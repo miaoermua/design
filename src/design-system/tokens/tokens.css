@@ -1,0 +1,151 @@
+/**
+ * Folio — Design Tokens
+ *
+ * 唯一颜色/字号/间距来源。业务组件只允许使用这里派生的语义类
+ * （bg-paper / text-ink-muted / border-line …），禁止硬编码色值。
+ *
+ * 结构：
+ *   1. @theme  — 调色板 + 字体 + 字号 + 容器宽度，生成 Tailwind 工具类
+ *   2. 语义别名 — --surface / --text-* / --edge，供手写 CSS 与暗色覆盖使用
+ *   3. 材质     — 纸张颗粒、环境光
+ *
+ * 暗色主题：只覆盖第 2 层语义别名与第 1 层调色板，组件不写任何 dark: 变体。
+ * 当前版本不提供切换入口，保留完整 token 以便后续启用。
+ */
+
+@theme {
+  /* ── 1. 调色板：暖中性纸色 ─────────────────────────────────── */
+  --color-paper: #f7f3ec;
+  --color-paper-raised: #fdfaf4;
+  --color-paper-sunk: #efe9df;
+  --color-paper-deep: #e7dfd2;
+
+  --color-ink: #1b1917;
+  --color-ink-soft: #38332c;
+  --color-ink-muted: #6a6258;
+  --color-ink-faint: #928878;
+
+  --color-line: #e1d8c9;
+  --color-line-strong: #cfc3b1;
+
+  /* 单一强调色：陶土红。只用于链接下划线、当前态标记、焦点环 */
+  --color-accent: #8c4a32;
+  --color-accent-soft: #b8866f;
+  --color-accent-wash: #f3e7dd;
+
+  /* 功能性颜色：仅用于表单/错误提示，不做装饰 */
+  --color-danger: #9b3324;
+  --color-success: #3f6b4a;
+
+  /* ── 2. 字体 ───────────────────────────────────────────────── */
+  --font-sans:
+    ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-serif:
+    'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'SimSun', Georgia, 'Times New Roman',
+    serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ── 3. 字号：Display / Heading / Body / Caption / Metadata / Code ── */
+  --text-display: 2.75rem;
+  --text-display--line-height: 1.14;
+  --text-display--letter-spacing: -0.022em;
+
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -0.012em;
+
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.4;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.5;
+
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.82;
+
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.7;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.6;
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1.5;
+
+  --text-code: 0.875rem;
+  --text-code--line-height: 1.7;
+
+  /* ── 4. 版式宽度 ────────────────────────────────────────────── */
+  --container-prose: 40rem; /* ≈ 36 汉字/行 @17px */
+  --container-wide: 68rem;
+  --container-narrow: 30rem;
+
+  /* ── 5. 间距节奏（4px 基准，编辑式留白）───────────────────── */
+  /* 变量名会参与工具类生成：--spacing-<name> 会生成 p-<name>/gap-<name>/
+     inline-<name> 等。这里不能叫 --spacing-block，否则 inline-block 会同时
+     命中 display 工具类与 inline-size 工具类，把宽度压成 2rem。 */
+  --spacing-gutter: 1.25rem;
+  --spacing-section: 5rem;
+  --spacing-stack: 2rem;
+
+  /* ── 6. 圆角/边框/阴影：克制 ───────────────────────────────── */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+
+  --shadow-raise: 0 1px 2px rgb(27 25 23 / 0.04), 0 8px 24px -16px rgb(27 25 23 / 0.18);
+  --shadow-pop: 0 2px 6px rgb(27 25 23 / 0.06), 0 18px 48px -24px rgb(27 25 23 / 0.24);
+
+  /* ── 7. 动效 ───────────────────────────────────────────────── */
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+}
+
+/* ── 语义别名：手写 CSS 与暗色覆盖只认这一层 ─────────────────── */
+:root {
+  --surface: var(--color-paper);
+  --surface-raised: var(--color-paper-raised);
+  --surface-sunk: var(--color-paper-sunk);
+
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-muted);
+  --text-tertiary: var(--color-ink-faint);
+
+  --edge: var(--color-line);
+  --edge-strong: var(--color-line-strong);
+
+  --accent: var(--color-accent);
+
+  /* 阅读区背景必须足够不透明：正文永远落在 surface-raised 之上 */
+  --reading-surface: color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper));
+
+  color-scheme: light;
+}
+
+/*
+ * 暗色（保留，未在 UI 中提供切换入口）
+ * 覆盖的是同一批语义变量，因此组件层零改动。
+ */
+[data-theme='dark'] {
+  --color-paper: #171513;
+  --color-paper-raised: #1d1a17;
+  --color-paper-sunk: #131110;
+  --color-paper-deep: #0f0e0d;
+
+  --color-ink: #ece5da;
+  --color-ink-soft: #d8d0c4;
+  --color-ink-muted: #a49b8c;
+  --color-ink-faint: #857c6e;
+
+  --color-line: #302b25;
+  --color-line-strong: #443d34;
+
+  --color-accent: #c98466;
+  --color-accent-soft: #a06a53;
+  --color-accent-wash: #2a211c;
+
+  --reading-surface: color-mix(in oklab, var(--color-paper-raised) 92%, var(--color-paper));
+
+  color-scheme: dark;
+}

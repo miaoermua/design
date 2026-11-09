@@ -1,0 +1,1 @@
+export { archivesFeature } from './manifest'

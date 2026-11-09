@@ -1,0 +1,430 @@
+/**
+ * Folio — Reading surface (`.prose`)
+ *
+ * 文章与日记正文的排版规则。只用语义变量，不出现色值字面量。
+ * 目标是纸书阅读：舒适行宽、清晰层级、克制的装饰。
+ */
+
+.prose {
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  color: var(--text-primary);
+  letter-spacing: 0.004em;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.prose > * + * {
+  margin-top: 1.35em;
+}
+
+/* ── 标题 ───────────────────────────────────────────────────── */
+.prose :is(h1, h2, h3, h4) {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  text-wrap: balance;
+  scroll-margin-top: 6rem;
+}
+
+.prose h1 {
+  font-size: var(--text-title);
+  margin-top: 2.6em;
+}
+
+.prose h2 {
+  font-size: var(--text-h2);
+  margin-top: 2.4em;
+}
+
+/* h2 上方用一道极细虚线分隔，形成编辑式分节 */
+.prose h2:not(:first-child)::before {
+  content: '';
+  display: block;
+  width: 3.5rem;
+  border-top: 1px dashed var(--edge-strong);
+  margin-bottom: 1.1em;
+}
+
+.prose h3 {
+  font-size: var(--text-h3);
+  margin-top: 2em;
+}
+
+.prose h4 {
+  font-size: var(--text-body);
+  margin-top: 1.8em;
+  color: var(--text-primary);
+}
+
+/* ── 段落与行内元素 ─────────────────────────────────────────── */
+.prose p {
+  margin-block: 0;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-soft);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.prose a:hover {
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+}
+
+.prose :is(del, s) {
+  color: var(--text-tertiary);
+}
+
+.prose mark {
+  background: var(--color-accent-wash);
+  color: inherit;
+  padding: 0.05em 0.22em;
+  border-radius: var(--radius-xs);
+}
+
+.prose kbd {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+/* ── 列表 ───────────────────────────────────────────────────── */
+.prose :is(ul, ol) {
+  padding-left: 1.35em;
+}
+
+.prose ul {
+  list-style: none;
+}
+
+.prose ul > li {
+  position: relative;
+}
+
+.prose ul > li::before {
+  content: '';
+  position: absolute;
+  left: -0.95em;
+  top: 0.82em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose ol > li::marker {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.prose li + li {
+  margin-top: 0.5em;
+}
+
+.prose li > :is(ul, ol) {
+  margin-top: 0.5em;
+}
+
+.prose li > p + p {
+  margin-top: 0.6em;
+}
+
+/* ── 引用 ───────────────────────────────────────────────────── */
+.prose blockquote {
+  margin-inline: 0;
+  padding: 0.15em 0 0.15em 1.35em;
+  border-left: 2px solid var(--color-accent-soft);
+  color: var(--text-secondary);
+  font-style: normal;
+}
+
+.prose blockquote > :first-child {
+  margin-top: 0;
+}
+
+.prose blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.prose blockquote p {
+  font-size: 1.02em;
+}
+
+/* ── 分隔线：细虚线 ─────────────────────────────────────────── */
+.prose hr {
+  border: 0;
+  border-top: 1px dashed var(--edge-strong);
+  margin-block: 3em;
+}
+
+/* ── 代码 ───────────────────────────────────────────────────── */
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-paper-sunk);
+  padding: 0.14em 0.38em;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
+.prose pre {
+  position: relative;
+  margin-block: 1.9em;
+  padding: 1.05rem 1.15rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-sunk);
+  overflow-x: auto;
+  font-size: var(--text-code);
+  line-height: var(--text-code--line-height);
+  tab-size: 2;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+  white-space: pre;
+}
+
+/* Shiki 输出：双主题变量由构建期注入 */
+.prose pre.shiki {
+  background: var(--shiki-light-bg, var(--color-paper-sunk)) !important;
+  color: var(--shiki-light, inherit);
+}
+
+.prose pre.shiki span {
+  color: var(--shiki-light);
+}
+
+.prose .code-block {
+  position: relative;
+}
+
+.prose .code-block__lang {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+/* ── 表格 ───────────────────────────────────────────────────── */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: 1.6;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose :is(th, td) {
+  border-bottom: 1px solid var(--edge);
+  padding: 0.6em 0.9em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th {
+  font-weight: 600;
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom-color: var(--edge-strong);
+}
+
+.prose tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ── 图片与图注 ─────────────────────────────────────────────── */
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin-inline: auto;
+}
+
+.prose figure {
+  margin: 2em 0;
+}
+
+.prose figcaption {
+  margin-top: 0.7em;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+/* ── 数学 / Mermaid ─────────────────────────────────────────── */
+.prose .katex {
+  font-size: 1.04em;
+}
+
+.prose .katex-display {
+  margin: 1.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.2em;
+}
+
+.prose .mermaid-block {
+  margin: 1.9em 0;
+  padding: 1.1rem;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  overflow-x: auto;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.prose .mermaid-block[data-rendered='true'] {
+  border-style: solid;
+  border-color: var(--edge);
+}
+
+/* ── Mix Space 扩展块 ───────────────────────────────────────── */
+.prose .spoiler {
+  background: var(--color-paper-deep);
+  color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 0.2em;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.prose .spoiler.is-revealed,
+.prose .spoiler:focus-visible {
+  color: inherit;
+}
+
+.prose .callout {
+  margin: 1.8em 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 2px solid var(--edge-strong);
+  background: var(--surface-sunk);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+}
+
+.prose .callout > :first-child {
+  margin-top: 0;
+}
+
+.prose .callout > :last-child {
+  margin-bottom: 0;
+}
+
+/* 脚注 */
+.prose .footnotes {
+  margin-top: 3.5em;
+  padding-top: 1.5em;
+  border-top: 1px dashed var(--edge-strong);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+/* 标题锚点 */
+.prose .heading-anchor {
+  margin-left: 0.4em;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out-soft);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+}
+
+.prose :is(h1, h2, h3, h4):hover .heading-anchor,
+.prose .heading-anchor:focus-visible {
+  opacity: 1;
+}
+
+/* 窄屏收紧 */
+@media (max-width: 640px) {
+  .prose {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .prose h2 {
+    margin-top: 2em;
+  }
+}
+
+/* 尊重减弱动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .prose * {
+    transition-duration: 0ms !important;
+  }
+}
+
+/* ── 紧凑变体：日记与首页摘要使用同一套排版，但降低层级 ───────── */
+.prose--compact {
+  font-size: var(--text-small);
+  line-height: 1.78;
+}
+
+.prose--compact > * + * {
+  margin-top: 1.05em;
+}
+
+.prose--compact :is(h1, h2, h3) {
+  font-size: var(--text-body);
+  margin-top: 1.9em;
+}
+
+.prose--compact h2:not(:first-child)::before {
+  margin-bottom: 0.8em;
+}
+
+.prose--compact :is(pre, table, blockquote) {
+  font-size: 0.95em;
+}
+
+@media (max-width: 640px) {
+  .prose--compact {
+    font-size: 0.9375rem;
+  }
+}

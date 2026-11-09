@@ -1,0 +1,1 @@
+export { friendsFeature } from './manifest'

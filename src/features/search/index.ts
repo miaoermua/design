@@ -1,0 +1,1 @@
+export { searchFeature } from './manifest'

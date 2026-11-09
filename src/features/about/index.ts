@@ -1,0 +1,1 @@
+export { aboutFeature } from './manifest'
