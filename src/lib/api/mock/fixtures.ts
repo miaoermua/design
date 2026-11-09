@@ -434,10 +434,10 @@ export function mockNoteDetail(id: string): { status: number; body: unknown } | 
 export const mockAggregate: V2Aggregate = {
   user: {
     name: '林序',
-    username: 'linxu',
+    username: 'miaoermua',
     introduce: '写字，也写代码。喜欢纸、光和排版。',
     avatar: 'https://picsum.photos/seed/folio-avatar/400/400',
-    social_ids: { github: 'linxu', rss: '' },
+    social_ids: { github: 'miaoermua', rss: '' },
   },
   seo: {
     title: 'Folio',

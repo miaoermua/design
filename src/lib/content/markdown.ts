@@ -9,6 +9,7 @@
 import katex from 'katex'
 import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
 import { highlightCode, plainCodeBlock } from './highlight'
+import { safeUrl, sanitizeRenderedHtml } from './sanitize'
 import { createSlugger, stripHtml } from './slug'
 
 export interface TocItem {
@@ -51,9 +52,14 @@ function renderTex(tex: string, displayMode: boolean): string {
   }
 }
 
-/** Mermaid 只放源码与容器，渲染交给客户端补水组件 */
-function renderMermaid(code: string): string {
+/**
+ * Mermaid 只放源码与容器，渲染交给客户端补水组件。
+ * 源码同时登记进本次渲染的 `sources`：安全边界只信任登记过的容器，
+ * 作者手写同结构 HTML 无法凭 class + data 属性让客户端去渲染任意图表。
+ */
+function renderMermaid(code: string, sources: Set<string>): string {
   const encoded = Buffer.from(code, 'utf8').toString('base64')
+  sources.add(encoded)
   return [
     `<div class="mermaid-block" data-mermaid-src="${encoded}">`,
     `<pre><code>${escapeText(code)}</code></pre>`,
@@ -65,47 +71,60 @@ function renderMermaid(code: string): string {
  * 数学扩展
  * 行内：$...$（首尾不允许空白，避免误吞金额 "$5"）
  * 块级：$$ ... $$
+ *
+ * 每次调用返回新对象：扩展注册只发生在引擎构造阶段，不同渲染任务之间不共享可变配置。
  */
-const mathExtensions: MarkedExtension = {
-  extensions: [
-    {
-      name: 'blockMath',
-      level: 'block',
-      start(src: string) {
-        const index = src.search(/^\$\$/m)
-        return index >= 0 ? index : undefined
+function createMathExtensions(): MarkedExtension {
+  return {
+    extensions: [
+      {
+        name: 'blockMath',
+        level: 'block',
+        start(src: string) {
+          const index = src.search(/^\$\$/m)
+          return index >= 0 ? index : undefined
+        },
+        tokenizer(src: string) {
+          const match = /^\$\$\n?([\s\S]*?)\n?\$\$(?:[ \t]*\n+|$)/.exec(src)
+          if (!match) return undefined
+          return { type: 'blockMath', raw: match[0], text: (match[1] ?? '').trim() }
+        },
+        renderer(token) {
+          const tex = typeof token.text === 'string' ? token.text : ''
+          return `<div class="math-block">${renderTex(tex, true)}</div>`
+        },
       },
-      tokenizer(src: string) {
-        const match = /^\$\$\n?([\s\S]*?)\n?\$\$(?:[ \t]*\n+|$)/.exec(src)
-        if (!match) return undefined
-        return { type: 'blockMath', raw: match[0], text: (match[1] ?? '').trim() }
+      {
+        name: 'inlineMath',
+        level: 'inline',
+        start(src: string) {
+          const index = src.search(/\$(?!\$)/)
+          return index >= 0 ? index : undefined
+        },
+        tokenizer(src: string) {
+          const match = /^\$(?![\s$])((?:\\.|[^\\$\n])+?)\$(?![\d$])/.exec(src)
+          if (!match) return undefined
+          return { type: 'inlineMath', raw: match[0], text: match[1] ?? '' }
+        },
+        renderer(token) {
+          const tex = typeof token.text === 'string' ? token.text : ''
+          return renderTex(tex, false)
+        },
       },
-      renderer(token) {
-        const tex = typeof token.text === 'string' ? token.text : ''
-        return `<div class="math-block">${renderTex(tex, true)}</div>`
-      },
-    },
-    {
-      name: 'inlineMath',
-      level: 'inline',
-      start(src: string) {
-        const index = src.search(/\$(?!\$)/)
-        return index >= 0 ? index : undefined
-      },
-      tokenizer(src: string) {
-        const match = /^\$(?![\s$])((?:\\.|[^\\$\n])+?)\$(?![\d$])/.exec(src)
-        if (!match) return undefined
-        return { type: 'inlineMath', raw: match[0], text: match[1] ?? '' }
-      },
-      renderer(token) {
-        const tex = typeof token.text === 'string' ? token.text : ''
-        return renderTex(tex, false)
-      },
-    },
-  ],
+    ],
+  }
 }
 
-function createRenderer(toc: TocItem[]): Renderer {
+/** 一次渲染任务的全部可变状态（不允许跨任务复用） */
+interface RenderState {
+  toc: TocItem[]
+  /** 渲染器真实产出的标题 id（含不进 TOC 的 h1 / h4+），安全边界据此保留 id */
+  headingIds: Set<string>
+  /** 渲染器真实产出的 Mermaid 源码 */
+  mermaidSources: Set<string>
+}
+
+function createRenderer(state: RenderState): Renderer {
   const slugify = createSlugger()
   const renderer = new Renderer()
 
@@ -115,8 +134,9 @@ function createRenderer(toc: TocItem[]): Renderer {
     const id = slugify(plain)
     const depth = Math.min(4, Math.max(1, token.depth))
 
+    state.headingIds.add(id)
     if (depth === 2 || depth === 3) {
-      toc.push({ id, text: plain, depth })
+      state.toc.push({ id, text: plain, depth })
     }
 
     return [
@@ -135,9 +155,13 @@ function createRenderer(toc: TocItem[]): Renderer {
 
   renderer.link = function (this: Renderer, token: Tokens.Link): string {
     const inner = this.parser.parseInline(token.tokens)
-    const isExternal = /^https?:\/\//i.test(token.href)
+    // 危险协议（javascript: / data: / vbscript: …）不产出链接，只保留链接文字
+    const href = safeUrl(token.href)
+    if (!href) return inner
+
+    const isExternal = /^https?:\/\//i.test(href)
     const attrs = [
-      `href="${escapeAttribute(token.href)}"`,
+      `href="${escapeAttribute(href)}"`,
       token.title ? `title="${escapeAttribute(token.title)}"` : '',
       isExternal ? 'target="_blank" rel="noopener noreferrer"' : '',
     ]
@@ -147,8 +171,12 @@ function createRenderer(toc: TocItem[]): Renderer {
   }
 
   renderer.image = function (token: Tokens.Image): string {
+    const src = safeUrl(token.href, 'image')
+    // 图片只允许 http / https；其余协议不渲染，避免 data: / javascript: 载体
+    if (!src) return ''
+
     const alt = token.text ?? ''
-    const img = `<img src="${escapeAttribute(token.href)}" alt="${escapeAttribute(alt)}" loading="lazy" decoding="async"${token.title ? ` title="${escapeAttribute(token.title)}"` : ''} />`
+    const img = `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" loading="lazy" decoding="async"${token.title ? ` title="${escapeAttribute(token.title)}"` : ''} />`
     if (!alt) return img
     return `<figure>${img}<figcaption>${escapeText(alt)}</figcaption></figure>`
   }
@@ -156,23 +184,20 @@ function createRenderer(toc: TocItem[]): Renderer {
   return renderer
 }
 
-const markedInstance = new Marked({
-  gfm: true,
-  breaks: false,
-  async: true,
-  ...mathExtensions,
-})
-
 /**
- * 渲染 Markdown 为 HTML + TOC
- * 内容来自站点管理员，属于可信输入；渲染层仍然只输出受控标签。
+ * 构造一次渲染任务专用的引擎。
+ *
+ * marked 的扩展（renderer / walkTokens）注册在实例上，实例状态在解析期间可被读取。
+ * 因此**不能**跨请求共享实例：并发时后一次 `use()` 会覆盖前一次的 renderer，
+ * 于是 A 文章的标题被写进 B 文章的 TOC；同一个实例反复 `use()` 还会把 walkTokens
+ * 链式包裹，导致高亮回调随渲染次数累积。
+ * 这里每次调用都新建实例，TOC 收集器、slug 计数器、高亮闭包全部属于当前任务。
  */
-export async function renderMarkdown(markdown: string): Promise<RenderedContent> {
-  const toc: TocItem[] = []
-  const renderer = createRenderer(toc)
-
-  markedInstance.use({
-    renderer,
+function createMarkdownEngine(state: RenderState): Marked {
+  const engine = new Marked({ gfm: true, breaks: false, async: true })
+  engine.use(createMathExtensions())
+  engine.use({
+    renderer: createRenderer(state),
     walkTokens: async (token) => {
       if (token.type !== 'code') return
       const code = token as Tokens.Code
@@ -180,20 +205,51 @@ export async function renderMarkdown(markdown: string): Promise<RenderedContent>
       const casted = code as Tokens.Code & { folioHtml?: string }
 
       if (MERMAID_FENCE.test(lang.trim())) {
-        casted.folioHtml = renderMermaid(code.text)
+        casted.folioHtml = renderMermaid(code.text, state.mermaidSources)
         return
       }
       casted.folioHtml = await highlightCode(code.text, lang.trim() || undefined)
     },
   })
-
-  const html = await markedInstance.parse(markdown)
-  return { html: typeof html === 'string' ? html : '', toc }
+  return engine
 }
 
-/** 只渲染行内 Markdown（摘要、图注等） */
+/**
+ * 渲染 Markdown 为 HTML + TOC
+ *
+ * 渲染器只输出受控标签，但正文允许手写原始 HTML，最终统一过一遍安全边界
+ * （见 `./sanitize`）：标签/属性白名单 + URL 协议白名单 + 事件处理器清除。
+ */
+export async function renderMarkdown(markdown: string): Promise<RenderedContent> {
+  const state: RenderState = { toc: [], headingIds: new Set(), mermaidSources: new Set() }
+  const engine = createMarkdownEngine(state)
+  const html = await engine.parse(markdown)
+  const sanitized = sanitizeRenderedHtml(typeof html === 'string' ? html : '', {
+    headingIds: state.headingIds,
+    mermaidSources: state.mermaidSources,
+  })
+  return { html: sanitized, toc: state.toc }
+}
+
+/**
+ * 只渲染行内 Markdown（摘要、图注等）
+ *
+ * 独立构造同步引擎：不能复用异步实例（marked 禁止在 async 实例上按 sync 解析），
+ * 同时行内场景不输出图片与原始 HTML。
+ */
 export function renderInline(markdown: string): string {
+  const engine = new Marked({ gfm: true, breaks: false, async: false })
+  engine.use(createMathExtensions())
+
   const renderer = new Renderer()
   renderer.image = () => ''
-  return markedInstance.parseInline(markdown, { renderer, async: false }) as string
+  renderer.html = () => ''
+  renderer.link = function (this: Renderer, token: Tokens.Link): string {
+    const inner = this.parser.parseInline(token.tokens)
+    const href = safeUrl(token.href)
+    return href ? `<a href="${escapeAttribute(href)}">${inner}</a>` : inner
+  }
+
+  const html = engine.parseInline(markdown, { renderer })
+  return sanitizeRenderedHtml(typeof html === 'string' ? html : '')
 }

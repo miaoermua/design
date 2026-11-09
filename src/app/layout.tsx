@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+// KaTeX 已在服务端产出公式 HTML，这里只需要官方排版样式（字体、间距、分数线）。
+// 必须排在 globals.css 之前，让 prose.css 的局部覆盖仍然生效。
+import 'katex/dist/katex.min.css'
 import './globals.css'
 import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
