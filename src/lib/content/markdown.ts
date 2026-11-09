@@ -3,11 +3,13 @@
  *
  * 流程：lexer → walkTokens（异步代码高亮）→ parser（自定义 renderer）
  * 支持：GFM、Shiki 高亮、KaTeX 行内/块级公式、Mermaid（客户端补水）、
- *      标题锚点与 TOC、外链 noopener、图片图注。
+ *      相册/轮播容器、标题锚点与 TOC、外链 noopener、图片图注。
  */
 
 import katex from 'katex'
 import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
+import { escapeAttribute, escapeText } from './escape'
+import { createGalleryExtension } from './gallery'
 import { highlightCode, plainCodeBlock } from './highlight'
 import { safeUrl, sanitizeRenderedHtml } from './sanitize'
 import { createSlugger, stripHtml } from './slug'
@@ -24,18 +26,6 @@ export interface RenderedContent {
 }
 
 const MERMAID_FENCE = /^mermaid\b/i
-
-function escapeAttribute(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-}
-
-function escapeText(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-}
 
 function renderTex(tex: string, displayMode: boolean): string {
   try {
@@ -122,6 +112,8 @@ interface RenderState {
   headingIds: Set<string>
   /** 渲染器真实产出的 Mermaid 源码 */
   mermaidSources: Set<string>
+  /** 渲染器真实产出的相册容器 id，安全边界据此保留容器属性 */
+  galleryIds: Set<string>
 }
 
 function createRenderer(state: RenderState): Renderer {
@@ -196,6 +188,8 @@ function createRenderer(state: RenderState): Renderer {
 function createMarkdownEngine(state: RenderState): Marked {
   const engine = new Marked({ gfm: true, breaks: false, async: true })
   engine.use(createMathExtensions())
+  // 相册/轮播：解析与 HTML 产出在 ./gallery，这里只把登记回调接进当前任务的状态
+  engine.use(createGalleryExtension((id) => state.galleryIds.add(id)))
   engine.use({
     renderer: createRenderer(state),
     walkTokens: async (token) => {
@@ -221,12 +215,18 @@ function createMarkdownEngine(state: RenderState): Marked {
  * （见 `./sanitize`）：标签/属性白名单 + URL 协议白名单 + 事件处理器清除。
  */
 export async function renderMarkdown(markdown: string): Promise<RenderedContent> {
-  const state: RenderState = { toc: [], headingIds: new Set(), mermaidSources: new Set() }
+  const state: RenderState = {
+    toc: [],
+    headingIds: new Set(),
+    mermaidSources: new Set(),
+    galleryIds: new Set(),
+  }
   const engine = createMarkdownEngine(state)
   const html = await engine.parse(markdown)
   const sanitized = sanitizeRenderedHtml(typeof html === 'string' ? html : '', {
     headingIds: state.headingIds,
     mermaidSources: state.mermaidSources,
+    galleryIds: state.galleryIds,
   })
   return { html: sanitized, toc: state.toc }
 }

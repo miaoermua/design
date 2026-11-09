@@ -1,3 +1,4 @@
+import { MediaEnhancer } from '@/components/markdown/media-enhancer'
 import { cn } from '@/lib/utils/cn'
 import { MermaidHydrator } from './mermaid-hydrator'
 
@@ -15,6 +16,7 @@ export function Prose({ html, className }: ProseProps) {
     <>
       <div className={cn('prose', className)} dangerouslySetInnerHTML={{ __html: html }} />
       <MermaidHydrator />
+      <MediaEnhancer />
     </>
   )
 }

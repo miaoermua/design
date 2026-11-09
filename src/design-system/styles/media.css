@@ -1,0 +1,356 @@
+/*
+ * 图片 / 相册 / 轮播 / 预览
+ *
+ * 与 prose.css 分开维护：正文排版是一套规则，媒体交互是另一套。
+ * 服务端静态结构与 React 增强后的结构共用同一组类名（.md-gallery__track 等），
+ * 因此无 JS 时是「一排可横向滚动的图片」，有 JS 时是完整相册/轮播，样式不需要分叉。
+ */
+
+/* ── 普通图片 ───────────────────────────────────────────────── */
+
+.prose img.md-image {
+  cursor: zoom-in;
+}
+
+.prose img.md-image:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* 加载失败：浏览器会自己显示 alt，这里只补一个可辨认的占位框 */
+.prose img.md-image--broken {
+  min-height: 3rem;
+  padding: 1rem;
+  border: 1px dashed var(--edge-strong);
+  background: var(--surface-sunk);
+  cursor: default;
+}
+
+/* ── 相册 / 轮播容器 ────────────────────────────────────────── */
+
+.md-gallery {
+  position: relative;
+  margin: 2em 0;
+}
+
+/* 增强后就地隐藏静态轨道：结构保留，卸载 / 关闭 JS 时立刻回到静态形态 */
+.md-gallery[data-enhanced='true'] > .md-gallery__track {
+  display: none;
+}
+
+.md-gallery__root {
+  position: relative;
+}
+
+.md-gallery__root:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
+}
+
+.md-gallery__track {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0 0 0.25rem;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.md-gallery__track::-webkit-scrollbar {
+  display: none;
+}
+
+/* 覆盖 prose.css 的列表样式：轨道不是正文列表 */
+.prose .md-gallery__track {
+  padding-left: 0;
+}
+
+.prose .md-gallery__track > li {
+  margin-top: 0;
+  padding-left: 0;
+}
+
+.prose .md-gallery__track > li::before {
+  content: none;
+}
+
+.md-gallery__item {
+  flex: 0 0 auto;
+  width: min(100%, 30rem);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+/* 轮播：一次一张 */
+.md-gallery--carousel .md-gallery__item {
+  width: 100%;
+}
+
+.md-gallery__link {
+  display: block;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-sunk);
+  text-decoration: none;
+}
+
+/* 覆盖 .prose a 的下划线：相册里整张图是点击区 */
+.prose .md-gallery__link {
+  text-decoration: none;
+}
+
+.md-gallery__link img {
+  width: 100%;
+  max-height: 70vh;
+  height: auto;
+  object-fit: contain;
+  margin: 0;
+  border-radius: 0;
+  cursor: zoom-in;
+}
+
+.md-gallery__link img:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.md-gallery__broken {
+  display: grid;
+  place-items: center;
+  min-height: 8rem;
+  padding: 1rem;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  text-align: center;
+}
+
+/* ── 索引、圆点、切换按钮 ───────────────────────────────────── */
+
+.md-gallery__counter {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.md-gallery__dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.md-gallery__dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--edge-strong);
+  opacity: 0.45;
+  cursor: pointer;
+  transition:
+    opacity var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.md-gallery__dot[aria-current='true'] {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.md-gallery__dot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.md-gallery__nav {
+  position: absolute;
+  top: calc(50% - 1.25rem);
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--surface-raised) 88%, transparent);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.md-gallery__nav:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.md-gallery__nav:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.md-gallery__nav--prev {
+  left: 0.5rem;
+}
+
+.md-gallery__nav--next {
+  right: 0.5rem;
+}
+
+/* ── 图片预览 ───────────────────────────────────────────────── */
+
+.md-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: color-mix(in oklab, var(--color-ink) 84%, transparent);
+  backdrop-filter: blur(8px);
+  animation: md-preview-in var(--duration-fast) var(--ease-out-soft);
+}
+
+.md-preview__dialog {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.md-preview__stage {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.md-preview__image {
+  display: block;
+  max-width: min(100%, 90rem);
+  max-height: 76vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0;
+  border-radius: var(--radius-sm);
+}
+
+.md-preview__caption {
+  max-width: 60ch;
+  margin: 0;
+  color: color-mix(in oklab, var(--color-paper) 78%, transparent);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  text-align: center;
+}
+
+.md-preview__counter {
+  margin: 0.6rem 0 0;
+  color: color-mix(in oklab, var(--color-paper) 70%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.md-preview__close,
+.md-preview__nav {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--color-paper) 26%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--color-ink) 55%, transparent);
+  color: var(--color-paper);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.md-preview__close:hover,
+.md-preview__nav:hover {
+  border-color: color-mix(in oklab, var(--color-paper) 60%, transparent);
+}
+
+.md-preview__close:focus-visible,
+.md-preview__nav:focus-visible {
+  outline: 2px solid var(--color-paper);
+  outline-offset: 2px;
+}
+
+.md-preview__close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  z-index: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.md-preview__nav {
+  position: fixed;
+  top: 50%;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.md-preview__nav--prev {
+  left: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+.md-preview__nav--next {
+  right: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+@keyframes md-preview-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-gallery__track {
+    scroll-behavior: auto;
+  }
+
+  .md-preview {
+    animation: none;
+  }
+
+  .md-gallery__dot,
+  .md-gallery__nav,
+  .md-preview__close,
+  .md-preview__nav {
+    transition: none;
+  }
+}

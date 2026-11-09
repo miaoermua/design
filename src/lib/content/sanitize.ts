@@ -21,6 +21,8 @@
  *   - `id`：只有本次渲染真实产出的标题 id 才保留，作者手写的 id 不进入输出
  *   - Mermaid：占位容器必须同时满足「class 含 mermaid-block」且「data-mermaid-src 属于
  *     本次渲染登记的源码集合」，作者伪造的容器会被降级为普通 div
+ *   - 相册：容器必须同时满足「class 含 md-gallery」且「data-gallery-id 属于本次渲染登记的
+ *     容器 id」，作者手写的同名容器会被摘掉 class 与 id，客户端不会增强它
  */
 
 import sanitizeHtml from 'sanitize-html'
@@ -335,10 +337,14 @@ export interface SanitizeContext {
   headingIds?: ReadonlySet<string>
   /** 渲染器登记的 Mermaid 源码（base64） */
   mermaidSources?: ReadonlySet<string>
+  /** 渲染器登记的相册容器 id；不在集合内的 `data-gallery-id` 一律丢弃 */
+  galleryIds?: ReadonlySet<string>
 }
 
 const HEADING = /^h[1-6]$/
 const MERMAID_CLASS = 'mermaid-block'
+const GALLERY_CLASS = 'md-gallery'
+const GALLERY_CLASS_PREFIX = 'md-gallery--'
 
 /** 从 class 串里摘掉一个类名 */
 function removeClassToken(value: string | undefined, token: string): string {
@@ -352,7 +358,9 @@ function removeClassToken(value: string | undefined, token: string): string {
 function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
   const headingIds = context.headingIds ?? new Set<string>()
   const mermaidSources = context.mermaidSources ?? new Set<string>()
+  const galleryIds = context.galleryIds ?? new Set<string>()
   const seenIds = new Set<string>()
+  const seenGalleryIds = new Set<string>()
 
   return {
     allowedTags: ALLOWED_TAGS,
@@ -375,9 +383,9 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
         'title',
       ],
       input: ['type', 'value', 'checked', 'disabled', 'name'],
-      // 渲染器产出的语言标记与 Mermaid 源码；作者写同名属性只在通过校验后保留
+      // 渲染器产出的语言标记、Mermaid 源码与相册 id；作者写同名属性只在通过校验后保留
       pre: ['data-lang', 'tabindex'],
-      div: ['data-mermaid-src'],
+      div: ['data-mermaid-src', 'data-gallery-id'],
       h1: ['id'],
       h2: ['id'],
       h3: ['id'],
@@ -441,7 +449,36 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
           delete next['data-mermaid-src']
         }
 
-        // 4. iframe：来源策略由本文件写死，作者属性不可覆盖
+        // 4. 相册容器：class 与 id 必须同时对上本次渲染的登记（同一 id 只认第一次）
+        if (tagName === 'div') {
+          const classes = next.class ?? ''
+          const galleryId = next['data-gallery-id']
+          const trusted =
+            classes.split(/\s+/).includes(GALLERY_CLASS) &&
+            typeof galleryId === 'string' &&
+            galleryIds.has(galleryId) &&
+            !seenGalleryIds.has(galleryId)
+
+          if (trusted) {
+            seenGalleryIds.add(galleryId)
+          } else {
+            delete next['data-gallery-id']
+            if (classes.includes(GALLERY_CLASS)) {
+              const rest = classes
+                .split(/\s+/)
+                .filter(
+                  (item) => item && item !== GALLERY_CLASS && !item.startsWith(GALLERY_CLASS_PREFIX),
+                )
+                .join(' ')
+              if (rest) next.class = rest
+              else delete next.class
+            }
+          }
+        } else if ('data-gallery-id' in next) {
+          delete next['data-gallery-id']
+        }
+
+        // 5. iframe：来源策略由本文件写死，作者属性不可覆盖
         if (tagName === 'iframe') {
           const policy = resolveIframePolicy(next.src)
           delete next.allow
@@ -455,10 +492,10 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
           }
         }
 
-        // 5. tabindex 只允许 0 / -1（Shiki 给可滚动代码块加的可聚焦标记）
+        // 6. tabindex 只允许 0 / -1（Shiki 给可滚动代码块加的可聚焦标记）
         if ('tabindex' in next && !/^-?[01]$/.test(next.tabindex ?? '')) delete next.tabindex
 
-        // 6. 外链补 rel
+        // 7. 外链补 rel
         if (tagName === 'a') {
           const href = next.href ?? ''
           const external = /^https?:\/\//i.test(href)

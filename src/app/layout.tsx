@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css'
 import './globals.css'
 import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
+import { ImageViewer } from '@/components/markdown/image-preview'
 import { describeError } from '@/lib/api'
 import { loadSiteContext, siteBaseUrl, siteDescription, siteTitle } from '@/lib/site'
 
@@ -81,6 +82,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
           <SiteFooter identity={identity} />
         </div>
+
+        {/* 全局唯一的图片预览宿主：正文里的普通图片 / 相册 / 轮播共用 */}
+        <ImageViewer />
       </body>
     </html>
   )
