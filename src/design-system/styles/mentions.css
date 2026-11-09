@@ -1,0 +1,55 @@
+/*
+ * 社交账号提及（`{GH@name}` / `{TW@name}` / `{TG@name}`）
+ *
+ * 只用既有 Token：不提新颜色，明暗主题自动跟随。
+ * 平台区分靠小号前缀标签（GH / TW / TG），不引图标库，也不加 JS。
+ * 链接语义与正文一致（下划线只在 hover / focus 出现），但用一层浅色底把「提及」
+ * 和普通链接区分开；这是纯提示，链接本身仍是普通 `<a href>`。
+ */
+
+.prose .md-mention {
+  padding: 0.02em 0.3em 0.04em;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent-wash);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 平台前缀：等宽小字，作为「这是哪个平台的账号」的视觉标记 */
+.prose .md-mention::before {
+  content: 'GH';
+  margin-right: 0.34em;
+  font-family: var(--font-sans);
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  vertical-align: 0.04em;
+}
+
+.prose .md-mention--tw::before {
+  content: 'TW';
+}
+
+.prose .md-mention--tg::before {
+  content: 'TG';
+}
+
+.prose .md-mention:hover {
+  background: var(--surface-sunk);
+  color: var(--accent);
+}
+
+.prose .md-mention:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose .md-mention {
+    transition: none;
+  }
+}

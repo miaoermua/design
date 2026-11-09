@@ -26,6 +26,10 @@
  *   - 提示块 / 横幅 / 折叠块 / Spoiler：只用 class 与原生语义标签（div / aside / details /
  *     summary / ins / span），不产出任何自定义 data-*，因此不需要新的信任凭据；
  *     `details` 只多放行 `open` 一个属性
+ *   - 脚注：`id` 只可能在 `sup` / `li` 上出现，且必须命中本次渲染登记过的脚注 id；
+ *     脚注 id 含每次渲染现生成的随机令牌，作者手写的 `id="fn-1"` 对不上，按普通作者 id 丢弃
+ *   - 社交提及：`md-mention*` 只是样式类，只有 href 命中本次渲染真实产出的链接集合才保留，
+ *     作者手写的同名 `<a>` 会被摘掉类名，无法伪装成系统生成的提及
  */
 
 import sanitizeHtml from 'sanitize-html'
@@ -344,12 +348,30 @@ export interface SanitizeContext {
   mermaidSources?: ReadonlySet<string>
   /** 渲染器登记的相册容器 id；不在集合内的 `data-gallery-id` 一律丢弃 */
   galleryIds?: ReadonlySet<string>
+  /** 渲染器登记的脚注 id；只对 `sup` / `li` 生效，不在集合内的 id 一律丢弃 */
+  footnoteIds?: ReadonlySet<string>
+  /** 渲染器真实产出的提及链接（完整 href）；不在集合内的 `md-mention*` 类名一律丢弃 */
+  mentionHrefs?: ReadonlySet<string>
 }
 
 const HEADING = /^h[1-6]$/
+/** 脚注 id 只允许出现在这两个标签上：正文引用与脚注项 */
+const FOOTNOTE_TAGS = new Set(['sup', 'li'])
 const MERMAID_CLASS = 'mermaid-block'
 const GALLERY_CLASS = 'md-gallery'
 const GALLERY_CLASS_PREFIX = 'md-gallery--'
+const MENTION_CLASS = 'md-mention'
+const MENTION_CLASS_PREFIX = 'md-mention--'
+
+/** 单个类名是否属于提及的视觉标记（`md-mention` / `md-mention--gh` …） */
+function isMentionClass(value: string): boolean {
+  return value === MENTION_CLASS || value.startsWith(MENTION_CLASS_PREFIX)
+}
+
+/** class 属性里是否出现了提及标记 */
+function hasMentionClass(classAttribute: string): boolean {
+  return classAttribute.split(/\s+/).some(isMentionClass)
+}
 
 /** 从 class 串里摘掉一个类名 */
 function removeClassToken(value: string | undefined, token: string): string {
@@ -364,6 +386,8 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
   const headingIds = context.headingIds ?? new Set<string>()
   const mermaidSources = context.mermaidSources ?? new Set<string>()
   const galleryIds = context.galleryIds ?? new Set<string>()
+  const footnoteIds = context.footnoteIds ?? new Set<string>()
+  const mentionHrefs = context.mentionHrefs ?? new Set<string>()
   const seenIds = new Set<string>()
   const seenGalleryIds = new Set<string>()
 
@@ -397,6 +421,9 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
       h4: ['id'],
       h5: ['id'],
       h6: ['id'],
+      // 脚注：只有当 id 命中本次渲染登记时才会真正保留（见 transformTags）
+      sup: ['id'],
+      li: ['id'],
       // 原生折叠块：只多放行 open（默认展开），没有其他属性可用
       details: ['open'],
       ol: ['start', 'reversed', 'type'],
@@ -428,10 +455,13 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
           delete next.style
         }
 
-        // 2. id：只保留本次渲染真实产出的标题锚点（且只保留第一次出现的那个）
+        // 2. id：只保留本次渲染真实产出的锚点（标题 / 脚注），且只保留第一次出现的那个
         if ('id' in next) {
           const id = next.id
-          const keep = HEADING.test(tagName) && headingIds.has(id) && !seenIds.has(id)
+          const trusted = HEADING.test(tagName)
+            ? headingIds.has(id)
+            : FOOTNOTE_TAGS.has(tagName) && footnoteIds.has(id)
+          const keep = trusted && !seenIds.has(id)
           if (keep) seenIds.add(id)
           else delete next.id
         }
@@ -484,6 +514,20 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
           }
         } else if ('data-gallery-id' in next) {
           delete next['data-gallery-id']
+        }
+
+        // 4.5 提及：`md-mention*` 是「系统产出的提及」的视觉标记，只认渲染器真实产出的
+        //     链接；作者手写的同名 class（无论挂在 a 还是 span 上）一律摘掉
+        if (typeof next.class === 'string' && hasMentionClass(next.class)) {
+          const trusted = tagName === 'a' && mentionHrefs.has(next.href ?? '')
+          if (!trusted) {
+            const rest = next.class
+              .split(/\s+/)
+              .filter((item) => item && !isMentionClass(item))
+              .join(' ')
+            if (rest) next.class = rest
+            else delete next.class
+          }
         }
 
         // 5. iframe：来源策略由本文件写死，作者属性不可覆盖

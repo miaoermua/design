@@ -1,0 +1,130 @@
+/*
+ * 脚注：正文引用、文章末尾的脚注列表、双向跳转
+ *
+ * 只依赖设计 Token（--accent / --edge / --text-secondary / --surface-sunk …），
+ * 明暗主题共用同一份规则；交互反馈全部交给 CSS（`:target` / `:hover` / `:focus-visible`），
+ * 不引入任何客户端状态。
+ */
+
+/* ── 1. 正文引用 ───────────────────────────────────────────── */
+
+.prose .footnote-ref {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: super;
+  letter-spacing: 0;
+}
+
+.prose .footnote-ref > a {
+  text-decoration: none;
+  color: var(--accent);
+  padding-inline: 0.12em;
+  border-radius: var(--radius-xs);
+  transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.prose .footnote-ref > a:hover {
+  background: var(--color-accent-wash);
+}
+
+.prose .footnote-ref > a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 跳转目标短暂高亮：点到返回链接后能立刻看见落在哪一条 */
+.prose .footnote-ref:target,
+.prose .footnote-ref:target > a {
+  background: var(--color-accent-wash);
+}
+
+/* ── 2. 脚注列表 ───────────────────────────────────────────── */
+
+.prose .footnotes {
+  margin-block: 3.5em 0;
+  padding-top: 1.4em;
+  border-top: 1px dashed var(--edge-strong);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  color: var(--text-secondary);
+}
+
+.prose .footnotes__title {
+  margin: 0 0 0.75em;
+  padding: 0;
+  border: 0;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.prose .footnotes__list {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.prose .footnote-item {
+  margin-block: 0.55em;
+  padding-left: 0.15em;
+  border-radius: var(--radius-xs);
+  transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.prose .footnote-item::marker {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose .footnote-item > p {
+  margin: 0;
+}
+
+.prose .footnote-item > :not(:first-child) {
+  margin-top: 0.6em;
+}
+
+/* 被跳转到的脚注项整条着色，松手后仍然看得见 */
+.prose .footnote-item:target {
+  background: var(--surface-sunk);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ── 3. 返回正文 ───────────────────────────────────────────── */
+
+.prose .footnote-backref {
+  margin-left: 0.35em;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--radius-xs);
+}
+
+.prose .footnote-backref:hover {
+  background: var(--color-accent-wash);
+}
+
+.prose .footnote-backref:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 多次引用时显示「第 N 处」，让每个返回入口都能区分 */
+.prose .footnote-backref__hint {
+  margin-left: 0.25em;
+  font-size: 0.9em;
+  color: var(--text-tertiary);
+}
+
+.prose .footnote-item__back {
+  margin-top: 0.4em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose .footnote-ref > a,
+  .prose .footnote-item {
+    transition: none;
+  }
+}

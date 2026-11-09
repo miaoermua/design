@@ -1,6 +1,6 @@
 {
   "name": "folio",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "description": "Folio — an editorial Mix Space theme (API v2 / core v12.x)",
   "packageManager": "pnpm@10.34.9",

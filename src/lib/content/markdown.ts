@@ -4,8 +4,8 @@
  * 流程：lexer → walkTokens（异步代码高亮）→ parser（自定义 renderer）
  * 支持：GFM、Shiki 高亮、KaTeX 行内/块级公式、Mermaid（客户端补水）、
  *      相册/轮播容器、提示块与横幅（`::: info` / `::: banner{info}`）、折叠块、
- *      GitHub Alerts（`> [!NOTE]`）、Spoiler / Ins 行内标记、
- *      标题锚点与 TOC、外链 noopener、图片图注。
+ *      GitHub Alerts（`> [!NOTE]`）、Spoiler / Ins 行内标记、社交提及（`{GH@name}`）、
+ *      脚注、标题锚点与 TOC、外链 noopener、图片图注。
  */
 
 import katex from 'katex'
@@ -13,9 +13,16 @@ import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
 import { createAlertExtension } from './alerts'
 import { createContainerExtension } from './containers'
 import { escapeAttribute, escapeText } from './escape'
+import {
+  createFootnoteExtension,
+  createFootnoteState,
+  renderFootnoteList,
+  type FootnoteState,
+} from './footnotes'
 import { createGalleryExtension } from './gallery'
 import { highlightCode, plainCodeBlock } from './highlight'
 import { createInlineMarkExtensions } from './inline-marks'
+import { createMentionExtension } from './mentions'
 import { safeUrl, sanitizeRenderedHtml } from './sanitize'
 import { createSlugger, stripHtml } from './slug'
 
@@ -119,6 +126,29 @@ interface RenderState {
   mermaidSources: Set<string>
   /** 渲染器真实产出的相册容器 id，安全边界据此保留容器属性 */
   galleryIds: Set<string>
+  /** 文档级已占用的 HTML id：标题锚点与脚注共用，保证跨命名空间唯一 */
+  usedIds: Set<string>
+  /** 本次渲染的脚注状态（定义、编号、返回锚点），随任务回收 */
+  footnotes: FootnoteState
+  /** 渲染器真实产出的提及链接：安全边界据此只保留 `md-mention*` 样式类 */
+  mentionHrefs: Set<string>
+}
+
+/**
+ * 认领一个文档级 id。
+ *
+ * 标题 slug 与脚注 id 都经过这里，因此「标题恰好叫 fn 1」与「第 1 条脚注」不会撞出
+ * 重复 id；撞名时统一追加 `-2`、`-3`。作者手写 id 不参与分配（清洗阶段直接丢弃）。
+ */
+function claimId(state: RenderState, base: string): string {
+  let id = base
+  let suffix = 2
+  while (state.usedIds.has(id)) {
+    id = `${base}-${suffix}`
+    suffix += 1
+  }
+  state.usedIds.add(id)
+  return id
 }
 
 function createRenderer(state: RenderState): Renderer {
@@ -128,7 +158,7 @@ function createRenderer(state: RenderState): Renderer {
   renderer.heading = function (this: Renderer, token: Tokens.Heading): string {
     const inner = this.parser.parseInline(token.tokens)
     const plain = stripHtml(inner)
-    const id = slugify(plain)
+    const id = claimId(state, slugify(plain))
     const depth = Math.min(4, Math.max(1, token.depth))
 
     state.headingIds.add(id)
@@ -200,6 +230,10 @@ function createMarkdownEngine(state: RenderState): Marked {
   engine.use(createAlertExtension())
   // 相册/轮播：解析与 HTML 产出在 ./gallery，这里只把登记回调接进当前任务的状态
   engine.use(createGalleryExtension((id) => state.galleryIds.add(id)))
+  // 脚注：定义与编号都挂在本次渲染的状态上，id 走文档级 claimId（与标题共用占用表）
+  engine.use(createFootnoteExtension(state.footnotes, (base) => claimId(state, base)))
+  // 提及：URL 由平台常量表拼出，登记真实产出的 href 供清洗阶段校验样式类
+  engine.use(createMentionExtension((href) => state.mentionHrefs.add(href)))
   engine.use({
     renderer: createRenderer(state),
     walkTokens: async (token) => {
@@ -230,14 +264,24 @@ export async function renderMarkdown(markdown: string): Promise<RenderedContent>
     headingIds: new Set(),
     mermaidSources: new Set(),
     galleryIds: new Set(),
+    usedIds: new Set(),
+    footnotes: createFootnoteState(),
+    mentionHrefs: new Set(),
   }
   const engine = createMarkdownEngine(state)
   const html = await engine.parse(markdown)
-  const sanitized = sanitizeRenderedHtml(typeof html === 'string' ? html : '', {
-    headingIds: state.headingIds,
-    mermaidSources: state.mermaidSources,
-    galleryIds: state.galleryIds,
-  })
+
+  // 脚注列表挂在正文之后：它由本模块产出（不是作者输入），同样要过一遍清洗
+  const sanitized = sanitizeRenderedHtml(
+    `${typeof html === 'string' ? html : ''}${renderFootnoteList(state.footnotes)}`,
+    {
+      headingIds: state.headingIds,
+      mermaidSources: state.mermaidSources,
+      galleryIds: state.galleryIds,
+      footnoteIds: state.footnotes.trustedIds,
+      mentionHrefs: state.mentionHrefs,
+    },
+  )
   return { html: sanitized, toc: state.toc }
 }
 
@@ -246,10 +290,16 @@ export async function renderMarkdown(markdown: string): Promise<RenderedContent>
  *
  * 独立构造同步引擎：不能复用异步实例（marked 禁止在 async 实例上按 sync 解析），
  * 同时行内场景不输出图片与原始 HTML。
+ *
+ * 提及也在这里注册：它不依赖任何文档级状态（URL 由平台常量表拼出），
+ * 摘要 / 图注里出现 `{GH@name}` 时能正常成为链接，而不是露出一串花括号。
  */
 export function renderInline(markdown: string): string {
+  // 提及只需要「本次调用产出了哪些链接」，是纯函数级状态，与文章渲染无关
+  const mentionHrefs = new Set<string>()
   const engine = new Marked({ gfm: true, breaks: false, async: false })
   engine.use(createMathExtensions())
+  engine.use(createMentionExtension((href) => mentionHrefs.add(href)))
 
   const renderer = new Renderer()
   renderer.image = () => ''
@@ -261,5 +311,5 @@ export function renderInline(markdown: string): string {
   }
 
   const html = engine.parseInline(markdown, { renderer })
-  return sanitizeRenderedHtml(typeof html === 'string' ? html : '')
+  return sanitizeRenderedHtml(typeof html === 'string' ? html : '', { mentionHrefs })
 }

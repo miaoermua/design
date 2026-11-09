@@ -355,15 +355,7 @@
   margin-bottom: 0;
 }
 
-/* 脚注 */
-.prose .footnotes {
-  margin-top: 3.5em;
-  padding-top: 1.5em;
-  border-top: 1px dashed var(--edge-strong);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
+/* 脚注样式见 footnotes.css（此处只保留标题锚点） */
 
 /* 标题锚点 */
 .prose .heading-anchor {

@@ -3,6 +3,8 @@
 @import '../design-system/styles/prose.css';
 @import '../design-system/styles/media.css';
 @import '../design-system/styles/containers.css';
+@import '../design-system/styles/footnotes.css';
+@import '../design-system/styles/mentions.css';
 
 /*
  * 基础层：纸面、环境光、焦点、选择色。
