@@ -33,17 +33,19 @@
   --color-accent-soft: #b8866f;
   --color-accent-wash: #f3e7dd;
 
-  /* 功能性颜色：仅用于表单/错误提示，不做装饰 */
+  /* 功能性颜色：仅用于表单/错误提示与提示块，不做装饰 */
   --color-danger: #9b3324;
   --color-success: #3f6b4a;
+  /* 提示块需要的两种语气：中性的说明色与琥珀色的注意色 */
+  --color-info: #3f6377;
+  --color-warning: #8a5a1c;
 
   /* ── 2. 字体 ───────────────────────────────────────────────── */
   --font-sans:
-    ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Noto Sans SC', sans-serif;
   --font-serif:
-    'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'SimSun', Georgia, 'Times New Roman',
-    serif;
+    'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'SimSun', Georgia, 'Times New Roman', serif;
   --font-mono:
     ui-monospace, SFMono-Regular, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
@@ -144,6 +146,11 @@
   --color-accent: #c98466;
   --color-accent-soft: #a06a53;
   --color-accent-wash: #2a211c;
+
+  --color-danger: #d9776a;
+  --color-success: #7aa88a;
+  --color-info: #7ea6bd;
+  --color-warning: #d3a25f;
 
   --reading-surface: color-mix(in oklab, var(--color-paper-raised) 92%, var(--color-paper));
 

@@ -1,0 +1,200 @@
+/*
+ * 提示类内容：Callout / Banner / GitHub Alerts / Details / Spoiler / Ins
+ *
+ * 共用一条「语气 → 颜色」的映射：每种类型只声明 `--notice-tone`，
+ * 背景与描边全部由 color-mix 从同一个 tone 派生，因此新增类型不需要新增颜色。
+ * tone 只取设计系统里的功能色（accent / info / success / warning / danger）与边框色，
+ * 没有散落的固定色值，明暗主题共用同一份规则。
+ */
+
+/* ── 1. 类型 → 语气 ─────────────────────────────────────────── */
+
+.md-callout,
+.md-banner {
+  --notice-tone: var(--edge-strong);
+}
+
+.md-callout--info,
+.md-callout--important,
+.md-banner--info {
+  --notice-tone: var(--color-info);
+}
+
+.md-callout--success,
+.md-callout--tip,
+.md-banner--success {
+  --notice-tone: var(--color-success);
+}
+
+.md-callout--warning,
+.md-callout--caution,
+.md-banner--warning {
+  --notice-tone: var(--color-warning);
+}
+
+.md-callout--error,
+.md-callout--danger,
+.md-banner--error,
+.md-banner--danger {
+  --notice-tone: var(--color-danger);
+}
+
+/* ── 2. Callout / GitHub Alerts ─────────────────────────────── */
+
+.md-callout {
+  display: grid;
+  gap: 0.45rem;
+  margin-block: 1.9em;
+  padding: 0.95rem 1.15rem;
+  border-left: 3px solid var(--notice-tone);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--notice-tone) 8%, var(--surface-raised));
+}
+
+.md-callout__title {
+  margin: 0;
+  color: var(--notice-tone);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: var(--text-caption--line-height);
+}
+
+.md-callout__body {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.md-callout__body > :first-child {
+  margin-top: 0;
+}
+
+.md-callout__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── 3. Banner：通栏提示，没有标题，靠左侧圆点与整条底纹区分 ── */
+
+.md-banner {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  margin-block: 2.1em;
+  padding: 0.8rem 1.05rem;
+  border: 1px solid color-mix(in oklab, var(--notice-tone) 30%, var(--edge));
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--notice-tone) 6%, var(--surface-raised));
+}
+
+/* 圆点用伪元素，服务端不需要额外节点，也不会被 Sanitizer 判成装饰性内容 */
+.md-banner::before {
+  content: '';
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-top: 0.55em;
+  border-radius: var(--radius-pill);
+  background: var(--notice-tone);
+}
+
+.md-banner__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+.md-banner__body > :first-child {
+  margin-top: 0;
+}
+
+.md-banner__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── 4. Details / Summary ───────────────────────────────────── */
+
+.md-details {
+  margin-block: 1.9em;
+  padding-block: 0.15rem;
+  border-block: 1px solid var(--edge);
+}
+
+.md-details__summary {
+  padding-block: 0.5rem;
+  color: var(--text-primary);
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+.md-details__summary::marker {
+  color: var(--accent);
+}
+
+.md-details__summary:hover {
+  color: var(--accent);
+}
+
+.md-details__summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.md-details[open] > .md-details__summary {
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--edge);
+}
+
+.md-details__body > :first-child {
+  margin-top: 0;
+}
+
+.md-details__body > :last-child {
+  margin-bottom: 1rem;
+}
+
+/* ── 5. Ins：原生插入语义，靠底色和虚线下划线区分，不加图标 ── */
+
+.prose ins {
+  padding-inline: 0.15em;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-success) 55%, transparent);
+  background: color-mix(in oklab, var(--color-success) 12%, transparent);
+  text-decoration: none;
+}
+
+/* ── 6. Spoiler：没有 JS 时内容照常可读，只有增强后才模糊 ──── */
+
+.md-spoiler {
+  border-radius: var(--radius-xs);
+  transition: filter var(--duration-fast) var(--ease-out-soft);
+}
+
+.md-spoiler[data-spoiler-ready='true'] {
+  padding-inline: 0.15em;
+  background: var(--surface-sunk);
+  box-shadow: inset 0 -1px 0 var(--edge-strong);
+  cursor: pointer;
+}
+
+.md-spoiler[data-spoiler-ready='true']:not([data-revealed='true']) {
+  filter: blur(0.34em);
+  user-select: none;
+}
+
+.md-spoiler[data-spoiler-ready='true']:hover {
+  box-shadow: inset 0 -1px 0 var(--accent);
+}
+
+.md-spoiler:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-spoiler {
+    transition: none;
+  }
+}

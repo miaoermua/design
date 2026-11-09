@@ -3,14 +3,19 @@
  *
  * 流程：lexer → walkTokens（异步代码高亮）→ parser（自定义 renderer）
  * 支持：GFM、Shiki 高亮、KaTeX 行内/块级公式、Mermaid（客户端补水）、
- *      相册/轮播容器、标题锚点与 TOC、外链 noopener、图片图注。
+ *      相册/轮播容器、提示块与横幅（`::: info` / `::: banner{info}`）、折叠块、
+ *      GitHub Alerts（`> [!NOTE]`）、Spoiler / Ins 行内标记、
+ *      标题锚点与 TOC、外链 noopener、图片图注。
  */
 
 import katex from 'katex'
 import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
+import { createAlertExtension } from './alerts'
+import { createContainerExtension } from './containers'
 import { escapeAttribute, escapeText } from './escape'
 import { createGalleryExtension } from './gallery'
 import { highlightCode, plainCodeBlock } from './highlight'
+import { createInlineMarkExtensions } from './inline-marks'
 import { safeUrl, sanitizeRenderedHtml } from './sanitize'
 import { createSlugger, stripHtml } from './slug'
 
@@ -188,6 +193,11 @@ function createRenderer(state: RenderState): Renderer {
 function createMarkdownEngine(state: RenderState): Marked {
   const engine = new Marked({ gfm: true, breaks: false, async: true })
   engine.use(createMathExtensions())
+  // 行内标记要先于块级容器注册：`|| … ||` 只可能出现在行内位置
+  engine.use(createInlineMarkExtensions())
+  // 提示块 / 横幅 / 折叠块（`:::`）与 GitHub Alerts（`> [!NOTE]`）各自独立成块
+  engine.use(createContainerExtension())
+  engine.use(createAlertExtension())
   // 相册/轮播：解析与 HTML 产出在 ./gallery，这里只把登记回调接进当前任务的状态
   engine.use(createGalleryExtension((id) => state.galleryIds.add(id)))
   engine.use({

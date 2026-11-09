@@ -12,18 +12,16 @@
  *   - 普通图片：加可聚焦语义，点击 / 回车打开统一预览
  *   - 加载失败：打上 `md-image--broken`，样式里退化成占位块
  *
- * 作用范围限定在单个 Prose 容器内：`<Prose>` 把本组件紧跟在正文之后渲染，
- * 因此优先认领紧邻的前一个 `.prose`；找不到时退化为「文档里第一个还没被接管的 `.prose`」，
- * 这样日记列表这类「一页多个正文」的场景不会互相抢节点。
+ * 作用范围限定在单个 Prose 容器内，定位逻辑见 `./content-scope`。
  */
 
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import type { GalleryImage, GalleryVariant } from '@/lib/content/gallery'
+import { locateProseScope } from './content-scope'
 import { Gallery } from './gallery'
 import { openPreview } from './image-preview'
 
-const PROSE_SELECTOR = '.prose'
 const GALLERY_SELECTOR = '.md-gallery[data-gallery-id]'
 /** 容器属性：样式据此隐藏服务端静态轨道 */
 const ENHANCED_FLAG = 'enhanced'
@@ -42,20 +40,6 @@ interface GalleryHost {
 interface MountedGallery {
   container: HTMLElement
   mount: HTMLElement
-}
-
-function locateScope(marker: HTMLSpanElement | null): HTMLElement | null {
-  let node = marker?.previousElementSibling ?? null
-  while (node) {
-    if (node.matches(PROSE_SELECTOR)) return node as HTMLElement
-    node = node.previousElementSibling
-  }
-
-  for (const candidate of Array.from(document.querySelectorAll<HTMLElement>(PROSE_SELECTOR))) {
-    if (candidate.dataset[SCOPE_FLAG] !== 'true') return candidate
-  }
-
-  return null
 }
 
 function readGalleryImages(node: HTMLElement): GalleryImage[] {
@@ -99,7 +83,7 @@ export function MediaEnhancer(): ReactElement {
   const [hosts, setHosts] = useState<GalleryHost[]>([])
 
   useEffect(() => {
-    const scope = locateScope(markerRef.current)
+    const scope = locateProseScope(markerRef.current, SCOPE_FLAG)
     if (!scope) return
     scope.dataset[SCOPE_FLAG] = 'true'
 

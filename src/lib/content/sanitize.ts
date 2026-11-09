@@ -23,6 +23,9 @@
  *     本次渲染登记的源码集合」，作者伪造的容器会被降级为普通 div
  *   - 相册：容器必须同时满足「class 含 md-gallery」且「data-gallery-id 属于本次渲染登记的
  *     容器 id」，作者手写的同名容器会被摘掉 class 与 id，客户端不会增强它
+ *   - 提示块 / 横幅 / 折叠块 / Spoiler：只用 class 与原生语义标签（div / aside / details /
+ *     summary / ins / span），不产出任何自定义 data-*，因此不需要新的信任凭据；
+ *     `details` 只多放行 `open` 一个属性
  */
 
 import sanitizeHtml from 'sanitize-html'
@@ -284,6 +287,8 @@ const ALLOWED_TAGS = [
   'p',
   'div',
   'span',
+  // 横幅（`::: banner{…}`）用 aside 表达「与主线内容平行的一段提示」
+  'aside',
   'a',
   'em',
   'strong',
@@ -392,6 +397,8 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
       h4: ['id'],
       h5: ['id'],
       h6: ['id'],
+      // 原生折叠块：只多放行 open（默认展开），没有其他属性可用
+      details: ['open'],
       ol: ['start', 'reversed', 'type'],
       th: ['colspan', 'rowspan', 'scope'],
       td: ['colspan', 'rowspan'],
@@ -467,7 +474,8 @@ function createOptions(context: SanitizeContext): sanitizeHtml.IOptions {
               const rest = classes
                 .split(/\s+/)
                 .filter(
-                  (item) => item && item !== GALLERY_CLASS && !item.startsWith(GALLERY_CLASS_PREFIX),
+                  (item) =>
+                    item && item !== GALLERY_CLASS && !item.startsWith(GALLERY_CLASS_PREFIX),
                 )
                 .join(' ')
               if (rest) next.class = rest
