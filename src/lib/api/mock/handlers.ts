@@ -149,7 +149,7 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
         category: row.category ? { slug: row.category.slug, name: row.category.name } : null,
         created_at: row.created_at,
         highlight: {
-          snippet: buildSnippet(row.text ?? '', keyword),
+          snippet: buildSnippet(toPlainText(row.text ?? ''), keyword),
           title: row.title,
         },
       }))
@@ -172,6 +172,22 @@ function buildSnippet(text: string, keyword: string): string | undefined {
   const prefix = start > 0 ? '…' : ''
   const suffix = end < text.length ? '…' : ''
   return `${prefix}${escapeHtml(text.slice(start, index))}<mark>${escapeHtml(keyword)}</mark>${escapeHtml(text.slice(index + keyword.length, end))}${suffix}`
+}
+
+/**
+ * 搜索片段用的纯文本：真实后端返回的是正文切片，mock 的正文是 Markdown，
+ * 直接切会把 `##`、`**`、图片语法一起带进结果里。先在纯文本副本上定位，
+ * 再回原文切片，保留可读的上下文。
+ */
+function toPlainText(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[*_`>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function escapeHtml(value: string): string {

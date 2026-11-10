@@ -55,12 +55,15 @@ export default async function HomePage() {
 
   return (
     <Container>
-      <section className="pt-16 pb-12 sm:pt-24">
-        <p className="meta">文章 · 日记 · 归档</p>
-        <h1 className="mt-4 max-w-[42rem] font-serif text-display leading-[1.14] tracking-[-0.022em] text-[var(--text-primary)]">
+      <section className="pt-[calc(var(--spacing-section)*1.15)] pb-[var(--spacing-stack)]">
+        <p className="meta flex items-center gap-3">
+          <span aria-hidden="true" className="h-px w-8 bg-[var(--accent-line)]" />
+          文章 · 日记 · 归档
+        </p>
+        <h1 className="mt-5 max-w-[40rem] font-serif text-display text-[var(--text-heading)]">
           {siteTitle(identity)}
         </h1>
-        <p className="mt-5 max-w-[var(--container-prose)] font-serif text-small text-[var(--text-secondary)]">
+        <p className="mt-5 max-w-[var(--container-prose)] text-lead text-[var(--text-secondary)]">
           {siteDescription(identity)}
         </p>
 
@@ -88,7 +91,7 @@ export default async function HomePage() {
       <Rule />
 
       {articles ? (
-        <section className="py-14">
+        <section className="py-[var(--spacing-section)]">
           <SectionHeading
             title="最近写的"
             action={
@@ -121,7 +124,7 @@ export default async function HomePage() {
       ) : null}
 
       {diaries ? (
-        <section className="border-t border-dashed border-[var(--edge-strong)] py-14">
+        <section className="border-t border-dashed border-[var(--edge-strong)] py-[var(--spacing-section)]">
           <SectionHeading
             title="日记"
             action={
@@ -144,8 +147,8 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <section className="border-t border-dashed border-[var(--edge-strong)] py-12">
-        <p className="font-serif text-title text-[var(--text-primary)]">按时间翻阅</p>
+      <section className="border-t border-dashed border-[var(--edge-strong)] py-[calc(var(--spacing-section)*0.8)]">
+        <p className="font-serif text-title text-[var(--text-heading)]">按时间翻阅</p>
         <p className="mt-2 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]">
           归档把文章与日记放进同一条时间轴，从最近的一个月开始往回走。
         </p>

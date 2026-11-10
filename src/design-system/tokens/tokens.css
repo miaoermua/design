@@ -1,46 +1,60 @@
 /**
- * Folio — Design Tokens
+ * Folio — Design Tokens · Frozen Parchment
  *
- * 唯一颜色/字号/间距来源。业务组件只允许使用这里派生的语义类
- * （bg-paper / text-ink-muted / border-line …），禁止硬编码色值。
+ * 唯一颜色/字体/字号/间距/圆角/阴影/边框/动效/材质来源。
+ * 业务组件只允许消费这里的语义类（bg-paper / text-ink-muted / border-line …）
+ * 或语义变量（--surface / --text-* / --edge / --accent），禁止硬编码色值。
  *
- * 结构：
- *   1. @theme  — 调色板 + 字体 + 字号 + 容器宽度，生成 Tailwind 工具类
- *   2. 语义别名 — --surface / --text-* / --edge，供手写 CSS 与暗色覆盖使用
- *   3. 材质     — 纸张颗粒、环境光
+ * 分层：
+ *   1. @theme   — 调色板 / 字体 / 字号 / 容器 / 间距 / 圆角 / 阴影 / 动效
+ *                 （同时生成 Tailwind 工具类）
+ *   2. 语义别名 — --surface-* / --text-* / --edge-* / --accent-* / --focus-ring-*
+ *   3. 材质     — --material-*（颗粒、环境光、冰面参数），由 material.css 消费
  *
- * 暗色主题：只覆盖第 2 层语义别名与第 1 层调色板，组件不写任何 dark: 变体。
- * 当前版本不提供切换入口，保留完整 token 以便后续启用。
+ * 铁律：
+ *   - 组件层不出现 HEX / rgb() 字面量（tests/design-tokens.test.ts 守护）。
+ *   - 暗色只覆盖第 1、2 层变量，组件层零 dark: 变体。
+ *   - 视觉比例：暖纸 70% · 编辑排版 20% · 冰面 10%。
  */
 
 @theme {
-  /* ── 1. 调色板：暖中性纸色 ─────────────────────────────────── */
-  --color-paper: #f7f3ec;
-  --color-paper-raised: #fdfaf4;
-  --color-paper-sunk: #efe9df;
-  --color-paper-deep: #e7dfd2;
+  /* ══ 1. 调色板：暖纸 × 冰川 ═════════════════════════════════════ */
 
-  --color-ink: #1b1917;
-  --color-ink-soft: #38332c;
-  --color-ink-muted: #6a6258;
-  --color-ink-faint: #928878;
+  /* 纸：从页面底到浮层，四级亮度 */
+  --color-paper: #f3f0e7; /* background */
+  --color-paper-raised: #f8f6ef; /* surface */
+  --color-paper-lift: #ffffff; /* surface elevated */
+  --color-paper-sunk: #e9e5d9;
+  --color-paper-deep: #dfd9c9;
 
-  --color-line: #e1d8c9;
-  --color-line-strong: #cfc3b1;
+  /* 冰：仅用于覆盖层（不与纸色混用为底色） */
+  --color-frost: #dce5e5;
 
-  /* 单一强调色：陶土红。只用于链接下划线、当前态标记、焦点环 */
-  --color-accent: #8c4a32;
-  --color-accent-soft: #b8866f;
-  --color-accent-wash: #f3e7dd;
+  /* 墨：正文、次级、辅助、标题 */
+  --color-ink: #525650; /* foreground */
+  --color-ink-soft: #3f433f;
+  --color-ink-muted: #6b6f67; /* secondary，AA ≥ 4.5:1 */
+  --color-ink-faint: #85877f; /* muted，仅用于 ≥14px 或非文本 */
+  --color-heading: #344f58; /* heading */
 
-  /* 功能性颜色：仅用于表单/错误提示与提示块，不做装饰 */
-  --color-danger: #9b3324;
-  --color-success: #3f6b4a;
-  /* 提示块需要的两种语气：中性的说明色与琥珀色的注意色 */
-  --color-info: #3f6377;
-  --color-warning: #8a5a1c;
+  /* 线：普通边界与虚线分隔 */
+  --color-line: #d8d4c8;
+  --color-line-strong: #c9c8bc;
 
-  /* ── 2. 字体 ───────────────────────────────────────────────── */
+  /* 主题色：Glacier。承担交互识别，不做大面积填充 */
+  --color-accent: #6d9298; /* primary */
+  --color-accent-soft: #a8c1c4; /* primary-soft */
+  --color-accent-strong: #526f75; /* primary-hover，也是唯一可用于小字的强调色 */
+  --color-accent-wash: #e4ecec; /* 标签/选中底 */
+  --color-accent-line: #b7cbcd;
+
+  /* 功能色：只服务于状态，不参与装饰 */
+  --color-danger: #a4503f;
+  --color-warning: #8a6a2f;
+  --color-success: #4a6b52;
+  --color-info: #4a6a7c;
+
+  /* ══ 2. 字体：Serif 标题 × Sans 正文 × Mono 代码 ═══════════════ */
   --font-sans:
     ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
     'Noto Sans SC', sans-serif;
@@ -49,14 +63,14 @@
   --font-mono:
     ui-monospace, SFMono-Regular, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-  /* ── 3. 字号：Display / Heading / Body / Caption / Metadata / Code ── */
-  --text-display: 2.75rem;
-  --text-display--line-height: 1.14;
-  --text-display--letter-spacing: -0.022em;
+  /* ══ 3. 字号：Display / Heading / Body / Lead / Caption / Meta / Code ══ */
+  --text-display: clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.024em;
 
-  --text-title: 1.75rem;
-  --text-title--line-height: 1.3;
-  --text-title--letter-spacing: -0.012em;
+  --text-title: clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem);
+  --text-title--line-height: 1.26;
+  --text-title--letter-spacing: -0.014em;
 
   --text-h2: 1.375rem;
   --text-h2--line-height: 1.4;
@@ -65,6 +79,10 @@
 
   --text-body: 1.0625rem;
   --text-body--line-height: 1.82;
+
+  /* 导语：首页与文章开头的第一段，比正文大一档、行高更松 */
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.8;
 
   --text-small: 0.9375rem;
   --text-small--line-height: 1.7;
@@ -76,83 +94,166 @@
   --text-code: 0.875rem;
   --text-code--line-height: 1.7;
 
-  /* ── 4. 版式宽度 ────────────────────────────────────────────── */
+  /* ══ 4. 版心：正文 / 页面 / 窄栏 ═══════════════════════════════ */
   --container-prose: 40rem; /* ≈ 36 汉字/行 @17px */
   --container-wide: 68rem;
   --container-narrow: 30rem;
 
-  /* ── 5. 间距节奏（4px 基准，编辑式留白）───────────────────── */
-  /* 变量名会参与工具类生成：--spacing-<name> 会生成 p-<name>/gap-<name>/
-     inline-<name> 等。这里不能叫 --spacing-block，否则 inline-block 会同时
-     命中 display 工具类与 inline-size 工具类，把宽度压成 2rem。 */
-  --spacing-gutter: 1.25rem;
-  --spacing-section: 5rem;
-  --spacing-stack: 2rem;
+  /* ══ 5. 间距：一个水平内边距 + 两个竖向节奏 ═══════════════════ */
+  /* 变量名参与工具类生成，不能叫 --spacing-block（会撞 display/inline-size）。 */
+  --spacing-gutter: 1.25rem; /* 移动端页边距 */
+  --spacing-gutter-lg: 2rem; /* ≥640px 的页边距 */
+  --spacing-section: 5rem; /* 区块之间 */
+  --spacing-stack: 2rem; /* 区块内部 */
 
-  /* ── 6. 圆角/边框/阴影：克制 ───────────────────────────────── */
+  /* ══ 6. 圆角 / 边框 / 阴影 ═════════════════════════════════════ */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-pill: 999px;
 
-  --shadow-raise: 0 1px 2px rgb(27 25 23 / 0.04), 0 8px 24px -16px rgb(27 25 23 / 0.18);
-  --shadow-pop: 0 2px 6px rgb(27 25 23 / 0.06), 0 18px 48px -24px rgb(27 25 23 / 0.24);
+  --border-hairline: 1px;
+  --border-rule: 1px;
 
-  /* ── 7. 动效 ───────────────────────────────────────────────── */
+  /* 阴影统一走 --shadow-color，暗色下改为纯黑，避免“亮色投影” */
+  --shadow-raise:
+    0 1px 2px rgb(var(--shadow-color) / 0.05), 0 10px 28px -18px rgb(var(--shadow-color) / 0.22);
+  --shadow-pop:
+    0 2px 8px rgb(var(--shadow-color) / 0.06), 0 24px 56px -28px rgb(var(--shadow-color) / 0.28);
+
+  /* ══ 7. 动效：短、克制、只解释状态 ═════════════════════════════ */
   --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 140ms;
   --duration-base: 240ms;
+  --duration-slow: 420ms;
 }
 
-/* ── 语义别名：手写 CSS 与暗色覆盖只认这一层 ─────────────────── */
+/* ── 语义别名 + 材质参数 ───────────────────────────────────────── */
 :root {
+  /* 表面 */
   --surface: var(--color-paper);
   --surface-raised: var(--color-paper-raised);
+  --surface-lift: var(--color-paper-lift);
   --surface-sunk: var(--color-paper-sunk);
+  --surface-glass: var(--color-frost);
 
+  /* 文字 */
   --text-primary: var(--color-ink);
+  --text-strong: var(--color-ink-soft);
   --text-secondary: var(--color-ink-muted);
   --text-tertiary: var(--color-ink-faint);
+  --text-heading: var(--color-heading);
 
+  /* 线 */
   --edge: var(--color-line);
   --edge-strong: var(--color-line-strong);
+  --edge-frost: color-mix(in srgb, var(--color-frost) 72%, var(--color-ink) 8%);
 
+  /* 主题色 */
   --accent: var(--color-accent);
+  --accent-soft: var(--color-accent-soft);
+  --accent-strong: var(--color-accent-strong);
+  --accent-wash: var(--color-accent-wash);
+  --accent-line: var(--color-accent-line);
 
-  /* 阅读区背景必须足够不透明：正文永远落在 surface-raised 之上 */
+  /* 阅读区：正文永远落在比页面更亮一级的纸上 */
   --reading-surface: color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper));
+
+  /* 代码底：比阅读纸面沉一级，让代码块与正文分开；暗色下比页面更深 */
+  --code-surface: var(--color-paper-sunk);
+
+  /* 焦点：14 处重复描边收敛到这里 */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--accent);
+  --focus-ring: var(--focus-ring-width) solid var(--focus-ring-color);
+
+  /* 阴影基色（暗色覆盖为纯黑） */
+  --shadow-color: 34 40 38;
+
+  /* 材质：颗粒 / 环境光 / 冰面 */
+  --material-grain-opacity: 0.5;
+  --material-grain-size: 240px;
+  --material-grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  --material-ambient:
+    radial-gradient(
+      120% 78% at 50% -18%,
+      color-mix(in oklab, var(--color-paper-lift) 62%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      68% 46% at 100% 102%,
+      color-mix(in oklab, var(--color-paper-sunk) 52%, transparent) 0%,
+      transparent 72%
+    );
+
+  --material-glass-tint: 220 229 229;
+  /* 导航条压住的是滚动中的图片，需要够实才读得清 */
+  --material-glass-alpha-bar: 0.9;
+  --material-glass-blur: 14px;
+  --material-glass-saturate: 1.25;
+  --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
 
   color-scheme: light;
 }
 
 /*
- * 暗色（保留，未在 UI 中提供切换入口）
- * 覆盖的是同一批语义变量，因此组件层零改动。
+ * 暗色：夜间纸墨，不是反色。
+ * - 底色为冷调深墨（非纯黑），正文为柔白（非纯白），避免眩光。
+ * - 主题色提亮两档以保证暗底上 ≥ 4.5:1。
+ * - 阴影改为纯黑，冰面改为深色玻璃。
+ * 入口在站点头部的 ThemeToggle（写入 <html data-theme>，首帧前由 layout 内联脚本决定）。
  */
 [data-theme='dark'] {
-  --color-paper: #171513;
-  --color-paper-raised: #1d1a17;
-  --color-paper-sunk: #131110;
-  --color-paper-deep: #0f0e0d;
+  --color-paper: #15181a;
+  --color-paper-raised: #1b1f21;
+  --color-paper-lift: #23282a;
+  --color-paper-sunk: #101315;
+  --color-paper-deep: #0c0f11;
 
-  --color-ink: #ece5da;
-  --color-ink-soft: #d8d0c4;
-  --color-ink-muted: #a49b8c;
-  --color-ink-faint: #857c6e;
+  --color-frost: #2a3436;
 
-  --color-line: #302b25;
-  --color-line-strong: #443d34;
+  --color-ink: #d9dad2;
+  --color-ink-soft: #e9eae2;
+  --color-ink-muted: #a3a69d;
+  --color-ink-faint: #868981;
+  --color-heading: #c6d7d9;
 
-  --color-accent: #c98466;
-  --color-accent-soft: #a06a53;
-  --color-accent-wash: #2a211c;
+  --color-line: #2a3032;
+  --color-line-strong: #394143;
 
-  --color-danger: #d9776a;
-  --color-success: #7aa88a;
-  --color-info: #7ea6bd;
-  --color-warning: #d3a25f;
+  --color-accent: #8fb3b8;
+  --color-accent-soft: #6d9298;
+  --color-accent-strong: #a8c1c4;
+  --color-accent-wash: #223030;
+  --color-accent-line: #35504f;
 
-  --reading-surface: color-mix(in oklab, var(--color-paper-raised) 92%, var(--color-paper));
+  --color-danger: #d98b7d;
+  --color-warning: #d6ab6d;
+  --color-success: #86ab92;
+  --color-info: #86a9bd;
+
+  --shadow-color: 0 0 0;
+
+  --material-grain-opacity: 0.4;
+  --material-ambient:
+    radial-gradient(
+      120% 78% at 50% -18%,
+      color-mix(in oklab, var(--color-paper-lift) 55%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      70% 48% at 100% 104%,
+      color-mix(in oklab, var(--color-paper-deep) 60%, transparent) 0%,
+      transparent 74%
+    );
+
+  --material-glass-tint: 24 30 32;
+
+  --material-glass-blur: 16px;
+  --material-glass-saturate: 1.1;
+  --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 22%, transparent);
 
   color-scheme: dark;
 }

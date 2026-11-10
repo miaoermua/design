@@ -13,7 +13,7 @@
 }
 
 .prose img.md-image:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -43,7 +43,7 @@
 }
 
 .md-gallery__root:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 6px;
   border-radius: var(--radius-sm);
 }
@@ -115,7 +115,7 @@
 }
 
 .md-gallery__link img:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -171,7 +171,7 @@
 }
 
 .md-gallery__dot:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -203,7 +203,7 @@
 }
 
 .md-gallery__nav:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -296,7 +296,7 @@
 
 .md-preview__close:focus-visible,
 .md-preview__nav:focus-visible {
-  outline: 2px solid var(--color-paper);
+  outline: var(--focus-ring-width) solid var(--color-paper);
   outline-offset: 2px;
 }
 

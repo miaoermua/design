@@ -16,7 +16,13 @@ const widthClass = {
 
 export function Container({ children, className, width = 'wide' }: ContainerProps) {
   return (
-    <div className={cn('mx-auto w-full px-5 sm:px-8', widthClass[width], className)}>
+    <div
+      className={cn(
+        'mx-auto w-full px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]',
+        widthClass[width],
+        className,
+      )}
+    >
       {children}
     </div>
   )

@@ -16,7 +16,7 @@ export function ErrorState({ title = '内容加载失败', error, hint }: ErrorS
       role="alert"
       className="border-line bg-paper-sunk/60 flex flex-col gap-2 border-l-2 border-l-[var(--color-danger)] px-5 py-4"
     >
-      <p className="text-small font-medium text-[var(--text-primary)]">{title}</p>
+      <p className="text-small font-medium text-[var(--text-heading)]">{title}</p>
       <p className="font-mono text-meta break-all text-[var(--text-secondary)]">
         {describeError(error)}
       </p>

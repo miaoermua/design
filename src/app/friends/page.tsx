@@ -38,7 +38,7 @@ function FriendCard({ link }: { link: FriendLink }) {
         </span>
       )}
       <span className="min-w-0">
-        <span className="block font-serif text-h3 text-[var(--text-primary)]">
+        <span className="block font-serif text-h3 text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
           {link.name}
         </span>
         {link.description ? (
@@ -46,7 +46,7 @@ function FriendCard({ link }: { link: FriendLink }) {
             {link.description}
           </span>
         ) : null}
-        <span className="meta mt-1 block truncate">{link.url}</span>
+        <span className="meta mt-1 block truncate text-[var(--text-tertiary)]">{link.url}</span>
       </span>
     </>
   )
@@ -56,7 +56,7 @@ function FriendCard({ link }: { link: FriendLink }) {
       href={link.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-4 border border-[var(--edge)] bg-[var(--surface-raised)] p-4 transition-colors duration-[var(--duration-fast)] hover:border-[var(--accent)]"
+      className="group flex items-start gap-4 border border-[var(--edge)] bg-[var(--surface-raised)] p-4 transition-colors duration-[var(--duration-fast)] hover:border-[var(--accent)]"
     >
       {body}
     </a>

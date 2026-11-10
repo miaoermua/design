@@ -41,7 +41,7 @@ export function ReadingProgress({ targetId }: { targetId: string }) {
       role="presentation"
     >
       <div
-        className="h-full origin-left bg-[var(--accent)] opacity-70 motion-safe:transition-transform motion-safe:duration-150"
+        className="h-full origin-left bg-[var(--accent)] motion-safe:transition-transform motion-safe:duration-150"
         style={{ transform: `scaleX(${progress})` }}
       />
     </div>

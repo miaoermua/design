@@ -122,39 +122,46 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }}
       />
 
-      <article id="article-content">
-        <div className="mx-auto grid max-w-[calc(var(--container-prose)+14rem)] gap-12 lg:grid-cols-[minmax(0,var(--container-prose))_12rem] lg:gap-14">
-          <div className="min-w-0">
-            <header className="pt-12 sm:pt-16">
-              <p className="meta flex flex-wrap items-center gap-x-1">
-                <Link href="/articles" className="link-quiet">
-                  文章
-                </Link>
-                {article.category ? (
-                  <>
-                    <span aria-hidden="true">/</span>
-                    <Link href={categoryPath(article.category.slug)} className="link-quiet">
-                      {article.category.name}
-                    </Link>
-                  </>
-                ) : null}
-                <time className="meta-sep" dateTime={article.createdAt}>
+      <article id="article-content" className="pb-[var(--spacing-section)]">
+        <div className="mx-auto grid max-w-[calc(var(--container-prose)+23.5rem)] gap-12 xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-14">
+          <div className="reading-sheet mx-auto w-full min-w-0 max-w-[calc(var(--container-prose)+7rem)]">
+            <header className="pt-10 sm:pt-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--accent-line)]" />
+                <nav aria-label="面包屑" className="meta flex items-center gap-2">
+                  <Link href="/articles" className="link-quiet">
+                    文章
+                  </Link>
+                  {article.category ? (
+                    <>
+                      <span aria-hidden="true" className="text-[var(--text-tertiary)]">
+                        /
+                      </span>
+                      <Link href={categoryPath(article.category.slug)} className="link-quiet">
+                        {article.category.name}
+                      </Link>
+                    </>
+                  ) : null}
+                </nav>
+                <time className="meta meta-sep" dateTime={article.createdAt}>
                   {formatDate(article.createdAt, timeZone)}
                 </time>
-                {article.isPinned ? <span className="meta-sep">置顶</span> : null}
-              </p>
+                {article.isPinned ? (
+                  <span className="meta meta-sep text-[var(--accent-strong)]">置顶</span>
+                ) : null}
+              </div>
 
-              <h1 className="mt-4 font-serif text-[calc(var(--text-display)*0.62)] leading-[1.25] tracking-[-0.02em] text-[var(--text-primary)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
+              <h1 className="mt-5 font-serif text-[calc(var(--text-display)*0.78)] leading-[1.25] tracking-[-0.022em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
                 {article.title}
               </h1>
 
               {article.summary ? (
-                <p className="mt-5 font-serif text-[1.0625rem] leading-[1.75] text-[var(--text-secondary)]">
+                <p className="mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:text-lead sm:leading-[1.75]">
                   {article.summary}
                 </p>
               ) : null}
 
-              <p className="meta mt-6 flex flex-wrap items-center gap-x-1">
+              <p className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 {estimate ? <span>约 {estimate} 分钟</span> : null}
                 {article.readCount !== null ? (
                   <span className={estimate ? 'meta-sep' : undefined}>
@@ -172,10 +179,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               </p>
 
               {article.tags.length > 0 ? (
-                <p className="meta mt-3 flex flex-wrap gap-x-2">
+                <p className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-meta">
                   {article.tags.map((tag) => (
-                    <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="link-quiet">
-                      #{tag}
+                    <Link
+                      key={tag}
+                      href={`/tags/${encodeURIComponent(tag)}`}
+                      className="text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]"
+                    >
+                      {`#${tag}`}
                     </Link>
                   ))}
                 </p>
@@ -196,20 +207,28 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </header>
 
             {rendered && rendered.toc.length >= 2 ? (
-              <details className="mt-10 border-t border-dashed border-[var(--edge-strong)] pt-4 lg:hidden">
-                <summary className="meta cursor-pointer select-none">目录</summary>
-                <div className="mt-3">
+              <details className="mt-10 border-t border-dashed border-[var(--edge)] pt-4 xl:hidden">
+                <summary className="toc-summary meta flex cursor-pointer items-center justify-between select-none">
+                  目录
+                  <span
+                    aria-hidden="true"
+                    className="toc-chevron text-[var(--text-tertiary)]"
+                  >
+                    ›
+                  </span>
+                </summary>
+                <div className="mt-1">
                   <Toc items={rendered.toc} variant="inline" />
                 </div>
               </details>
             ) : null}
 
-            <div className="mt-12">
+            <div className="mt-10 sm:mt-12">
               {rendered ? (
                 <Prose html={rendered.html} />
               ) : (
                 <div className="border border-dashed border-[var(--edge)] px-5 py-6">
-                  <p className="text-small text-[var(--text-primary)]">
+                  <p className="text-small text-[var(--text-heading)]">
                     这篇正文的 contentFormat 是「{article.contentFormat}」。
                   </p>
                   <p className="mt-2 text-caption text-[var(--text-secondary)]">
@@ -219,17 +238,23 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               )}
             </div>
 
-            <footer className="mt-16">
+            <div aria-hidden="true" className="mt-16 flex items-center justify-center gap-3">
+              <span className="h-px w-10 bg-[var(--edge)]" />
+              <span className="size-1.5 rotate-45 bg-[var(--accent-soft)]" />
+              <span className="h-px w-10 bg-[var(--edge)]" />
+            </div>
+
+            <footer className="mt-10">
               {article.copyright ? (
-                <p className="border-t border-dashed border-[var(--edge-strong)] pt-6 text-caption text-[var(--text-secondary)]">
+                <p className="text-caption text-[var(--text-secondary)]">
                   本文版权归作者所有，转载请注明出处并保留原文链接。
                 </p>
               ) : null}
 
               <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} />
 
-              <div className="mt-10 flex items-center justify-between">
-                <Link href="/articles" className="link-quiet text-small">
+              <div className="mt-10 flex items-center justify-between border-t border-dashed border-[var(--edge)] pt-6">
+                <Link href="/articles" className="link-quiet text-small text-[var(--text-secondary)]">
                   ← 返回文章列表
                 </Link>
                 <BackToTop />
@@ -237,14 +262,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </footer>
           </div>
 
-          <aside className="hidden lg:block">
+          <aside className="hidden xl:block">
             {rendered ? <Toc items={rendered.toc} /> : null}
           </aside>
         </div>
       </article>
 
       {article.related.length > 0 ? (
-        <section className="mt-20 border-t border-dashed border-[var(--edge-strong)] pt-10">
+        <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">
           <SectionHeading title="相关阅读" />
           <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {article.related.map((item) => (

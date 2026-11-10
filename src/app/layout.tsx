@@ -47,8 +47,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { identity, error } = await loadSiteContext()
 
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <body>
+        {/* 防闪：首帧之前决定 data-theme，避免先画浅色再翻黑 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('folio-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.dataset.theme='dark'}}catch(e){}})()",
+          }}
+        />
         <a
           href="#main"
           className="fixed top-3 left-4 z-50 -translate-y-24 rounded-[var(--radius-sm)] border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-small transition-transform duration-[var(--duration-fast)] focus:translate-y-0"

@@ -19,13 +19,20 @@ export function DiaryDayGroupView({ group, timeZone }: DiaryDayGroupViewProps) {
       className="grid gap-5 border-t border-dashed border-[var(--edge-strong)] py-10 sm:grid-cols-[7rem_1fr] sm:gap-10"
     >
       <header className="sm:sticky sm:top-24 sm:self-start">
-        <h2 id={headingId} className="font-serif text-[2.25rem] leading-none text-[var(--text-primary)]">
+        <h2
+          id={headingId}
+          className="font-serif text-[2.5rem] leading-none tabular-nums text-[var(--text-heading)]"
+        >
           {Number(day)}
         </h2>
-        <p className="meta mt-1.5">
-          {Number(month)} 月 · {year}
+        <p className="meta mt-2 tabular-nums">
+          {year}.{month}
         </p>
-        {first ? <p className="meta">{formatWeekday(first.publishedAt, timeZone)}</p> : null}
+        {first ? (
+          <p className="meta text-[var(--text-tertiary)]">
+            {formatWeekday(first.publishedAt, timeZone)}
+          </p>
+        ) : null}
       </header>
 
       <div className="flex flex-col gap-9">

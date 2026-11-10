@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { listCategories, listTags, type Tag } from '@/lib/api'
 import { categoryPath, tagPath } from '@/lib/routes'
+import { cn } from '@/lib/utils/cn'
 
 export const metadata: Metadata = {
   title: '标签',
@@ -14,11 +15,11 @@ export const metadata: Metadata = {
 
 /** 用相对频次决定字号，而不是凭感觉给每个标签写死大小 */
 function tagSizeClass(tag: Tag, maxCount: number): string {
-  if (tag.count === null || maxCount <= 0) return 'text-body'
+  if (tag.count === null || maxCount <= 0) return 'text-[1rem]'
   const ratio = tag.count / maxCount
-  if (ratio > 0.6) return 'text-[1.375rem]'
-  if (ratio > 0.3) return 'text-[1.125rem]'
-  return 'text-small'
+  if (ratio > 0.6) return 'text-[1.25rem]'
+  if (ratio > 0.3) return 'text-[1.0625rem]'
+  return 'text-[0.9375rem]'
 }
 
 export default async function TagsPage() {
@@ -35,7 +36,7 @@ export default async function TagsPage() {
       <PageHeader
         kicker="标签"
         title="按主题翻阅"
-        description="标签按文章数从多到少排列，数字是该标签下的文章数。"
+        description="标签按文章数从多到少排列，右侧数字是该标签下的文章数。"
         meta={
           <p className="meta">
             {sortedTags.length} 个标签 · {categories.length} 个分类
@@ -44,24 +45,37 @@ export default async function TagsPage() {
       />
 
       <section aria-labelledby="tag-list">
-        <h2 id="tag-list" className="meta">
+        <h2 id="tag-list" className="meta border-b border-[var(--edge)] pb-3">
           标签
         </h2>
         {sortedTags.length > 0 ? (
-          <ul className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-4">
+          <ul className="grid gap-x-12 sm:grid-cols-2">
             {sortedTags.map((tag) => (
-              <li key={tag.name} className="flex items-baseline gap-1.5">
+              <li key={tag.name}>
                 <Link
                   href={tagPath(tag.name)}
-                  className={`link-quiet font-serif text-[var(--text-primary)] ${tagSizeClass(tag, maxCount)}`}
+                  className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
                 >
-                  #{tag.name}
-                </Link>
-                {tag.count !== null ? (
-                  <span className="text-meta tabular-nums text-[var(--text-tertiary)]">
-                    {tag.count} 篇
+                  <span
+                    className={cn(
+                      'shrink-0 font-serif leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]',
+                      tagSizeClass(tag, maxCount),
+                    )}
+                  >
+                    #{tag.name}
                   </span>
-                ) : null}
+                  {tag.count !== null ? (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
+                      />
+                      <span className="text-meta tabular-nums text-[var(--text-secondary)]">
+                        {tag.count} 篇
+                      </span>
+                    </>
+                  ) : null}
+                </Link>
               </li>
             ))}
           </ul>
@@ -72,23 +86,36 @@ export default async function TagsPage() {
         )}
       </section>
 
-      <section className="mt-16 border-t border-dashed border-[var(--edge-strong)] pt-8" aria-labelledby="category-list">
-        <h2 id="category-list" className="meta">
+      <section
+        className="mt-16 border-t border-dashed border-[var(--edge-strong)] pt-8"
+        aria-labelledby="category-list"
+      >
+        <h2 id="category-list" className="meta border-b border-[var(--edge)] pb-3">
           分类
         </h2>
         {categories.length > 0 ? (
-          <ul className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+          <ul className="grid gap-x-12 sm:grid-cols-2">
             {categories.map((category) => (
-              <li key={category.id} className="flex items-baseline justify-between gap-4">
+              <li key={category.id}>
                 <Link
                   href={categoryPath(category.slug)}
-                  className="link-quiet font-serif text-h3 text-[var(--text-primary)]"
+                  className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
                 >
-                  {category.name}
+                  <span className="shrink-0 font-serif text-[1.125rem] leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
+                    {category.name}
+                  </span>
+                  {category.count !== null ? (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
+                      />
+                      <span className="text-meta tabular-nums text-[var(--text-secondary)]">
+                        {category.count} 篇
+                      </span>
+                    </>
+                  ) : null}
                 </Link>
-                {category.count !== null ? (
-                  <span className="meta tabular-nums">{category.count}</span>
-                ) : null}
               </li>
             ))}
           </ul>

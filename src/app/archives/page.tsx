@@ -130,7 +130,7 @@ export default async function ArchivesPage() {
 
           {years.map((group) => (
             <section key={group.year} id={`year-${group.year}`} className="scroll-mt-24 pt-10">
-              <h2 className="font-serif text-[2rem] leading-none text-[var(--text-primary)]">
+              <h2 className="font-serif text-[2rem] leading-none text-[var(--text-heading)]">
                 {group.year}
               </h2>
 

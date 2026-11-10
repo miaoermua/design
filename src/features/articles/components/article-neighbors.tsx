@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Article } from '@/lib/api'
 import { articlePath } from '@/lib/routes'
+import { cn } from '@/lib/utils/cn'
 
 interface ArticleNeighborsProps {
   /** 较新的一篇（按 createdAt 倒序时位于当前文章之前） */
@@ -23,28 +24,76 @@ export function ArticleNeighbors({ newer, older }: ArticleNeighborsProps) {
   return (
     <nav
       aria-label="相邻文章"
-      className="mt-16 grid gap-6 border-t border-dashed border-[var(--edge-strong)] pt-8 sm:grid-cols-2"
+      className="mt-12 grid gap-px border border-[var(--edge)] bg-[var(--edge)] sm:grid-cols-2"
     >
-      <div>
-        {newer && newerHref ? (
-          <Link href={newerHref} className="group block">
-            <span className="meta">较新的文章</span>
-            <span className="link-quiet mt-1 block font-serif text-h3 text-[var(--text-primary)]">
-              {newer.title}
-            </span>
-          </Link>
-        ) : null}
-      </div>
-      <div className="sm:text-right">
-        {older && olderHref ? (
-          <Link href={olderHref} className="group block">
-            <span className="meta">较早的文章</span>
-            <span className="link-quiet mt-1 block font-serif text-h3 text-[var(--text-primary)]">
-              {older.title}
-            </span>
-          </Link>
-        ) : null}
-      </div>
+      <NeighborLink
+        href={newerHref}
+        article={newer}
+        direction="newer"
+        label="较新的文章"
+        emptyLabel="已经是最新一篇"
+        empty={!newerHref}
+      />
+      <NeighborLink
+        href={olderHref}
+        article={older}
+        direction="older"
+        label="较早的文章"
+        emptyLabel="已经是最早一篇"
+        empty={!olderHref}
+        alignEnd
+      />
     </nav>
+  )
+}
+
+interface NeighborLinkProps {
+  href: string | null
+  article: Article | null
+  direction: 'newer' | 'older'
+  label: string
+  emptyLabel: string
+  empty: boolean
+  alignEnd?: boolean
+}
+
+function NeighborLink({
+  href,
+  article,
+  direction,
+  label,
+  emptyLabel,
+  empty,
+  alignEnd,
+}: NeighborLinkProps) {
+  const arrow = direction === 'newer' ? '←' : '→'
+
+  if (empty || !href || !article) {
+    return (
+      <div className={cn('bg-[var(--reading-surface)] px-5 py-5', alignEnd && 'sm:text-right')}>
+        <p className="meta text-[var(--text-tertiary)]">{label}</p>
+        <p className="mt-1.5 text-small text-[var(--text-tertiary)]">{emptyLabel}</p>
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group block bg-[var(--reading-surface)] px-5 py-5 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
+        alignEnd && 'sm:text-right',
+      )}
+    >
+      <p className="meta text-[var(--text-secondary)]">
+        <span aria-hidden="true" className="mr-1.5 inline-block text-[var(--accent)]">
+          {arrow}
+        </span>
+        {label}
+      </p>
+      <p className="mt-1.5 font-serif text-h3 leading-[1.45] text-[var(--text-heading)]">
+        {article.title}
+      </p>
+    </Link>
   )
 }

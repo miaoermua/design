@@ -27,7 +27,7 @@ export default function ErrorBoundary({
     <Container>
       <div className="py-24">
         <p className="meta">出错了</p>
-        <h1 className="mt-3 font-serif text-title text-[var(--text-primary)]">
+        <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
           这个页面没能完成渲染
         </h1>
         <p className="mt-4 max-w-[var(--container-prose)] font-mono text-caption break-words text-[var(--text-secondary)]">

@@ -15,7 +15,11 @@ export function NavLinks({ items, variant = 'inline' }: NavLinksProps) {
   const pathname = usePathname()
 
   return (
-    <ul className={cn(variant === 'inline' ? 'flex items-center gap-6' : 'flex flex-col gap-1')}>
+    <ul
+      className={cn(
+        variant === 'inline' ? 'flex items-center gap-7' : 'flex flex-col p-2',
+      )}
+    >
       {items.map((item) => {
         const active = isNavItemActive(item, pathname)
         return (
@@ -27,17 +31,18 @@ export function NavLinks({ items, variant = 'inline' }: NavLinksProps) {
                 'transition-colors duration-[var(--duration-fast)]',
                 variant === 'inline'
                   ? 'relative block py-1 text-small'
-                  : 'block px-3 py-2 text-small',
+                  : 'block rounded-[var(--radius-sm)] px-3 py-2.5 text-small',
                 active
-                  ? 'text-[var(--text-primary)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                  ? 'text-[var(--text-heading)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+                active && variant === 'stacked' && 'bg-[var(--accent-wash)]',
               )}
             >
               {item.label}
               {active && variant === 'inline' ? (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-x-0 -bottom-0.5 h-px bg-[var(--accent)]"
+                  className="absolute inset-x-0 -bottom-1 h-px rounded-[var(--radius-pill)] bg-[var(--accent)]"
                 />
               ) : null}
             </Link>
@@ -64,14 +69,14 @@ export function MobileNav({ items }: { items: NavItem[] }) {
         aria-expanded={open}
         aria-controls="site-mobile-nav"
         onClick={() => setOpen((value) => !value)}
-        className="meta rounded-[var(--radius-sm)] border border-[var(--edge)] px-2.5 py-1 text-[var(--text-secondary)]"
+        className="meta rounded-[var(--radius-sm)] border border-[var(--edge)] px-2.5 py-1 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--accent-line)] hover:text-[var(--text-heading)]"
       >
         {open ? '收起' : '目录'}
       </button>
       {open ? (
         <div
           id="site-mobile-nav"
-          className="absolute inset-x-0 top-full border-y border-[var(--edge)] bg-[var(--surface-raised)] py-2 shadow-[var(--shadow-raise)]"
+          className="glass-panel absolute inset-x-[var(--spacing-gutter)] top-full mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] shadow-[var(--shadow-pop)]"
         >
           <NavLinks items={items} variant="stacked" />
         </div>

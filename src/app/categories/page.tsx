@@ -32,7 +32,7 @@ export default async function CategoriesPage() {
             <li key={category.id} className="flex items-baseline justify-between gap-4 py-5">
               <Link
                 href={categoryPath(category.slug)}
-                className="link-quiet font-serif text-title text-[var(--text-primary)]"
+                className="link-quiet font-serif text-title text-[var(--text-heading)]"
               >
                 {category.name}
               </Link>

@@ -50,7 +50,7 @@ export function ArticleCard({ article, timeZone, variant = 'card', priority }: A
           </time>
         </p>
 
-        <h3 className={cn('mt-2 font-serif text-[var(--text-primary)]', titleClass)}>
+        <h3 className={cn('mt-2 font-serif text-[var(--text-heading)]', titleClass)}>
           {href ? (
             <Link href={href} className="link-quiet">
               {article.title}
@@ -75,7 +75,7 @@ export function ArticleCard({ article, timeZone, variant = 'card', priority }: A
           <p className="meta mt-3 flex flex-wrap gap-x-2">
             {article.tags.map((tag) => (
               <Link key={tag} href={tagPath(tag)} className="link-quiet">
-                #{tag}
+                {`#${tag}`}
               </Link>
             ))}
           </p>

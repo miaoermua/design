@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '../design-system/tokens/tokens.css';
+@import '../design-system/styles/material.css';
 @import '../design-system/styles/prose.css';
 @import '../design-system/styles/media.css';
 @import '../design-system/styles/containers.css';
@@ -52,13 +53,14 @@
   }
 
   ::selection {
-    background: var(--color-accent-wash);
-    color: var(--text-primary);
+    background: var(--accent-wash);
+    color: var(--text-strong);
   }
 
+  /* 焦点环只有一处定义，组件层用 outline: var(--focus-ring) 复用 */
   :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
     border-radius: var(--radius-xs);
   }
 
@@ -70,6 +72,7 @@
   h6 {
     margin: 0;
     font-weight: 600;
+    color: var(--text-heading);
     text-wrap: balance;
   }
 
@@ -118,43 +121,7 @@
   }
 }
 
-/*
- * 纸张质感
- *
- * 两层：
- *   1. 颗粒 —— SVG feTurbulence 生成的固定噪点，极低不透明度，不随滚动
- *   2. 环境光 —— 顶部偏亮的径向渐变，模拟纸张受光
- * 都固定在视口上、pointer-events: none、z-index 低于内容，
- * 保证正文对比度不受影响（叠加后正文背景仍在 #fbf7f0 以上）。
- */
-.paper-grain {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 240px 240px;
-}
-
-.paper-ambient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      120% 80% at 50% -20%,
-      color-mix(in oklab, var(--color-paper-raised) 70%, transparent) 0%,
-      transparent 62%
-    ),
-    radial-gradient(
-      70% 50% at 100% 100%,
-      color-mix(in oklab, var(--color-paper-sunk) 45%, transparent) 0%,
-      transparent 70%
-    );
-}
+/* 纸张颗粒与环境光已迁到 material.css，由 --material-* 参数驱动 */
 
 /* 内容层需要高于材质层 */
 .site-shell {
@@ -165,29 +132,47 @@
 /* 编辑式细虚线分隔：用于页头、区块之间 */
 .rule-dashed {
   border: 0;
-  border-top: 1px dashed var(--edge-strong);
+  border-top: var(--border-rule) dashed var(--edge-strong);
 }
 
 /* 搜索片段高亮：只由后端插入的 <mark> 触发 */
 .search-snippet mark {
-  background: var(--accent-soft);
-  color: inherit;
-  padding: 0 0.08em;
+  background: color-mix(in srgb, var(--accent-soft) 42%, transparent);
+  color: var(--text-heading);
+  padding: 0.04em 0.12em;
 }
 
-/* 元信息：时间/分类/阅读量统一字距与大小 */
+/* 元信息：时间/分类/阅读量统一字距与大小
+   12px 下 tertiary 的对比度不足 4.5:1，元信息属于有效信息，用 secondary */
 .meta {
   font-family: var(--font-sans);
   font-size: var(--text-meta);
   letter-spacing: 0.04em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .meta-sep::before {
   content: '·';
   margin-inline: 0.5em;
-  color: var(--color-line-strong);
+  color: var(--text-tertiary);
+}
+
+/* 折叠目录：去掉原生三角，用右侧细箭头表示开合 */
+.toc-summary {
+  list-style: none;
+}
+
+.toc-summary::-webkit-details-marker {
+  display: none;
+}
+
+.toc-summary .toc-chevron {
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+details[open] > .toc-summary .toc-chevron {
+  transform: rotate(90deg);
 }
 
 /* 链接悬停：下划线从细到实，不做位移动画 */
@@ -200,15 +185,10 @@
 }
 
 .link-quiet:hover {
-  text-decoration-color: var(--color-accent-soft);
+  text-decoration-color: var(--accent);
 }
 
-/* 毛玻璃：仅用于导航与浮层 */
-.glass-bar {
-  background: color-mix(in oklab, var(--color-paper) 78%, transparent);
-  backdrop-filter: saturate(140%) blur(12px);
-  -webkit-backdrop-filter: saturate(140%) blur(12px);
-}
+/* 冰面玻璃由 material.css 提供（.glass-bar / .glass-panel） */
 
 /* 屏幕阅读器专用 */
 .sr-only {

@@ -46,7 +46,7 @@ const paperContent = [
   '',
   '中文正文的舒适行宽大约在 32 到 40 个字之间。低于 28 个字，视线会频繁回行；高于 45 个字，眼睛需要移动更大的距离才能找到下一行的起点。',
   '',
-  '>$ 行宽不是一个像素值，而是一个字数区间。它随字号变化，也随字体变化。',
+  '> 行宽不是一个像素值，而是一个字数区间。它随字号变化，也随字体变化。',
   '',
   '在 17px 的字号下，`40rem` 大约能容纳 36 个汉字，这正好落在区间的中部。',
   '',
@@ -326,7 +326,7 @@ export function mockPostDetail(category: string, slug: string): V2PostDetail | n
 
 const noteRows: V2NoteRow[] = [
   {
-    id: 'n1',
+    id: '31',
     nid: 31,
     title: '傍晚的风',
     slug: 'evening-wind',
@@ -346,7 +346,7 @@ const noteRows: V2NoteRow[] = [
     modified_at: null,
   },
   {
-    id: 'n2',
+    id: '30',
     nid: 30,
     title: '删掉一个功能',
     slug: 'delete-a-feature',
@@ -364,7 +364,7 @@ const noteRows: V2NoteRow[] = [
     created_at: '2026-11-03T12:40:00.000Z',
   },
   {
-    id: 'n3',
+    id: '29',
     nid: 29,
     title: '雨',
     slug: 'rain',
@@ -382,7 +382,7 @@ const noteRows: V2NoteRow[] = [
     created_at: '2026-10-28T13:05:00.000Z',
   },
   {
-    id: 'n4',
+    id: '28',
     nid: 28,
     title: '一句话',
     slug: 'one-sentence',
@@ -400,7 +400,7 @@ const noteRows: V2NoteRow[] = [
     created_at: '2026-10-20T02:30:00.000Z',
   },
   {
-    id: 'n5',
+    id: '27',
     nid: 27,
     title: '一些不方便公开的事',
     slug: 'private-note',
@@ -448,7 +448,7 @@ export const mockAggregate: V2Aggregate = {
   },
   url: { web_url: 'https://example.com' },
   comment_options: { disable_comment: false, allow_guest_comment: true },
-  latest_note_id: { id: 'n1', nid: 1 },
+  latest_note_id: { id: '31', nid: 31 },
   theme: { accent: '#8c4a32' },
   ai: { enable_summary: false },
 }

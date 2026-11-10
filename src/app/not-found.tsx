@@ -6,7 +6,7 @@ export default function NotFound() {
     <Container>
       <div className="py-24 sm:py-32">
         <p className="meta">404</p>
-        <h1 className="mt-3 font-serif text-title text-[var(--text-primary)]">
+        <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
           这一页不在这里
         </h1>
         <p className="mt-3 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]">

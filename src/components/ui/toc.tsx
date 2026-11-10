@@ -1,5 +1,6 @@
 import type { TocItem } from '@/lib/content/markdown'
 import { cn } from '@/lib/utils/cn'
+import { TocList } from './toc-list'
 
 interface TocProps {
   items: TocItem[]
@@ -10,7 +11,7 @@ interface TocProps {
   variant?: 'rail' | 'inline'
 }
 
-/** 文章目录：只由服务端渲染时得到的 heading 生成，不做滚动监听 */
+/** 文章目录：标题来自服务端渲染的 heading，高亮交给 TocList 增强 */
 export function Toc({ items, variant = 'rail' }: TocProps) {
   if (items.length < 2) return null
 
@@ -19,24 +20,12 @@ export function Toc({ items, variant = 'rail' }: TocProps) {
   return (
     <nav
       aria-label="本文目录"
-      className={isRail ? 'sticky top-24 max-h-[calc(100dvh-8rem)] overflow-auto' : undefined}
+      className={isRail ? 'sticky top-28 max-h-[calc(100dvh-9rem)] overflow-y-auto pb-2' : undefined}
     >
-      {isRail ? <p className="meta">目录</p> : null}
-      <ul className={cn('border-l border-[var(--edge)]', isRail && 'mt-3')}>
-        {items.map((item) => (
-          <li key={item.id}>
-            <a
-              href={`#${item.id}`}
-              className={cn(
-                'block py-1 text-caption leading-[1.55] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]',
-                item.depth === 3 ? 'pl-6 pr-2' : 'pl-3 pr-2',
-              )}
-            >
-              {item.text}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {isRail ? (
+        <p className={cn('meta mb-2 text-[var(--text-tertiary)]')}>目录</p>
+      ) : null}
+      <TocList items={items} variant={variant} />
     </nav>
   )
 }

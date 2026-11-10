@@ -9,6 +9,7 @@ import { requireFeature } from '@/core/registry/guard'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { diaryPath } from '@/lib/routes'
+import { cn } from '@/lib/utils/cn'
 import { formatDate, formatTime, formatWeekday } from '@/lib/utils/date'
 import { excerpt } from '@/lib/utils/text'
 
@@ -45,7 +46,7 @@ function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
     <Container width="narrow">
       <div className="py-24">
         <p className="meta">日记</p>
-        <h1 className="mt-3 font-serif text-title text-[var(--text-primary)]">
+        <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
           这篇日记受密码保护
         </h1>
         <p className="mt-3 text-small text-[var(--text-secondary)]">
@@ -62,7 +63,7 @@ function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
             type="password"
             required
             autoComplete="off"
-            className="min-w-0 flex-1 border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-small text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+            className="min-w-0 flex-1 border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-small text-[var(--text-heading)] outline-none focus:border-[var(--accent)]"
           />
           <button
             type="submit"
@@ -105,8 +106,8 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   )
 
   return (
-    <Container width="prose">
-      <article className="py-14 sm:py-20">
+    <Container width="wide">
+      <article className="reading-sheet mx-auto mt-10 w-full max-w-[calc(var(--container-prose)+7rem)] sm:mt-14">
         <header>
           <p className="meta flex flex-wrap items-center gap-x-1">
             <Link href="/diaries" className="link-quiet">
@@ -119,14 +120,13 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
           </p>
 
-          <h1 className="mt-4 font-serif text-title leading-[1.28] text-[var(--text-primary)]">
+          <h1 className="mt-4 font-serif text-title leading-[1.28] text-[var(--text-heading)]">
             {diary.title}
           </h1>
 
           <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
             {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}
             {diary.bookmark ? <span className="meta-sep">收藏</span> : null}
-            <span className="meta-sep">#{diary.nid}</span>
           </p>
         </header>
 
@@ -136,7 +136,7 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
           <Prose html={rendered.html} />
         ) : (
           <div className="border border-dashed border-[var(--edge)] px-5 py-6">
-            <p className="text-small text-[var(--text-primary)]">
+            <p className="text-small text-[var(--text-heading)]">
               这篇日记的正文格式是「{diary.contentFormat}」。
             </p>
             <p className="mt-2 text-caption text-[var(--text-secondary)]">
@@ -146,7 +146,14 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
         )}
 
         {diary.images.length > 0 ? (
-          <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div
+            className={cn(
+              'mt-8 grid gap-2',
+              diary.images.length === 1
+                ? 'max-w-[26rem] grid-cols-1'
+                : 'grid-cols-2 sm:grid-cols-3',
+            )}
+          >
             {diary.images.map((image) =>
               image.kind === 'video' ? (
                 <video

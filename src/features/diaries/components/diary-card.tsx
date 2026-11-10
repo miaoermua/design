@@ -20,7 +20,7 @@ export function DiaryCard({ diary, timeZone }: DiaryCardProps) {
         <time dateTime={diary.publishedAt}>{formatCompact(diary.publishedAt, timeZone)}</time>
         {chips.length > 0 ? <span className="meta-sep">{chips.join(' · ')}</span> : null}
       </p>
-      <h3 className="mt-2 font-serif text-h3 leading-[1.4] text-[var(--text-primary)]">
+      <h3 className="mt-2 font-serif text-h3 leading-[1.4] text-[var(--text-heading)]">
         <Link href={diaryPath(diary.id)} className="link-quiet">
           {diary.title}
         </Link>

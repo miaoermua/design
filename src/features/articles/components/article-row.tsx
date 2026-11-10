@@ -21,12 +21,12 @@ export function ArticleRow({ article, timeZone, compact = false }: ArticleRowPro
   return (
     <article
       className={cn(
-        'grid gap-2',
-        compact ? 'py-5 first:pt-0 last:pb-0' : 'py-7 sm:grid-cols-[7.5rem_1fr] sm:gap-6',
+        'group grid gap-2',
+        compact ? 'py-5 first:pt-0 last:pb-0' : 'py-8 sm:grid-cols-[7.5rem_1fr] sm:gap-8',
       )}
     >
       {compact ? null : (
-        <p className="meta leading-[1.7]">
+        <p className="meta pt-1 leading-[1.7] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--text-secondary)]">
           <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
         </p>
       )}
@@ -34,8 +34,8 @@ export function ArticleRow({ article, timeZone, compact = false }: ArticleRowPro
       <div className="min-w-0">
         <h3
           className={cn(
-            'font-serif leading-[1.4] text-[var(--text-primary)]',
-            compact ? 'text-h3' : 'text-title leading-[1.32]',
+            'font-serif text-[var(--text-heading)]',
+            compact ? 'text-h3 leading-[1.45]' : 'text-[1.625rem] leading-[1.3] tracking-[-0.01em]',
           )}
         >
           {href ? (
@@ -53,27 +53,36 @@ export function ArticleRow({ article, timeZone, compact = false }: ArticleRowPro
           </p>
         ) : null}
 
-        <div className="meta mt-2 flex flex-wrap items-center gap-x-1">
+        <div className="meta mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           {compact ? (
             <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
           ) : null}
           {article.category ? (
             <Link
               href={categoryPath(article.category.slug)}
-              className={cn('link-quiet', compact && 'meta-sep')}
+              className={cn(
+                'text-[var(--accent-strong)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]',
+                compact && 'meta-sep',
+              )}
             >
               {article.category.name}
             </Link>
           ) : null}
           {!compact
             ? article.tags.map((tag) => (
-                <Link key={tag} href={tagPath(tag)} className="link-quiet">
-                  <span className="meta-sep">#{tag}</span>
+                <Link
+                  key={tag}
+                  href={tagPath(tag)}
+                  className="text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]"
+                >
+                  {`#${tag}`}
                 </Link>
               ))
             : null}
           {article.readCount !== null ? (
-            <span className="meta-sep">{article.readCount.toLocaleString('zh-CN')} 次阅读</span>
+            <span className="text-[var(--text-secondary)]">
+              {article.readCount.toLocaleString('zh-CN')} 次阅读
+            </span>
           ) : null}
         </div>
       </div>

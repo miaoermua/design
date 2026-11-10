@@ -1,0 +1,108 @@
+/**
+ * Folio — 材质层（Material）
+ *
+ * 三种材质，全部由 --material-* 驱动，参数集中在 tokens.css：
+ *   1. 纸张颗粒  .paper-grain     —— 单一全局噪点层，固定不随内容滚动
+ *   2. 环境光    .paper-ambient   —— 顶部受光 + 右下阴影，极低对比度
+ *   3. 冰面      .glass-bar / .glass-panel —— 导航与浮层专用
+ *
+ * 关闭方式：不 @import 本文件即可，页面仍完整（纸色与排版都在 typography/base 层）。
+ * 约束：全站只有一层颗粒、一层环境光；backdrop-filter 只出现在 .glass-* 上。
+ */
+
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--material-grain-opacity);
+  background-image: var(--material-grain-image);
+  background-repeat: repeat;
+  background-size: var(--material-grain-size);
+}
+
+.paper-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--material-ambient);
+}
+
+/* 内容纸面：比页面底色亮一级，用于正文与外层卡片 */
+.paper-sheet {
+  background-color: var(--reading-surface);
+}
+
+.paper-sheet--framed {
+  border: var(--border-hairline) solid var(--edge);
+  box-shadow: var(--shadow-raise);
+}
+
+/*
+ * 阅读纸面：文章/日记详情专用的一张「纸」。
+ * - 窄屏不铺底色，正文直接落在页面纸上，避免整块卡片感；
+ * - ≥640px 起铺 --reading-surface，用发丝边与极轻投影把它从页面纸上抬起一层；
+ * - 内边距在 ≥1024px 恰好等于 3.5rem，使正文回到 40rem 版心。
+ */
+.reading-sheet {
+  padding-block: 0.5rem;
+  background: transparent;
+}
+
+@media (min-width: 40rem) {
+  .reading-sheet {
+    padding: 2.75rem 2.5rem 3rem;
+    background-color: var(--reading-surface);
+    border: var(--border-hairline) solid var(--edge-frost);
+    border-radius: var(--radius-xs);
+    box-shadow: var(--shadow-raise);
+  }
+}
+
+@media (min-width: 64rem) {
+  .reading-sheet {
+    padding: 3.5rem 3.5rem 4rem;
+  }
+}
+
+/*
+ * 冰面：半透明冰川色 + 轻微模糊 + 内缘高光。
+ * 只覆盖“需要压住下层内容”的局部，不做全屏玻璃。
+ */
+.glass-bar {
+  background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar));
+  -webkit-backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur));
+  backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur));
+  box-shadow: inset 0 1px 0 var(--material-glass-rim);
+}
+
+/*
+ * 浮层不做玻璃：菜单底下压的是正文，半透明会让两层文字叠在一起。
+ * 用比纸面亮一级的实色 + 投影，保留「浮在纸上」的层次，也不牺牲可读性。
+ */
+.glass-panel {
+  background-color: var(--surface-raised);
+  border: var(--border-hairline) solid var(--edge-frost);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop), inset 0 1px 0 var(--material-glass-rim);
+}
+
+/* 不支持 backdrop-filter 时退化为不透明纸面，保持可读性 */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass-bar {
+    background-color: var(--surface-raised);
+    box-shadow: none;
+  }
+}
+
+/* 用户要求降低透明度/减少动态时，玻璃退化为实色 */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-bar {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

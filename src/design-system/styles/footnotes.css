@@ -28,7 +28,7 @@
 }
 
 .prose .footnote-ref > a:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -107,7 +107,7 @@
 }
 
 .prose .footnote-backref:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 1px;
 }
 

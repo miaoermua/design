@@ -37,10 +37,27 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         title="找一篇文章"
         description="一次搜索同时覆盖文章与日记。"
       >
-        <form action="/search" method="get" role="search" className="mt-8 flex items-end gap-3 border-b border-[var(--text-primary)] pb-2">
+        <form
+          action="/search"
+          method="get"
+          role="search"
+          className="mt-8 flex max-w-[var(--container-prose)] items-center gap-3 border border-[var(--edge-strong)] bg-[var(--reading-surface)] px-4 py-2.5 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--accent)]"
+        >
           <label htmlFor="q" className="sr-only">
             关键词
           </label>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-[1.15rem] shrink-0 text-[var(--text-tertiary)]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
           <input
             id="q"
             name="q"
@@ -48,9 +65,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             defaultValue={keyword}
             autoComplete="off"
             placeholder="输入关键词，回车搜索"
-            className="min-w-0 flex-1 bg-transparent py-2 font-serif text-h3 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
+            className="min-w-0 flex-1 bg-transparent py-1 font-serif text-[1.125rem] leading-[1.6] text-[var(--text-heading)] outline-none placeholder:font-sans placeholder:text-[0.9375rem] placeholder:text-[var(--text-tertiary)]"
           />
-          <button type="submit" className="meta shrink-0 pb-2">
+          <kbd className="meta hidden shrink-0 border border-[var(--edge)] px-1.5 py-0.5 text-[var(--text-tertiary)] sm:block">
+            Enter
+          </kbd>
+          <button
+            type="submit"
+            className="meta shrink-0 text-[var(--accent-strong)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]"
+          >
             搜索
           </button>
         </form>
@@ -58,8 +81,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       {result ? (
         <>
-          <p className="meta">
-            “{keyword}” 命中 {result.pagination.total} 条
+          <p className="text-small text-[var(--text-secondary)]">
+            “<span className="text-[var(--text-heading)]">{keyword}</span>” 命中{' '}
+            <span className="tabular-nums">{result.pagination.total}</span> 条
             {result.items.length > 0
               ? ` · 第 ${result.pagination.page} / ${result.pagination.totalPages} 页`
               : null}
@@ -74,14 +98,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     ? articlePath(hit.categorySlug, hit.slug ?? '')
                     : diaryPath(hit.id)
                 return (
-                  <li key={hit.id} className="py-6">
-                    <p className="meta">
-                      <time dateTime={hit.createdAt}>{formatCompact(hit.createdAt, timeZone)}</time>
+                  <li key={hit.id} className="group py-6">
+                    <p className="meta flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span>{hit.kind === 'post' ? '文章' : '日记'}</span>
+                      <time className="meta-sep" dateTime={hit.createdAt}>
+                        {formatCompact(hit.createdAt, timeZone)}
+                      </time>
                       {hit.categoryName || hit.categorySlug ? (
-                        <span className="meta-sep">{hit.categoryName ?? hit.categorySlug}</span>
+                        <span className="meta-sep text-[var(--accent-strong)]">
+                          {hit.categoryName ?? hit.categorySlug}
+                        </span>
                       ) : null}
                     </p>
-                    <h2 className="mt-1.5 font-serif text-h3 leading-[1.4] text-[var(--text-primary)]">
+                    <h2 className="mt-1.5 font-serif text-h3 leading-[1.4] text-[var(--text-heading)]">
                       {href ? (
                         <Link href={href} className="link-quiet">
                           {hit.title}
@@ -123,7 +152,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           />
         </>
       ) : (
-        <p className="meta">输入关键词后回车开始搜索。</p>
+        <div className="mt-10 flex items-center gap-3 border-t border-dashed border-[var(--edge)] pt-6">
+          <span aria-hidden="true" className="size-1.5 rotate-45 bg-[var(--accent-soft)]" />
+          <p className="meta">输入关键词后回车开始搜索。</p>
+        </div>
       )}
     </Container>
   )

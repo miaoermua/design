@@ -1,8 +1,8 @@
 # design
 
-实验性质的 mix-space 主题，暂名 Design
+实验性质的 Mix-space 前端主题，暂名 Design
 
-使用 Mix-space Core api v2（12.x） 进行开发
+使用 [Mix-Space](https://github.com/mx-space/) Core（12.x）API v2 进行开发
 
 借鉴使用:
 

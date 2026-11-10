@@ -4,6 +4,7 @@ import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { diaryPath } from '@/lib/routes'
+import { cn } from '@/lib/utils/cn'
 import { formatTime } from '@/lib/utils/date'
 
 interface DiaryEntryProps {
@@ -26,7 +27,7 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
 
       <div className="min-w-0">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="font-serif text-h3 text-[var(--text-primary)]">
+          <h3 className="font-serif text-h3 text-[var(--text-heading)]">
             <Link href={diaryPath(diary.id)} className="link-quiet">
               {diary.title}
             </Link>
@@ -50,7 +51,15 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
         ) : null}
 
         {diary.images.length > 0 ? (
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div
+            className={cn(
+              'mt-4 grid gap-2',
+              // 单张图给足版面，多张图才退成缩略图网格
+              diary.images.length === 1
+                ? 'max-w-[26rem] grid-cols-1'
+                : 'grid-cols-2 sm:grid-cols-3',
+            )}
+          >
             {diary.images.map((image) =>
               image.kind === 'video' ? (
                 <video
