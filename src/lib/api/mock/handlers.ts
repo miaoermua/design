@@ -8,12 +8,12 @@
 import type { V2Pagination } from '../contracts/v2/common'
 import type { V2CategoryDetail } from '../contracts/v2/taxonomy'
 import {
-  mockAboutPage,
   mockAggregate,
   mockCategories,
   mockLinks,
   mockNoteDetail,
   mockNotes,
+  mockPages,
   mockPostDetail,
   mockPosts,
   mockTagSums,
@@ -158,7 +158,18 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
 
   if (path === '/links/all') return { status: 200, body: { data: mockLinks } }
 
-  if (path === `/pages/slug/${mockAboutPage.slug}`) return { status: 200, body: mockAboutPage }
+  // 独立页面列表：线上是 { data, pagination }，mock 保持同一形状
+  if (path === '/pages') {
+    const rows = [...mockPages].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    return { status: 200, body: paginate(rows, page, size) }
+  }
+
+  const pageMatch = /^\/pages\/slug\/([^/]+)$/.exec(path)
+  if (pageMatch) {
+    const slug = decodeURIComponent(pageMatch[1] ?? '')
+    const row = mockPages.find((item) => item.slug === slug)
+    return row ? { status: 200, body: row } : notFound(path)
+  }
 
   return null
 }

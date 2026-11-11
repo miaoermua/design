@@ -4,22 +4,30 @@ import { Container } from '@/components/ui/container'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
-import { listCategories, listTags, type Tag } from '@/lib/api'
+import { listCategories, listTags } from '@/lib/api'
 import { categoryPath, tagPath } from '@/lib/routes'
-import { cn } from '@/lib/utils/cn'
 
+/**
+ * /tags —— 兼容路由
+ *
+ * 「标签」已并入 /explore（作为第二个 Tab）。这里保留原路由与原有版式：
+ * 它承载的是「按主题浏览」的独立落地页，比 Tab 面板更宽松，也更适合被外部引用。
+ *
+ * 数据模型没有合并：标签来自 `/categories?type=1`，分类来自 `?type=0`，
+ * 与 /explore 的标签分区调用的是同一组接口，但职责仍是各自独立的。
+ */
 export const metadata: Metadata = {
   title: '标签',
   description: '按分类与标签浏览文章。',
 }
 
 /** 用相对频次决定字号，而不是凭感觉给每个标签写死大小 */
-function tagSizeClass(tag: Tag, maxCount: number): string {
-  if (tag.count === null || maxCount <= 0) return 'text-[1rem]'
-  const ratio = tag.count / maxCount
-  if (ratio > 0.6) return 'text-[1.25rem]'
-  if (ratio > 0.3) return 'text-[1.0625rem]'
-  return 'text-[0.9375rem]'
+function tagSizeClass(count: number | null, maxCount: number): string {
+  if (count === null || maxCount <= 0) return 'text-body'
+  const ratio = count / maxCount
+  if (ratio > 0.6) return 'text-h2'
+  if (ratio > 0.3) return 'text-lead'
+  return 'text-small'
 }
 
 export default async function TagsPage() {
@@ -57,10 +65,7 @@ export default async function TagsPage() {
                   className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
                 >
                   <span
-                    className={cn(
-                      'shrink-0 font-serif leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]',
-                      tagSizeClass(tag, maxCount),
-                    )}
+                    className={`shrink-0 font-serif leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)] ${tagSizeClass(tag.count, maxCount)}`}
                   >
                     #{tag.name}
                   </span>
@@ -101,7 +106,7 @@ export default async function TagsPage() {
                   href={categoryPath(category.slug)}
                   className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
                 >
-                  <span className="shrink-0 font-serif text-[1.125rem] leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
+                  <span className="shrink-0 font-serif text-lead leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
                     {category.name}
                   </span>
                   {category.count !== null ? (

@@ -40,6 +40,8 @@ export interface DiaryListQuery {
   year?: number
   sortBy?: 'createdAt' | 'modifiedAt' | 'weather' | 'mood'
   sortOrder?: 1 | -1
+  /** 内容语言（`?lang=`），由后端返回译文 */
+  lang?: string
 }
 
 /** 时间线分组：按日期（站点时区）分桶 */

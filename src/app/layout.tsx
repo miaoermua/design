@@ -10,6 +10,7 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { ImageViewer } from '@/components/markdown/image-preview'
 import { describeError } from '@/lib/api'
+import { getLocale } from '@/lib/i18n/server'
 import { loadSiteContext, siteBaseUrl, siteDescription, siteTitle } from '@/lib/site'
 
 /**
@@ -48,9 +49,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { identity, error } = await loadSiteContext()
+  // 与界面/内容语言保持一致：屏幕阅读器按 lang 选择发音，切换语言后必须同步
+  const locale = await getLocale()
 
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={locale === 'en' ? 'en' : 'zh-CN'} suppressHydrationWarning>
       <body>
         {/* 防闪：首帧之前决定 data-theme，避免先画浅色再翻黑 */}
         <script

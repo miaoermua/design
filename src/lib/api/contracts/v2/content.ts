@@ -2,15 +2,20 @@
  * Mix Space API v2 — 独立页面 / 搜索 / 片段
  *
  * 来源：线上实测
+ *   GET /pages → { data: PageRow[], pagination }（实测 4 条，按 order 升序）
  *   GET /pages/slug/:slug → PageRow（原样返回，不包 data）
  *   GET /search?keyword=&page=&size= → { data: SearchResultItem[], pagination }
  *
  *   ⚠️ 搜索结果是文章与日记的混合流，用 `type` 区分（'post' | 'note'）：
  *      - post 命中带 category 与 slug，可以拼出文章详情地址；
  *      - note 命中只有 id / nid，没有 slug，应链接到日记详情。
+ *
+ *   ⚠️ 翻译：内容接口（posts / notes / pages / search）接受 `?lang=` 查询参数，
+ *      返回该语言的正文与标题；`?locale=` 不生效。列表项额外带
+ *      is_translated / source_lang / available_translations（实测存在于详情）。
  */
 
-import type { EntityId, IsoDateString, V2Image } from './common'
+import type { EntityId, IsoDateString, V2Image, V2Pagination } from './common'
 
 export interface V2PageRow {
   id: string
@@ -25,6 +30,16 @@ export interface V2PageRow {
   order?: number
   created_at: IsoDateString
   modified_at?: IsoDateString | null
+  /** 实测：该语言下是否已有译文 */
+  is_translated?: boolean
+  source_lang?: string | null
+  available_translations?: string[] | null
+}
+
+/** `{ data, pagination }` 中的独立页面列表 */
+export interface V2PageListBody {
+  data: V2PageRow[]
+  pagination?: V2Pagination
 }
 
 /** 搜索结果项（实测字段） */

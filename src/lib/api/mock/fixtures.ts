@@ -496,3 +496,32 @@ export const mockAboutPage: V2PageRow = {
   created_at: '2024-03-02T08:00:00.000Z',
   modified_at: '2026-10-30T04:00:00.000Z',
 }
+
+/**
+ * 独立页面列表：与 mockAboutPage 共用同一份正文来源，避免两处描述不一致。
+ * order 与线上一致（是排序权重，不是 ID）。
+ */
+export const mockPages: V2PageRow[] = [
+  mockAboutPage,
+  {
+    id: 'page-site',
+    title: '站点',
+    slug: 'site',
+    subtitle: '这个站点是怎么搭起来的',
+    text: [
+      '## 技术栈',
+      '',
+      '- Next.js App Router + React Server Components',
+      '- Mix Space Core 作为内容后端',
+      '- 全文自托管，没有统计脚本',
+      '',
+      '## 关于写作',
+      '',
+      '文章偏长，日记偏短。两者共用一条时间轴，但阅读节奏不同。',
+    ].join('\n'),
+    content_format: 'markdown',
+    order: 1,
+    created_at: '2024-03-01T08:00:00.000Z',
+    modified_at: '2026-09-12T04:00:00.000Z',
+  },
+]

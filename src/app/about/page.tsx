@@ -7,6 +7,8 @@ import { Prose } from '@/components/ui/prose'
 import { requireFeature } from '@/core/registry/guard'
 import { getPageBySlug, isNotFound } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
+import { toContentLang } from '@/lib/i18n/config'
+import { getLocale } from '@/lib/i18n/server'
 import { loadSiteContext } from '@/lib/site'
 import { toSocialLinks } from '@/lib/social'
 import { formatDate } from '@/lib/utils/date'
@@ -19,9 +21,11 @@ export const metadata: Metadata = {
 export default async function AboutPage() {
   requireFeature('about')
 
+  const locale = await getLocale()
+
   let page: Awaited<ReturnType<typeof getPageBySlug>>
   try {
-    page = await getPageBySlug('about')
+    page = await getPageBySlug('about', { lang: toContentLang(locale) })
   } catch (error) {
     if (isNotFound(error)) notFound()
     throw error

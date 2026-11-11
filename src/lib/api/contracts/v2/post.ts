@@ -48,6 +48,10 @@ export interface V2PostRow {
   created_at: IsoDateString
   modified_at?: IsoDateString | null
   related?: V2PostRow[] | null
+  /** 实测：`?lang=` 命中已有译文时为 true */
+  is_translated?: boolean
+  source_lang?: string | null
+  available_translations?: string[] | null
 }
 
 /** 文章详情：在行基础上多一个 liked（匿名访问为 false/null） */

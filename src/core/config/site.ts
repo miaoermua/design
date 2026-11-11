@@ -8,9 +8,15 @@
 export const SITE_NAME_FALLBACK = 'Folio'
 export const SITE_DESCRIPTION_FALLBACK = '一份纸上记录'
 
-/** 首页各区块条数（受 v2 size 上限 50 约束） */
-export const HOME_RECENT_ARTICLES = 5
-export const HOME_RECENT_DIARIES = 4
+/**
+ * 首页各区块条数
+ *
+ * Blogs 是首页的主体，Notes 刻意更少——它不是「另一份列表」，
+ * 而是「最近在想什么」的轻量提示，抢走主视觉空间会让首页没有重点。
+ * 两者都受 v2 的 size 上限 50 约束。
+ */
+export const HOME_RECENT_ARTICLES = 6
+export const HOME_RECENT_DIARIES = 3
 export const LIST_PAGE_SIZE = 10
 
 /** 归档页一次拉取的最大条数（v2 上限 50） */

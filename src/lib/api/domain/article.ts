@@ -49,4 +49,9 @@ export interface ArticleListQuery {
   sortOrder?: 1 | -1
   /** 官方的分类过滤参数（逗号分隔 ID），不是 slug */
   categoryIds?: string[]
+  /**
+   * 内容语言（BCP 47 主标签，如 `en`）。
+   * 传给后端的 `?lang=`，由 Mix Space 返回已翻译的标题与正文；不传则返回原文。
+   */
+  lang?: string
 }

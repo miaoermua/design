@@ -25,6 +25,17 @@ export function categoryPath(slug: string): string {
   return `/categories/${encodeURIComponent(slug)}`
 }
 
+/**
+ * 独立页面详情。
+ *
+ * slug 为 `about` 时指向既有的 `/about`——那是主题的固定入口，
+ * 避免同一个页面出现两个地址（也保证旧链接继续有效）。
+ */
+export function pagePath(slug: string): string {
+  if (slug === 'about') return '/about'
+  return `/pages/${encodeURIComponent(slug)}`
+}
+
 export function searchPath(keyword: string, page?: number): string {
   const params = new URLSearchParams()
   if (keyword) params.set('q', keyword)

@@ -9,10 +9,10 @@ const TAG = ['notes']
 
 /** GET /notes */
 export async function listDiaries(query: DiaryListQuery = {}): Promise<PageResult<Diary>> {
-  const { page = 1, size = 10, year, sortBy, sortOrder } = query
+  const { page = 1, size = 10, year, sortBy, sortOrder, lang } = query
 
   const body = await requestV2<{ data?: V2NoteRow[] }>('/notes', {
-    query: { page, size, year, sortBy, sortOrder },
+    query: { page, size, year, sortBy, sortOrder, lang },
     revalidate: 60,
     tags: TAG,
   })
@@ -26,9 +26,13 @@ export async function listDiaries(query: DiaryListQuery = {}): Promise<PageResul
  * 受密码保护时抛 PasswordRequiredError（403 / code 14000），由页面转成「需要密码」状态。
  * 密码通过查询参数透传（core 的 NotePasswordQueryDto.password），主题不保存任何密码。
  */
-export async function getDiary(id: string, password?: string): Promise<Diary> {
+export async function getDiary(
+  id: string,
+  password?: string,
+  options: { lang?: string } = {},
+): Promise<Diary> {
   const body = await requestV2<unknown>(`/notes/${encodeURIComponent(id)}`, {
-    query: { password },
+    query: { password, lang: options.lang },
     revalidate: password ? 0 : 120,
     tags: TAG,
   })

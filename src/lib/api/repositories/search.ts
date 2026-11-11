@@ -13,10 +13,10 @@ import type { SearchHit } from '../domain/taxonomy'
  */
 export async function searchArticles(
   keyword: string,
-  options: { page?: number; size?: number } = {},
+  options: { page?: number; size?: number; lang?: string } = {},
 ): Promise<PageResult<SearchHit>> {
   const body = await requestV2<{ data?: V2SearchResultItem[] }>('/search', {
-    query: { keyword, page: options.page ?? 1, size: options.size ?? 10 },
+    query: { keyword, page: options.page ?? 1, size: options.size ?? 10, lang: options.lang },
     revalidate: 0,
     tags: ['search'],
   })

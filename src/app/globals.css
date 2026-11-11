@@ -135,6 +135,74 @@
   border-top: var(--border-rule) dashed var(--edge-strong);
 }
 
+/* ── 动效 ────────────────────────────────────────────────────────
+ *
+ * 只做三件事：淡入、轻微上移、面板从小幅缩放。
+ * 刻意不做的：大幅缩放、翻转、横向滑动、错峰延迟——它们会让「翻页」
+ * 变成「演出」，而在读文章的人只想尽快看到下一段文字。
+ *
+ * 时长与缓动一律走 token（duration 与 ease 两组变量），
+ * 这样 reduced-motion 的全局降级（见 @layer base）能一并生效。
+ */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* 页面主体过渡：每次路由切换后 <main> 重新挂载，动画随之重放。
+   作用在 <main> 而不是整个 <html>，避免顶栏与页脚跟着一起动。 */
+.page-enter {
+  animation: rise-in var(--duration-base) var(--ease-out-soft) both;
+}
+
+/* 悬浮顶栏的位移过渡
+   写在这里而不是 Tailwind 工具类：隐藏位移是 calc() 表达式，
+   任意值类的解析在构建期静默失败过一次（state 变了但 transform 仍为 none），
+   这类关键交互不该依赖工具类能否生成。 */
+.site-header-bar {
+  transition: transform var(--duration-base) var(--ease-out-soft);
+  will-change: transform;
+}
+
+/* 减少动态效果时：取消位移与过渡，顶栏直接切换，不做滑动动画 */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+
+  .site-header-bar {
+    transition: none;
+    will-change: auto;
+  }
+}
+
 /* 搜索片段高亮：只由后端插入的 <mark> 触发 */
 .search-snippet mark {
   background: color-mix(in srgb, var(--accent-soft) 42%, transparent);

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ToolbarButton } from './toolbar-button'
 
 type Theme = 'light' | 'dark'
 
@@ -11,11 +12,19 @@ function readTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
 }
 
+interface ThemeToggleProps {
+  /** 无障碍名称与 Tooltip 文本（随语言变化） */
+  label: string
+}
+
 /**
  * 主题切换：只改 <html data-theme>，配色全部由 token 承担。
  * 首次访问跟随系统（防闪脚本已处理），手动切换后写入 localStorage。
+ *
+ * 外观交给 ToolbarButton：它与搜索/语言/置顶是同一组工具，
+ * 尺寸与交互反馈必须一致，不能四套各自维护。
  */
-export function ThemeToggle() {
+export function ThemeToggle({ label }: ThemeToggleProps) {
   const [theme, setTheme] = useState<Theme>('light')
   const [ready, setReady] = useState(false)
 
@@ -35,16 +44,8 @@ export function ThemeToggle() {
     setTheme(next)
   }
 
-  const label = theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'
-
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={label}
-      title={label}
-      className="flex size-8 items-center justify-center rounded-[var(--radius-sm)] border border-transparent text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--edge)] hover:text-[var(--text-heading)]"
-    >
+    <ToolbarButton label={label} onClick={toggle}>
       {ready ? (
         theme === 'dark' ? (
           <svg
@@ -53,7 +54,7 @@ export function ThemeToggle() {
             className="size-[1.05rem]"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -67,7 +68,7 @@ export function ThemeToggle() {
             className="size-[1.05rem]"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -75,8 +76,9 @@ export function ThemeToggle() {
           </svg>
         )
       ) : (
+        // 占位同尺寸，避免水合前后按钮宽度跳动
         <span aria-hidden="true" className="size-[1.05rem]" />
       )}
-    </button>
+    </ToolbarButton>
   )
 }

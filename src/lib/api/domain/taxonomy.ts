@@ -31,6 +31,12 @@ export interface SiteIdentity {
   }
   commentsEnabled: boolean
   latestDiaryId: string | null
+  /**
+   * 部署方写入 /aggregate.theme 的主题配置（原样保留，未做形状假设）。
+   * 实测线上可能为 null —— 表示没配，不是错误。
+   * 解析交给 core/config/theme 的使用方，数据层不解释业务键。
+   */
+  theme: Record<string, unknown> | null
 }
 
 export interface FriendLink {

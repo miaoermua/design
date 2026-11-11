@@ -14,6 +14,8 @@ export const featureFlags = {
   diaries: true,
   taxonomy: true,
   archives: true,
+  /** 独立页面（Mix Space /pages）：与文章/日记并列的内容类型 */
+  pages: true,
   search: true,
   about: true,
   friends: true,

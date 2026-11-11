@@ -1,0 +1,1 @@
+export { pagesFeature } from './manifest'

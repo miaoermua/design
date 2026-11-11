@@ -10,6 +10,8 @@
 - [kami](https://github.com/mx-space/kami)
 - [mx-starter](https://github.com/miaoermua/mx-starter)
 
+支持 Mix-space [Markdown 扩展](https://shiro.innei.in/#/markdown),翻译，搜索，评论，友链……
+
 ## 构建与运行
 
 需要 Node.js 22.12+ 与 pnpm 10.x（见 `package.json` 的 `engines` / `packageManager`）。

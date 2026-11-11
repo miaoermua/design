@@ -1,0 +1,314 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { isNavItemActive, type NavItem } from '@/core/navigation'
+import type { Locale } from '@/lib/i18n/config'
+import type { MessageKey } from '@/lib/i18n/dictionary'
+import { cn } from '@/lib/utils/cn'
+import { LanguageButton } from './language-button'
+import { SearchPanel } from './search-panel'
+import { ThemeToggle } from './theme-toggle'
+import { ToolbarButton, ToolbarGroup } from './toolbar-button'
+import { useHeaderScroll } from './use-header-scroll'
+
+interface SiteHeaderClientProps {
+  items: NavItem[]
+  title: string
+  locale: Locale
+  messages: Record<MessageKey, string>
+  /** 是否有搜索模块；关闭时不渲染搜索按钮 */
+  searchEnabled: boolean
+}
+
+/**
+ * 悬浮顶栏
+ *
+ * 形态：整行顶栏 → 收在版心内的圆角浮条。
+ * 它不再是页面的「顶边」，而是一块浮在纸面上的薄片：
+ *   - 外侧留出边距，滚动时正文从浮条两侧与下方穿过；
+ *   - 圆角 + 细边 + 投影建立独立层级，不靠整行实色块压迫版面；
+ *   - 玻璃参数沿用现有材质层，没有新增材质（见 material.css）。
+ *
+ * 滚动行为在 useHeaderScroll：向下累计 96px 隐藏、向上累计 40px 显示，
+ * 页首恒显。搜索面板打开或输入聚焦时锁定为显示——顶栏不能从操作中途滑走。
+ *
+ * 布局约束：工具组是独立组件，不写死在导航里。未来换位置或换组合，
+ * 改的是这个文件里的一处挂载点。
+ */
+export function SiteHeaderClient({
+  items,
+  title,
+  locale,
+  messages,
+  searchEnabled,
+}: SiteHeaderClientProps) {
+  const pathname = usePathname()
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  // 搜索面板打开时锁定顶栏（不允许隐藏）
+  const { hidden, detached } = useHeaderScroll(searchOpen)
+
+  const closeSearch = useCallback(() => setSearchOpen(false), [])
+
+  // ⌘K / Ctrl+K 打开搜索，Esc 关闭；不拦截输入框里的普通输入
+  useEffect(() => {
+    if (!searchEnabled) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isK = event.key.toLowerCase() === 'k'
+      if (isK && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        setSearchOpen((open) => !open)
+        return
+      }
+      // Escape 只在面板由本组件打开时处理；面板内部也有自己的处理
+      if (event.key === 'Escape') setSearchOpen(false)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [searchEnabled])
+
+  /**
+ * 隐藏状态用内联 transform 而不是 Tailwind 任意值类。
+ *
+ * 原因：`-translate-y-[calc(100%+0.75rem)]` 在 Tailwind v4 的任意值里
+ * 需要把 `+` 写成空格，容易失效且构建时不报错——实测该类没有被生成，
+ * 导致 state 正确但 transform 仍是 none。这里直接写 transform，
+ * 位移量用 CSS 变量拼出来，语义清楚也不依赖工具类解析。
+ */
+const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
+
+  return (
+    <>
+      <header
+        style={{ transform: hidden ? HIDDEN_TRANSFORM : 'translate3d(0, 0, 0)' }}
+        className={cn(
+          'site-header-bar fixed inset-x-0 top-0 z-40 pt-3 sm:pt-4',
+        )}
+      >
+        <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
+          <div
+            className={cn(
+              'glass-bar flex h-14 items-center gap-3 rounded-[var(--radius-md)] border px-2.5 sm:h-[3.75rem] sm:px-3',
+              // 脱离页首后才显示投影：在顶部时它与纸面是一体的
+              detached
+                ? 'border-[var(--edge)] shadow-[var(--shadow-pop)]'
+                : 'border-[var(--edge-frost)]',
+            )}
+          >
+            <Link
+              href="/"
+              className="shrink-0 rounded-[var(--radius-sm)] px-2 font-serif text-[1.0625rem] tracking-[0.005em] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]"
+            >
+              {title}
+            </Link>
+
+            {/* 桌面导航：与工具组用一条细分隔线分开，避免两者被读成一列 */}
+            <nav aria-label="主导航" className="hidden min-w-0 flex-1 sm:block">
+              <ul className="flex items-center gap-1">
+                {items.map((item) => {
+                  const active = isNavItemActive(item, pathname)
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-small transition-colors duration-[var(--duration-fast)]',
+                          active
+                            ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+                        )}
+                      >
+                        {messages[item.label]}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </nav>
+
+            <div className="ml-auto flex items-center gap-1 sm:ml-0">
+              <ToolbarGroup>
+                {searchEnabled ? (
+                  <ToolbarButton
+                    label={messages['action.search']}
+                    onClick={() => setSearchOpen(true)}
+                    active={searchOpen}
+                  >
+                    <SearchIcon />
+                  </ToolbarButton>
+                ) : null}
+
+                <ThemeToggle label={messages['action.mode']} />
+
+                <LanguageButton current={locale} label={messages['action.language']} />
+
+                <ToolbarButton
+                  label={messages['action.backToTop']}
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  <ArrowUpIcon />
+                </ToolbarButton>
+              </ToolbarGroup>
+
+              {/* 移动端导航：工具组之后，保证「工具 → 菜单」的阅读顺序 */}
+              <MobileMenu items={items} messages={messages} className="sm:hidden" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* 固定顶栏不占文档流：占位块保证正文不被浮条盖住 */}
+      <div aria-hidden="true" className="h-[calc(3.5rem+0.75rem)] sm:h-[calc(3.75rem+1rem)]" />
+
+      {searchEnabled ? (
+        <SearchPanel
+          open={searchOpen}
+          onClose={closeSearch}
+          labels={{
+            title: messages['action.search'],
+            placeholder: messages['search.placeholder'],
+            empty: messages['search.empty'],
+            emptyHint: messages['search.emptyHint'],
+            loading: messages['search.loading'],
+            failed: messages['search.failed'],
+            hint: messages['search.hint'],
+            openFull: messages['search.openFull'],
+          }}
+        />
+      ) : null}
+    </>
+  )
+}
+
+/** 移动端菜单：仅此一处客户端状态，随路由变化自动收起 */
+function MobileMenu({
+  items,
+  messages,
+  className,
+}: {
+  items: NavItem[]
+  messages: Record<MessageKey, string>
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  return (
+    <div className={cn('relative', className)}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="site-mobile-nav"
+        aria-label={messages['action.menu']}
+        onClick={() => setOpen((value) => !value)}
+        className="flex size-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]"
+      >
+        {open ? <CloseIcon /> : <MenuIcon />}
+      </button>
+
+      {open ? (
+        <div
+          id="site-mobile-nav"
+          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 min-w-[11rem] overflow-hidden"
+        >
+          <ul className="flex flex-col p-1.5">
+            {items.map((item) => {
+              const active = isNavItemActive(item, pathname)
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'block rounded-[var(--radius-sm)] px-3 py-2.5 text-small transition-colors duration-[var(--duration-fast)]',
+                      active
+                        ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+                    )}
+                  >
+                    {messages[item.label]}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-[1.05rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    >
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </svg>
+  )
+}
+
+function ArrowUpIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-[1.05rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-[1.15rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-[1.15rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}

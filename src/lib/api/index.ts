@@ -22,6 +22,6 @@ export {
 } from './repositories/taxonomy'
 export { getSiteIdentity, getTimeline, listFriendLinks } from './repositories/site'
 export { searchArticles } from './repositories/search'
-export { getPageBySlug, type PageContent } from './repositories/pages'
+export { getPageBySlug, listPages, type PageContent, type PageSummary } from './repositories/pages'
 
 export { API_VERSION, getSiteTimezone, getSiteUrl, isApiConfigured } from './config'
