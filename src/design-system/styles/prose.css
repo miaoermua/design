@@ -319,39 +319,17 @@
   border-color: var(--edge);
 }
 
-/* ── Mix Space 扩展块 ───────────────────────────────────────── */
-.prose .spoiler {
-  background: var(--color-paper-deep);
-  color: transparent;
-  border-radius: var(--radius-xs);
-  padding: 0 0.2em;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-out-soft);
-}
-
-.prose .spoiler.is-revealed,
-.prose .spoiler:focus-visible {
-  color: inherit;
-}
-
-.prose .callout {
-  margin: 1.8em 0;
-  padding: 0.9rem 1.1rem;
-  border-left: 2px solid var(--edge-strong);
-  background: var(--surface-sunk);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-small);
-  color: var(--text-secondary);
-}
-
-.prose .callout > :first-child {
-  margin-top: 0;
-}
-
-.prose .callout > :last-child {
-  margin-bottom: 0;
-}
+/*
+ * Mix Space 扩展块（Callout / Banner / Details / Spoiler / Ins）的样式统一由
+ * containers.css 负责，选择器以渲染器真实输出的 .md-* 类名为准，此处不重复声明。
+ *
+ * 早期这里还有一组 .prose .spoiler / .prose .callout 规则，但渲染器从不产出这两个
+ * 类名（分别是 <span class="md-spoiler"> 与 <div class="md-callout …">），属于失效规则。
+ * 它们也不能简单改名复用：.prose .md-spoiler 的特异性会压过 containers.css 基于
+ * [data-spoiler-ready] / [data-revealed] 的渐进增强状态机，旧规则的 color: transparent
+ * 会让无 JS 环境下的内容永久不可见；.prose .md-callout 的实色背景会盖掉按语气派生的
+ * color-mix 背景。因此删除，保留 containers.css 这一份唯一实现。
+ */
 
 /* 脚注样式见 footnotes.css（此处只保留标题锚点） */
 

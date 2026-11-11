@@ -55,11 +55,14 @@
   --color-info: #4a6a7c;
 
   /* ══ 2. 字体：Serif 标题 × Sans 正文 × Mono 代码 ═══════════════ */
+  /* 中文自托管（Noto Sans SC / Noto Serif SC，OFL 1.1）。字体文件与 @font-face 在
+     styles/fonts.css，本文件只负责语义字体栈；分片不覆盖的生僻字由后面的系统族兜底。
+     --font-mono 与中文本地化无关，保持系统栈。 */
   --font-sans:
-    ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    'Noto Sans SC', sans-serif;
+    'Noto Sans SC', ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   --font-serif:
-    'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'SimSun', Georgia, 'Times New Roman', serif;
+    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', Georgia, 'Times New Roman', serif;
   --font-mono:
     ui-monospace, SFMono-Regular, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 

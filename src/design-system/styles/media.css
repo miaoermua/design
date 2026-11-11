@@ -191,6 +191,8 @@
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
+  /* 组件专属：2.25rem 翻页按钮压在图片上，只需轻微虚化让箭头可读。
+     不是玻璃材质，不复用 --material-glass-blur（14px / 暗色 16px 是顶栏参数）。 */
   backdrop-filter: blur(6px);
   transition:
     color var(--duration-fast) var(--ease-out-soft),
@@ -225,6 +227,9 @@
   place-items: center;
   padding: clamp(1rem, 4vw, 3rem);
   background: color-mix(in oklab, var(--color-ink) 84%, transparent);
+  /* 组件专属：全屏预览遮罩的背景虚化，与上面的 ink 遮罩配合使用。
+     遮罩取 --color-ink、前景文字与描边取 --color-paper，亮暗两套主题下两者互为反色；
+     blur 半径与主题无关，也不属于 material.css 的玻璃材质参数。 */
   backdrop-filter: blur(8px);
   animation: md-preview-in var(--duration-fast) var(--ease-out-soft);
 }

@@ -1,0 +1,1134 @@
+{
+  "stage": "Phase 4D-0 对比度抽查",
+  "generatedAt": "2026-11-11T08:03:16.342Z",
+  "route": "/visual-tests/markdown",
+  "standard": "WCAG 2.1 AA（正文 4.5:1，大字 3:1）",
+  "browser": "Chrome/157.0.8103.39",
+  "note": "背景按 alpha 逐层合成（半透明层叠在不透明基色上），只测真正渲染出来的元素。",
+  "results": {
+    "light": [
+      {
+        "key": "body-text",
+        "selector": ".prose p",
+        "label": "正文段落",
+        "found": true,
+        "text": "本页是 Phase 4D 视觉验收专用素材，不是用户内容，也不会",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 6.92,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h2",
+        "selector": ".prose h2",
+        "label": "正文 h2",
+        "found": true,
+        "text": "一、标题层级#",
+        "color": "rgb(52, 79, 88)",
+        "fontSize": "22px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 8.07,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h3",
+        "selector": ".prose h3",
+        "label": "正文 h3",
+        "found": true,
+        "text": "H3 三级标题#",
+        "color": "rgb(52, 79, 88)",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 8.07,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h4-clamped",
+        "selector": ".prose h4",
+        "label": "正文 h4（H5/H6 也落在这里）",
+        "found": true,
+        "text": "H4 四级标题#",
+        "color": "rgb(52, 79, 88)",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 8.07,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "blockquote",
+        "selector": ".prose blockquote p",
+        "label": "引用块正文",
+        "found": true,
+        "text": "引用的本质是「把别人的声音放到自己的正文里」，所以它必须一眼能看",
+        "color": "rgb(107, 111, 103)",
+        "fontSize": "18.0336px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 4.74,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "inline-code",
+        "selector": ".prose code",
+        "label": "行内代码",
+        "found": true,
+        "text": "src/lib/content/markdown.ts",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "14.875px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "rgb(233, 229, 217)",
+        "background": {
+          "r": 233,
+          "g": 229,
+          "b": 217
+        },
+        "contrast": 5.94,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "link",
+        "selector": ".prose p a",
+        "label": "正文链接",
+        "found": true,
+        "text": "站内链接",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 6.92,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "mention",
+        "selector": ".md-mention",
+        "label": "社交提及",
+        "found": true,
+        "text": "Innei",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "rgb(228, 236, 236)",
+        "background": {
+          "r": 228,
+          "g": 236,
+          "b": 236
+        },
+        "contrast": 6.24,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "meta",
+        "selector": "#visual-tests-markdown .meta",
+        "label": "元信息小字",
+        "found": true,
+        "text": "Phase 4D · VISUAL FIXTURE",
+        "color": "rgb(107, 111, 103)",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 4.74,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-info-title",
+        "selector": ".md-callout--info .md-callout__title",
+        "label": "Callout info 标题",
+        "found": true,
+        "text": "说明",
+        "color": "rgb(74, 106, 124)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.935467 -0.00272725 0.00572865)",
+        "background": {
+          "r": 233,
+          "g": 234,
+          "b": 229
+        },
+        "contrast": 4.77,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-note-title",
+        "selector": ".md-callout--note .md-callout__title",
+        "label": "Callout note 标题",
+        "found": true,
+        "text": "自定义标题的笔记",
+        "color": "rgb(201, 200, 188)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.961347 -0.00079379 0.0100279)",
+        "background": {
+          "r": 244,
+          "g": 242,
+          "b": 235
+        },
+        "contrast": 1.5,
+        "threshold": 4.5,
+        "pass": false
+      },
+      {
+        "key": "callout-success-title",
+        "selector": ".md-callout--success .md-callout__title",
+        "label": "Callout success 标题",
+        "found": true,
+        "text": "完成",
+        "color": "rgb(74, 107, 82)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.93451 -0.00438337 0.0108481)",
+        "background": {
+          "r": 233,
+          "g": 234,
+          "b": 225
+        },
+        "contrast": 4.93,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-warning-title",
+        "selector": ".md-callout--warning .md-callout__title",
+        "label": "Callout warning 标题",
+        "found": true,
+        "text": "注意",
+        "color": "rgb(138, 106, 47)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.938463 0.000649818 0.0155744)",
+        "background": {
+          "r": 239,
+          "g": 234,
+          "b": 223
+        },
+        "contrast": 4.18,
+        "threshold": 4.5,
+        "pass": false
+      },
+      {
+        "key": "callout-error-title",
+        "selector": ".md-callout--error .md-callout__title",
+        "label": "Callout error 标题",
+        "found": true,
+        "text": "错误",
+        "color": "rgb(164, 80, 63)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.937466 0.0072288 0.0137283)",
+        "background": {
+          "r": 242,
+          "g": 232,
+          "b": 224
+        },
+        "contrast": 4.58,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-danger-title",
+        "selector": ".md-callout--danger .md-callout__title",
+        "label": "Callout danger 标题",
+        "found": true,
+        "text": "危险",
+        "color": "rgb(164, 80, 63)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.937466 0.0072288 0.0137283)",
+        "background": {
+          "r": 242,
+          "g": 232,
+          "b": 224
+        },
+        "contrast": 4.58,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-tip-title",
+        "selector": ".md-callout--tip .md-callout__title",
+        "label": "Callout tip 标题",
+        "found": true,
+        "text": "提示",
+        "color": "rgb(74, 107, 82)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.93451 -0.00438337 0.0108481)",
+        "background": {
+          "r": 233,
+          "g": 234,
+          "b": 225
+        },
+        "contrast": 4.93,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-important-title",
+        "selector": ".md-callout--important .md-callout__title",
+        "label": "Callout important 标题",
+        "found": true,
+        "text": "重要",
+        "color": "rgb(74, 106, 124)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.935467 -0.00272725 0.00572865)",
+        "background": {
+          "r": 233,
+          "g": 234,
+          "b": 229
+        },
+        "contrast": 4.77,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-caution-title",
+        "selector": ".md-callout--caution .md-callout__title",
+        "label": "Callout caution 标题",
+        "found": true,
+        "text": "谨慎",
+        "color": "rgb(138, 106, 47)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.938463 0.000649818 0.0155744)",
+        "background": {
+          "r": 239,
+          "g": 234,
+          "b": 223
+        },
+        "contrast": 4.18,
+        "threshold": 4.5,
+        "pass": false
+      },
+      {
+        "key": "callout-info-body",
+        "selector": ".md-callout--info .md-callout__body p",
+        "label": "Callout info 正文",
+        "found": true,
+        "text": "信息类提示：正文支持 行内 Markdown 与 代码。",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.935467 -0.00272725 0.00572865)",
+        "background": {
+          "r": 233,
+          "g": 234,
+          "b": 229
+        },
+        "contrast": 6.19,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "banner-info-body",
+        "selector": ".md-banner--info p",
+        "label": "Banner info 正文",
+        "found": true,
+        "text": "通栏提示没有标题，用于整篇文章级别的说明（例如「本文有后续更新」",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.944787 -0.00218218 0.00667221)",
+        "background": {
+          "r": 237,
+          "g": 237,
+          "b": 232
+        },
+        "contrast": 6.37,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "banner-warning-body",
+        "selector": ".md-banner--warning p",
+        "label": "Banner warning 正文",
+        "found": true,
+        "text": "同样支持其他类型；这一条用于对比左侧竖线与底色。",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.947034 0.000350623 0.0140565)",
+        "background": {
+          "r": 241,
+          "g": 237,
+          "b": 227
+        },
+        "contrast": 6.4,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "table-th",
+        "selector": ".prose th",
+        "label": "表格表头",
+        "found": true,
+        "text": "组件",
+        "color": "rgb(107, 111, 103)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 4.74,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "table-td",
+        "selector": ".prose td",
+        "label": "表格正文",
+        "found": true,
+        "text": "Callout",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 6.92,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "details-summary",
+        "selector": ".md-details summary",
+        "label": "Details 概要",
+        "found": true,
+        "text": "展开看实现细节",
+        "color": "rgb(82, 86, 80)",
+        "fontSize": "15px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 6.92,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "footnote",
+        "selector": ".footnotes p",
+        "label": "脚注正文",
+        "found": true,
+        "text": "第一条脚注，支持 行内 Markdown 与 code。↩第 1",
+        "color": "rgb(107, 111, 103)",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.971684 -0.000531214 0.00967608)",
+        "background": {
+          "r": 248,
+          "g": 246,
+          "b": 239
+        },
+        "contrast": 4.74,
+        "threshold": 4.5,
+        "pass": true
+      }
+    ],
+    "dark": [
+      {
+        "key": "body-text",
+        "selector": ".prose p",
+        "label": "正文段落",
+        "found": true,
+        "text": "本页是 Phase 4D 视觉验收专用素材，不是用户内容，也不会",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.79,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h2",
+        "selector": ".prose h2",
+        "label": "正文 h2",
+        "found": true,
+        "text": "一、标题层级#",
+        "color": "rgb(198, 215, 217)",
+        "fontSize": "22px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.17,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h3",
+        "selector": ".prose h3",
+        "label": "正文 h3",
+        "found": true,
+        "text": "H3 三级标题#",
+        "color": "rgb(198, 215, 217)",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.17,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "h4-clamped",
+        "selector": ".prose h4",
+        "label": "正文 h4（H5/H6 也落在这里）",
+        "found": true,
+        "text": "H4 四级标题#",
+        "color": "rgb(198, 215, 217)",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.17,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "blockquote",
+        "selector": ".prose blockquote p",
+        "label": "引用块正文",
+        "found": true,
+        "text": "引用的本质是「把别人的声音放到自己的正文里」，所以它必须一眼能看",
+        "color": "rgb(163, 166, 157)",
+        "fontSize": "18.0336px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 6.72,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "inline-code",
+        "selector": ".prose code",
+        "label": "行内代码",
+        "found": true,
+        "text": "src/lib/content/markdown.ts",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "14.875px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "rgb(16, 19, 21)",
+        "background": {
+          "r": 16,
+          "g": 19,
+          "b": 21
+        },
+        "contrast": 13.24,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "link",
+        "selector": ".prose p a",
+        "label": "正文链接",
+        "found": true,
+        "text": "站内链接",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.79,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "mention",
+        "selector": ".md-mention",
+        "label": "社交提及",
+        "found": true,
+        "text": "Innei",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "rgb(34, 48, 48)",
+        "background": {
+          "r": 34,
+          "g": 48,
+          "b": 48
+        },
+        "contrast": 9.72,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "meta",
+        "selector": "#visual-tests-markdown .meta",
+        "label": "元信息小字",
+        "found": true,
+        "text": "Phase 4D · VISUAL FIXTURE",
+        "color": "rgb(163, 166, 157)",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 6.72,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-info-title",
+        "selector": ".md-callout--info .md-callout__title",
+        "label": "Callout info 标题",
+        "found": true,
+        "text": "说明",
+        "color": "rgb(134, 169, 189)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.274375 -0.00654923 -0.00802091)",
+        "background": {
+          "r": 35,
+          "g": 41,
+          "b": 44
+        },
+        "contrast": 5.91,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-note-title",
+        "selector": ".md-callout--note .md-callout__title",
+        "label": "Callout note 标题",
+        "found": true,
+        "text": "自定义标题的笔记",
+        "color": "rgb(57, 65, 67)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.246608 -0.00498875 -0.00543564)",
+        "background": {
+          "r": 29,
+          "g": 34,
+          "b": 36
+        },
+        "contrast": 1.54,
+        "threshold": 4.5,
+        "pass": false
+      },
+      {
+        "key": "callout-success-title",
+        "selector": ".md-callout--success .md-callout__title",
+        "label": "Callout success 标题",
+        "found": true,
+        "text": "完成",
+        "color": "rgb(134, 171, 146)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.273649 -0.00819524 -0.00311171)",
+        "background": {
+          "r": 35,
+          "g": 41,
+          "b": 41
+        },
+        "contrast": 5.81,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-warning-title",
+        "selector": ".md-callout--warning .md-callout__title",
+        "label": "Callout warning 标题",
+        "found": true,
+        "text": "注意",
+        "color": "rgb(214, 171, 109)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.278444 -0.00239258 0.00237037)",
+        "background": {
+          "r": 40,
+          "g": 41,
+          "b": 39
+        },
+        "contrast": 6.89,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-error-title",
+        "selector": ".md-callout--error .md-callout__title",
+        "label": "Callout error 标题",
+        "found": true,
+        "text": "错误",
+        "color": "rgb(217, 139, 125)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.274182 0.00251299 -0.000908166)",
+        "background": {
+          "r": 40,
+          "g": 39,
+          "b": 40
+        },
+        "contrast": 5.63,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-danger-title",
+        "selector": ".md-callout--danger .md-callout__title",
+        "label": "Callout danger 标题",
+        "found": true,
+        "text": "危险",
+        "color": "rgb(217, 139, 125)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.274182 0.00251299 -0.000908166)",
+        "background": {
+          "r": 40,
+          "g": 39,
+          "b": 40
+        },
+        "contrast": 5.63,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-tip-title",
+        "selector": ".md-callout--tip .md-callout__title",
+        "label": "Callout tip 标题",
+        "found": true,
+        "text": "提示",
+        "color": "rgb(134, 171, 146)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.273649 -0.00819524 -0.00311171)",
+        "background": {
+          "r": 35,
+          "g": 41,
+          "b": 41
+        },
+        "contrast": 5.81,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-important-title",
+        "selector": ".md-callout--important .md-callout__title",
+        "label": "Callout important 标题",
+        "found": true,
+        "text": "重要",
+        "color": "rgb(134, 169, 189)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.274375 -0.00654923 -0.00802091)",
+        "background": {
+          "r": 35,
+          "g": 41,
+          "b": 44
+        },
+        "contrast": 5.91,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-caution-title",
+        "selector": ".md-callout--caution .md-callout__title",
+        "label": "Callout caution 标题",
+        "found": true,
+        "text": "谨慎",
+        "color": "rgb(214, 171, 109)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.278444 -0.00239258 0.00237037)",
+        "background": {
+          "r": 40,
+          "g": 41,
+          "b": 39
+        },
+        "contrast": 6.89,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "callout-info-body",
+        "selector": ".md-callout--info .md-callout__body p",
+        "label": "Callout info 正文",
+        "found": true,
+        "text": "信息类提示：正文支持 行内 Markdown 与 代码。",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.274375 -0.00654923 -0.00802091)",
+        "background": {
+          "r": 35,
+          "g": 41,
+          "b": 44
+        },
+        "contrast": 10.46,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "banner-info-body",
+        "selector": ".md-banner--info p",
+        "label": "Banner info 正文",
+        "found": true,
+        "text": "通栏提示没有标题，用于整篇文章级别的说明（例如「本文有后续更新」",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.26478 -0.00606803 -0.00735583)",
+        "background": {
+          "r": 33,
+          "g": 38,
+          "b": 41
+        },
+        "contrast": 10.85,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "banner-warning-body",
+        "selector": ".md-banner--warning p",
+        "label": "Banner warning 正文",
+        "found": true,
+        "text": "同样支持其他类型；这一条用于对比左侧竖线与底色。",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.267831 -0.00295054 0.000437625)",
+        "background": {
+          "r": 36,
+          "g": 38,
+          "b": 38
+        },
+        "contrast": 10.8,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "table-th",
+        "selector": ".prose th",
+        "label": "表格表头",
+        "found": true,
+        "text": "组件",
+        "color": "rgb(163, 166, 157)",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 6.72,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "table-td",
+        "selector": ".prose td",
+        "label": "表格正文",
+        "found": true,
+        "text": "Callout",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.79,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "details-summary",
+        "selector": ".md-details summary",
+        "label": "Details 概要",
+        "found": true,
+        "text": "展开看实现细节",
+        "color": "rgb(217, 218, 210)",
+        "fontSize": "15px",
+        "fontWeight": "600",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 11.79,
+        "threshold": 4.5,
+        "pass": true
+      },
+      {
+        "key": "footnote",
+        "selector": ".footnotes p",
+        "label": "脚注正文",
+        "found": true,
+        "text": "第一条脚注，支持 行内 Markdown 与 code。↩第 1",
+        "color": "rgb(163, 166, 157)",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "largeText": false,
+        "backgroundSource": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "background": {
+          "r": 27,
+          "g": 31,
+          "b": 33
+        },
+        "contrast": 6.72,
+        "threshold": 4.5,
+        "pass": true
+      }
+    ]
+  },
+  "mobileNav": {
+    "route": "/",
+    "viewport": "390×844",
+    "scroll": "顶部（scrollY=0）",
+    "note": "玻璃栏是半透明 + backdrop-filter，数值随下方内容移动而变化，这里记录顶部状态。",
+    "results": {
+      "light": [
+        {
+          "key": "nav-brand",
+          "selector": ".glass-bar a",
+          "label": "导航站名",
+          "found": true,
+          "text": "Folio",
+          "color": "rgb(52, 79, 88)",
+          "fontSize": "19px",
+          "fontWeight": "400",
+          "largeText": false,
+          "backgroundSource": "rgba(220, 229, 229, 0.9)",
+          "background": {
+            "r": 222,
+            "g": 231,
+            "b": 230
+          },
+          "contrast": 6.94,
+          "threshold": 4.5,
+          "pass": true
+        },
+        {
+          "key": "nav-toggle",
+          "selector": ".glass-bar button.meta",
+          "label": "导航「目录」按钮",
+          "found": true,
+          "text": "目录",
+          "color": "rgb(107, 111, 103)",
+          "fontSize": "12px",
+          "fontWeight": "400",
+          "largeText": false,
+          "backgroundSource": "rgba(220, 229, 229, 0.9)",
+          "background": {
+            "r": 222,
+            "g": 231,
+            "b": 230
+          },
+          "contrast": 4.07,
+          "threshold": 4.5,
+          "pass": false
+        }
+      ],
+      "dark": [
+        {
+          "key": "nav-brand",
+          "selector": ".glass-bar a",
+          "label": "导航站名",
+          "found": true,
+          "text": "Folio",
+          "color": "rgb(198, 215, 217)",
+          "fontSize": "19px",
+          "fontWeight": "400",
+          "largeText": false,
+          "backgroundSource": "rgba(24, 30, 32, 0.9)",
+          "background": {
+            "r": 24,
+            "g": 29,
+            "b": 31
+          },
+          "contrast": 11.41,
+          "threshold": 4.5,
+          "pass": true
+        },
+        {
+          "key": "nav-toggle",
+          "selector": ".glass-bar button.meta",
+          "label": "导航「目录」按钮",
+          "found": true,
+          "text": "目录",
+          "color": "rgb(163, 166, 157)",
+          "fontSize": "12px",
+          "fontWeight": "400",
+          "largeText": false,
+          "backgroundSource": "rgba(24, 30, 32, 0.9)",
+          "background": {
+            "r": 24,
+            "g": 29,
+            "b": 31
+          },
+          "contrast": 6.86,
+          "threshold": 4.5,
+          "pass": true
+        }
+      ]
+    }
+  },
+  "summary": {
+    "light": {
+      "total": 25,
+      "measured": 25,
+      "failed": ["callout-note-title", "callout-warning-title", "callout-caution-title"],
+      "missing": []
+    },
+    "dark": {
+      "total": 25,
+      "measured": 25,
+      "failed": ["callout-note-title"],
+      "missing": []
+    },
+    "mobileNav": {
+      "light": {
+        "total": 2,
+        "measured": 2,
+        "failed": ["nav-toggle"],
+        "missing": []
+      },
+      "dark": {
+        "total": 2,
+        "measured": 2,
+        "failed": [],
+        "missing": []
+      }
+    }
+  }
+}

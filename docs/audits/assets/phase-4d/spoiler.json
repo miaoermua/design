@@ -1,0 +1,236 @@
+{
+  "stage": "Phase 4D-0 Spoiler 验收",
+  "generatedAt": "2026-11-11T07:43:56.913Z",
+  "route": "/visual-tests/markdown",
+  "viewport": "1280×800",
+  "browser": "Chrome/157.0.8103.39",
+  "results": [
+    {
+      "check": "禁用 JS · light · 文本可读",
+      "status": "PASS",
+      "detail": "filter=none, contrast=6.92:1, ready=null, revealed=null, 尺寸=154×25, 定位成功=true",
+      "probe": {
+        "found": true,
+        "text": "点击展开的剧透内容",
+        "ready": null,
+        "revealed": null,
+        "role": null,
+        "tabIndex": -1,
+        "ariaExpanded": null,
+        "filter": "none",
+        "color": "rgb(82, 86, 80)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "outlineWidth": "3px",
+        "outlineStyle": "none",
+        "outlineColor": "rgb(82, 86, 80)",
+        "outlineOffset": "0px",
+        "visibility": "visible",
+        "opacity": "1",
+        "userSelect": "auto",
+        "width": 154,
+        "height": 25,
+        "contrast": 6.92,
+        "bgResolved": {
+          "r": 248,
+          "g": 246,
+          "b": 239,
+          "a": 1
+        },
+        "bgValue": "oklab(0.971684 -0.000531214 0.00967608)",
+        "fgResolved": {
+          "r": 82,
+          "g": 86,
+          "b": 80,
+          "a": 1
+        },
+        "parentColor": "rgb(82, 86, 80)"
+      },
+      "at": "2026-11-11T07:43:50.052Z"
+    },
+    {
+      "check": "禁用 JS · light · 无增强痕迹",
+      "status": "PASS",
+      "detail": "role=null, tabindex=-1, aria-expanded=null",
+      "at": "2026-11-11T07:43:50.052Z"
+    },
+    {
+      "check": "禁用 JS · dark · 文本可读",
+      "status": "PASS",
+      "detail": "filter=none, contrast=11.79:1, ready=null, revealed=null, 尺寸=154×25, 定位成功=true",
+      "probe": {
+        "found": true,
+        "text": "点击展开的剧透内容",
+        "ready": null,
+        "revealed": null,
+        "role": null,
+        "tabIndex": -1,
+        "ariaExpanded": null,
+        "filter": "none",
+        "color": "rgb(217, 218, 210)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "outlineWidth": "3px",
+        "outlineStyle": "none",
+        "outlineColor": "rgb(217, 218, 210)",
+        "outlineOffset": "0px",
+        "visibility": "visible",
+        "opacity": "1",
+        "userSelect": "auto",
+        "width": 154,
+        "height": 25,
+        "contrast": 11.79,
+        "bgResolved": {
+          "r": 27,
+          "g": 31,
+          "b": 33,
+          "a": 1
+        },
+        "bgValue": "oklab(0.234234 -0.00454654 -0.00534545)",
+        "fgResolved": {
+          "r": 217,
+          "g": 218,
+          "b": 210,
+          "a": 1
+        },
+        "parentColor": "rgb(217, 218, 210)"
+      },
+      "at": "2026-11-11T07:43:51.046Z"
+    },
+    {
+      "check": "禁用 JS · dark · 无增强痕迹",
+      "status": "PASS",
+      "detail": "role=null, tabindex=-1, aria-expanded=null",
+      "at": "2026-11-11T07:43:51.046Z"
+    },
+    {
+      "check": "JS 正常 · 初始化状态",
+      "status": "PASS",
+      "detail": "ready=true, revealed=null, role=button, tabindex=0, aria-expanded=false",
+      "probe": {
+        "found": true,
+        "text": "点击展开的剧透内容",
+        "ready": "true",
+        "revealed": null,
+        "role": "button",
+        "tabIndex": 0,
+        "ariaExpanded": "false",
+        "filter": "blur(5.78px)",
+        "color": "rgb(82, 86, 80)",
+        "backgroundColor": "rgb(233, 229, 217)",
+        "outlineWidth": "3px",
+        "outlineStyle": "none",
+        "outlineColor": "rgb(82, 86, 80)",
+        "outlineOffset": "0px",
+        "visibility": "visible",
+        "opacity": "1",
+        "userSelect": "none",
+        "width": 159,
+        "height": 25,
+        "contrast": 5.94,
+        "bgResolved": {
+          "r": 233,
+          "g": 229,
+          "b": 217,
+          "a": 1
+        },
+        "bgValue": "rgb(233, 229, 217)",
+        "fgResolved": {
+          "r": 82,
+          "g": 86,
+          "b": 80,
+          "a": 1
+        },
+        "parentColor": "rgb(82, 86, 80)"
+      },
+      "at": "2026-11-11T07:43:52.263Z"
+    },
+    {
+      "check": "JS 正常 · 模糊生效",
+      "status": "PASS",
+      "detail": "filter=blur(5.78px)（样式声明为 blur(0.34em)）",
+      "at": "2026-11-11T07:43:52.263Z"
+    },
+    {
+      "check": "JS 正常 · 鼠标点击展开",
+      "status": "PASS",
+      "detail": "revealed=true, aria-expanded=true, filter=none",
+      "at": "2026-11-11T07:43:52.713Z"
+    },
+    {
+      "check": "JS 正常 · Enter 展开",
+      "status": "PASS",
+      "detail": "Tab 19 次聚焦到 Spoiler；展开前 revealed=null，展开后 revealed=true",
+      "at": "2026-11-11T07:43:54.086Z"
+    },
+    {
+      "check": "JS 正常 · 焦点环可见",
+      "status": "PASS",
+      "detail": "outline=2px solid rgb(109, 146, 152) offset=2px",
+      "probe": {
+        "tag": "span",
+        "className": "md-spoiler",
+        "isSpoiler": true,
+        "outlineWidth": "2px",
+        "outlineStyle": "solid",
+        "outlineColor": "rgb(109, 146, 152)",
+        "outlineOffset": "2px"
+      },
+      "at": "2026-11-11T07:43:54.086Z"
+    },
+    {
+      "check": "JS 正常 · Space 展开",
+      "status": "PASS",
+      "detail": "Tab 19 次聚焦；展开前 revealed=null，展开后 revealed=true",
+      "at": "2026-11-11T07:43:55.585Z"
+    },
+    {
+      "check": "JS 正常 · 暗色模糊态",
+      "status": "PASS",
+      "detail": "filter=blur(5.78px), revealed=null",
+      "at": "2026-11-11T07:43:56.913Z"
+    }
+  ],
+  "shots": [
+    {
+      "file": "screenshots/spoiler-nojs-light-1280.png",
+      "note": "禁用 JS · light · Spoiler 原始文本",
+      "bytes": 307591,
+      "at": "2026-11-11T07:43:50.052Z"
+    },
+    {
+      "file": "screenshots/spoiler-nojs-dark-1280.png",
+      "note": "禁用 JS · dark · Spoiler 原始文本",
+      "bytes": 311941,
+      "at": "2026-11-11T07:43:51.046Z"
+    },
+    {
+      "file": "screenshots/spoiler-js-blurred-light-1280.png",
+      "note": "JS 正常 · 初始（模糊）",
+      "bytes": 309498,
+      "at": "2026-11-11T07:43:52.263Z"
+    },
+    {
+      "file": "screenshots/spoiler-js-revealed-light-1280.png",
+      "note": "JS 正常 · 鼠标点击后展开",
+      "bytes": 307968,
+      "at": "2026-11-11T07:43:52.713Z"
+    },
+    {
+      "file": "screenshots/spoiler-js-focus-enter-1280.png",
+      "note": "JS 正常 · 键盘聚焦后的焦点环 + Enter 展开",
+      "bytes": 318537,
+      "at": "2026-11-11T07:43:54.231Z"
+    },
+    {
+      "file": "screenshots/spoiler-js-space-dark-1280.png",
+      "note": "JS 正常 · 暗色 · Space 展开",
+      "bytes": 322304,
+      "at": "2026-11-11T07:43:55.761Z"
+    },
+    {
+      "file": "screenshots/spoiler-js-blurred-dark-1280.png",
+      "note": "JS 正常 · 暗色 · 初始（模糊）",
+      "bytes": 313664,
+      "at": "2026-11-11T07:43:56.913Z"
+    }
+  ]
+}

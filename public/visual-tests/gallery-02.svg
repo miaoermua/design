@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Folio visual fixture 02 cool">
+  <rect width="1200" height="900" fill="#e4ebee"/>
+  <circle cx="760" cy="400" r="250" fill="#2f5d6b" opacity="0.85"/>
+  <rect x="180" y="240" width="360" height="360" fill="#6f93a8" opacity="0.8"/>
+  <text x="64" y="820" font-family="ui-monospace, monospace" font-size="34" fill="#2b3f47">FIXTURE 02 · COOL</text>
+</svg>

@@ -7,7 +7,11 @@
  *   3. 冰面      .glass-bar / .glass-panel —— 导航与浮层专用
  *
  * 关闭方式：不 @import 本文件即可，页面仍完整（纸色与排版都在 typography/base 层）。
- * 约束：全站只有一层颗粒、一层环境光；backdrop-filter 只出现在 .glass-* 上。
+ * 约束：全站只有一层颗粒、一层环境光；材质层的 backdrop-filter 只出现在 .glass-* 上，
+ *       取值来自 --material-glass-blur 等参数。
+ *
+ * media.css 另有两处组件专属的局部模糊（相册翻页按钮 6px、图片预览遮罩 8px）：它们
+ * 服务于图片交互而非玻璃材质，背景透明度与用途都不同，因此不复用 --material-glass-*。
  */
 
 .paper-grain {

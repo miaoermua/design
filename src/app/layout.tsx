@@ -3,6 +3,9 @@ import type { Metadata } from 'next'
 // 必须排在 globals.css 之前，让 prose.css 的局部覆盖仍然生效。
 import 'katex/dist/katex.min.css'
 import './globals.css'
+// 自托管中文 Web Font：本文件只声明 @font-face，字体栈（--font-sans/--font-serif）定义在 tokens.css 的 @theme 里。
+// 保留在 globals.css 之后，与其他样式层保持一致的加载顺序。
+import '@/design-system/styles/fonts.css'
 import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { ImageViewer } from '@/components/markdown/image-preview'
