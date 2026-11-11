@@ -1,10 +1,14 @@
 /*
  * 提示类内容：Callout / Banner / GitHub Alerts / Details / Spoiler / Ins
  *
- * 共用一条「语气 → 颜色」的映射：每种类型只声明 `--notice-tone`，
- * 背景与描边全部由 color-mix 从同一个 tone 派生，因此新增类型不需要新增颜色。
+ * 共用一条「语气 → 颜色」的映射：每种类型只声明 `--notice-tone`（描边 / 圆点 / 底纹）
+ * 与 `--notice-ink`（标题文字），背景与描边由 color-mix 从 tone 派生，因此新增类型不需要新增颜色。
  * tone 只取设计系统里的功能色（accent / info / success / warning / danger）与边框色，
  * 没有散落的固定色值，明暗主题共用同一份规则。
+ *
+ * tone 与 ink 必须分开：tone 是**装饰色**（下限 3:1），ink 是**文字色**（下限 4.5:1）。
+ * Phase 4D-1 之前两者被合并成一个变量，导致中性提示（note）的标题直接取了描边色
+ * `--edge-strong`，实测 1.5:1；把文字色拆出来后，装饰色仍可保持克制的浅灰。
  */
 
 /* ── 1. 类型 → 语气 ─────────────────────────────────────────── */
@@ -12,24 +16,29 @@
 .md-callout,
 .md-banner {
   --notice-tone: var(--edge-strong);
+  /* 中性提示没有功能色，标题用正文墨色，不能用描边色 */
+  --notice-ink: var(--text-primary);
 }
 
 .md-callout--info,
 .md-callout--important,
 .md-banner--info {
   --notice-tone: var(--color-info);
+  --notice-ink: var(--color-info);
 }
 
 .md-callout--success,
 .md-callout--tip,
 .md-banner--success {
   --notice-tone: var(--color-success);
+  --notice-ink: var(--color-success);
 }
 
 .md-callout--warning,
 .md-callout--caution,
 .md-banner--warning {
   --notice-tone: var(--color-warning);
+  --notice-ink: var(--color-warning);
 }
 
 .md-callout--error,
@@ -37,6 +46,7 @@
 .md-banner--error,
 .md-banner--danger {
   --notice-tone: var(--color-danger);
+  --notice-ink: var(--color-danger);
 }
 
 /* ── 2. Callout / GitHub Alerts ─────────────────────────────── */
@@ -53,7 +63,8 @@
 
 .md-callout__title {
   margin: 0;
-  color: var(--notice-tone);
+  /* 文字色走 ink，描边色只做装饰（见文件头注释） */
+  color: var(--notice-ink);
   font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: 0.06em;

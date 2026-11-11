@@ -14,3 +14,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 coverage/
+
+# Phase 4D 视觉基线截图：本地产物，不随仓库分发（脚本与测量 JSON 仍然入库）
+docs/audits/assets/phase-4d/screenshots/
+docs/audits/*.md
+*.lock

@@ -6,7 +6,8 @@ const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta
 
 const config = [
   {
-    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'coverage/**'],
+    // .worktrees/** 是并行阶段工作树，里面是同一仓库的源码副本，不应参与主工作区的 lint
+    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'coverage/**', '.worktrees/**'],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {

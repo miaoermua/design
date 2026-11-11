@@ -69,7 +69,7 @@ export function MobileNav({ items }: { items: NavItem[] }) {
         aria-expanded={open}
         aria-controls="site-mobile-nav"
         onClick={() => setOpen((value) => !value)}
-        className="meta rounded-[var(--radius-sm)] border border-[var(--edge)] px-2.5 py-1 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--accent-line)] hover:text-[var(--text-heading)]"
+        className="meta meta-interactive rounded-[var(--radius-sm)] border border-[var(--edge)] px-2.5 py-1 transition-colors duration-[var(--duration-fast)] hover:border-[var(--accent-line)] hover:bg-[var(--accent-wash)]"
       >
         {open ? '收起' : '目录'}
       </button>

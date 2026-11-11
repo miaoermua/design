@@ -73,7 +73,7 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | 主题洗 | `--color-accent-wash`   | `#e4ecec` | 选中底、标签底、`::selection`                                                                                                                                                                                                                                                   |
 | 主题线 | `--color-accent-line`   | `#b7cbcd` | kicker 前短横线、引线                                                                                                                                                                                                                                                           |
 | 危险   | `--color-danger`        | `#a4503f` | `.md-callout--error/danger`、`ErrorState` 左边线（`containers.css:39`、`error-state.tsx:17`）                                                                                                                                                                                   |
-| 警告   | `--color-warning`       | `#8a6a2f` | `.md-callout--warning/caution`（`containers.css:32`）                                                                                                                                                                                                                           |
+| 警告   | `--color-warning`       | `#7d5f28` | `.md-callout--warning/caution`（`containers.css`）；比 4D 基线深一档，保证 8% 底纹上标题 ≥4.5:1                                                                                                                                                                                  |
 | 成功   | `--color-success`       | `#4a6b52` | `.md-callout--success/tip`、`.md-details__summary` 下边线（`containers.css:26`、`containers.css:163`）                                                                                                                                                                          |
 | 信息   | `--color-info`          | `#4a6a7c` | `.md-callout--info/important`（`containers.css:20`）                                                                                                                                                                                                                            |
 
@@ -302,6 +302,7 @@ Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必
 | `footnotes.css` / `mentions.css` | 脚注、@提及                                                                             |
 
 - **Callout 类型配色只有一个实现**：`.md-callout--*` 的左边线与标题色在 `containers.css`；`prose.css` **不得**再出现同名规则，否则两个文件会争夺同一属性、调色时只改一处就静默失效。
+- **Callout 的装饰色与文字色必须分开**：`--notice-tone` 只做左边线、圆点与 8% 底纹（装饰下限 3:1），标题文字用 `--notice-ink`（下限 4.5:1）。中性提示没有功能色，`--notice-ink` 取 `--text-primary`，**不得**复用 `--edge-strong` 这类描边色——Phase 4D-1 之前二者共用同一变量，实测标题只有 1.5:1。
 - **Spoiler 是渐进增强**：无 JS 时内容必须正常可读（默认可见，不靠 CSS 兜底隐藏）；JS 初始化后容器带 `data-spoiler-ready="true"`，展开后该项带 `data-revealed="true"`。**不得**用旧的 `.prose .spoiler` 一类选择器把内容永久隐藏——那会让无 JS 读者看不到正文。
 
 ### 10.2 新增 Markdown 扩展的检查清单

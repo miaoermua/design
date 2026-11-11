@@ -167,6 +167,28 @@ describe('Markdown 真实 DOM 与 CSS 选择器契约', () => {
     }
   })
 
+  it('Callout 文字色与装饰色分离：标题不取描边色', () => {
+    const containers = cssText.get('containers.css') as string
+    const title = declarationsFor(containers, '.md-callout__title')
+
+    expect(title, '找不到 .md-callout__title 声明块').not.toBeNull()
+    expect(title, '标题色必须走 --notice-ink').toContain('var(--notice-ink)')
+    expect(title, '标题色不得回退到装饰色 --notice-tone（4D-1 的 1.5:1 事故）').not.toContain(
+      'var(--notice-tone)',
+    )
+
+    // 五种语气（中性 + info / success / warning / error）都必须同时定义 tone 与 ink
+    for (const token of ['--notice-tone', '--notice-ink']) {
+      const declared = (containers.match(new RegExp(`${token}:`, 'g')) ?? []).length
+      expect(declared, `${token} 应声明 5 次（中性 + 4 种功能色）`).toBe(5)
+    }
+
+    const neutral = declarationsFor(containers, '.md-callout,\n.md-banner')
+    expect(neutral, '找不到中性提示的类型映射').not.toBeNull()
+    expect(neutral, '中性提示的描边保持边框色').toContain('--notice-tone: var(--edge-strong)')
+    expect(neutral, '中性提示的标题必须用正文墨色').toContain('--notice-ink: var(--text-primary)')
+  })
+
   it('反向：样式表里的 md-* 类都有生产者（修饰类按前缀判定）', () => {
     const mdClasses = [...styledClasses].filter((name) => name.startsWith('md-'))
     const orphans = mdClasses.filter((name) => {

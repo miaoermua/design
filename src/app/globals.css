@@ -152,6 +152,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 可交互的元信息（导航「目录」按钮）。
+   `.meta` 的 secondary 在冰面玻璃上实测 4.07:1，按钮属于可读控件，提到标题墨色（同一背景 6.94:1）。
+   必须写在这里而不是 Tailwind 工具类：globals.css 的这段规则不在 @layer 内，优先级高于 utilities。 */
+.meta-interactive {
+  color: var(--text-heading);
+}
+
 .meta-sep::before {
   content: '·';
   margin-inline: 0.5em;

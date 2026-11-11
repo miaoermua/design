@@ -50,7 +50,8 @@
 
   /* 功能色：只服务于状态，不参与装饰 */
   --color-danger: #a4503f;
-  --color-warning: #8a6a2f;
+  /* 比 Phase 4D 基线深一档：原值在 8% 底纹上实测 4.18:1，达不到正文 4.5:1 */
+  --color-warning: #7d5f28;
   --color-success: #4a6b52;
   --color-info: #4a6a7c;
 

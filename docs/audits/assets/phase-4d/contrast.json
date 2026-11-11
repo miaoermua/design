@@ -1,8 +1,8 @@
 {
   "stage": "Phase 4D-0 对比度抽查",
-  "generatedAt": "2026-11-11T08:03:16.342Z",
+  "generatedAt": "2026-11-11T09:45:20.410Z",
   "route": "/visual-tests/markdown",
-  "standard": "WCAG 2.1 AA（正文 4.5:1，大字 3:1）",
+  "standard": "WCAG 2.2 AA（正文 4.5:1，大字 3:1）",
   "browser": "Chrome/157.0.8103.39",
   "note": "背景按 alpha 逐层合成（半透明层叠在不透明基色上），只测真正渲染出来的元素。",
   "results": {
@@ -213,7 +213,7 @@
         "label": "Callout note 标题",
         "found": true,
         "text": "自定义标题的笔记",
-        "color": "rgb(201, 200, 188)",
+        "color": "rgb(82, 86, 80)",
         "fontSize": "13px",
         "fontWeight": "600",
         "largeText": false,
@@ -223,9 +223,9 @@
           "g": 242,
           "b": 235
         },
-        "contrast": 1.5,
+        "contrast": 6.68,
         "threshold": 4.5,
-        "pass": false
+        "pass": true
       },
       {
         "key": "callout-success-title",
@@ -253,19 +253,19 @@
         "label": "Callout warning 标题",
         "found": true,
         "text": "注意",
-        "color": "rgb(138, 106, 47)",
+        "color": "rgb(125, 95, 40)",
         "fontSize": "13px",
         "fontWeight": "600",
         "largeText": false,
-        "backgroundSource": "oklab(0.938463 0.000649818 0.0155744)",
+        "backgroundSource": "oklab(0.935314 0.000622397 0.015194)",
         "background": {
-          "r": 239,
-          "g": 234,
-          "b": 223
+          "r": 238,
+          "g": 233,
+          "b": 222
         },
-        "contrast": 4.18,
+        "contrast": 4.9,
         "threshold": 4.5,
-        "pass": false
+        "pass": true
       },
       {
         "key": "callout-error-title",
@@ -353,19 +353,19 @@
         "label": "Callout caution 标题",
         "found": true,
         "text": "谨慎",
-        "color": "rgb(138, 106, 47)",
+        "color": "rgb(125, 95, 40)",
         "fontSize": "13px",
         "fontWeight": "600",
         "largeText": false,
-        "backgroundSource": "oklab(0.938463 0.000649818 0.0155744)",
+        "backgroundSource": "oklab(0.935314 0.000622397 0.015194)",
         "background": {
-          "r": 239,
-          "g": 234,
-          "b": 223
+          "r": 238,
+          "g": 233,
+          "b": 222
         },
-        "contrast": 4.18,
+        "contrast": 4.9,
         "threshold": 4.5,
-        "pass": false
+        "pass": true
       },
       {
         "key": "callout-info-body",
@@ -417,13 +417,13 @@
         "fontSize": "15px",
         "fontWeight": "400",
         "largeText": false,
-        "backgroundSource": "oklab(0.947034 0.000350623 0.0140565)",
+        "backgroundSource": "oklab(0.944673 0.000330058 0.0137712)",
         "background": {
-          "r": 241,
-          "g": 237,
+          "r": 240,
+          "g": 236,
           "b": 227
         },
-        "contrast": 6.4,
+        "contrast": 6.35,
         "threshold": 4.5,
         "pass": true
       },
@@ -715,7 +715,7 @@
         "label": "Callout note 标题",
         "found": true,
         "text": "自定义标题的笔记",
-        "color": "rgb(57, 65, 67)",
+        "color": "rgb(217, 218, 210)",
         "fontSize": "13px",
         "fontWeight": "600",
         "largeText": false,
@@ -725,9 +725,9 @@
           "g": 34,
           "b": 36
         },
-        "contrast": 1.54,
+        "contrast": 11.41,
         "threshold": 4.5,
-        "pass": false
+        "pass": true
       },
       {
         "key": "callout-success-title",
@@ -1044,7 +1044,7 @@
           "label": "导航「目录」按钮",
           "found": true,
           "text": "目录",
-          "color": "rgb(107, 111, 103)",
+          "color": "rgb(52, 79, 88)",
           "fontSize": "12px",
           "fontWeight": "400",
           "largeText": false,
@@ -1054,9 +1054,9 @@
             "g": 231,
             "b": 230
           },
-          "contrast": 4.07,
+          "contrast": 6.94,
           "threshold": 4.5,
-          "pass": false
+          "pass": true
         }
       ],
       "dark": [
@@ -1086,7 +1086,7 @@
           "label": "导航「目录」按钮",
           "found": true,
           "text": "目录",
-          "color": "rgb(163, 166, 157)",
+          "color": "rgb(198, 215, 217)",
           "fontSize": "12px",
           "fontWeight": "400",
           "largeText": false,
@@ -1096,7 +1096,7 @@
             "g": 29,
             "b": 31
           },
-          "contrast": 6.86,
+          "contrast": 11.41,
           "threshold": 4.5,
           "pass": true
         }
@@ -1107,20 +1107,20 @@
     "light": {
       "total": 25,
       "measured": 25,
-      "failed": ["callout-note-title", "callout-warning-title", "callout-caution-title"],
+      "failed": [],
       "missing": []
     },
     "dark": {
       "total": 25,
       "measured": 25,
-      "failed": ["callout-note-title"],
+      "failed": [],
       "missing": []
     },
     "mobileNav": {
       "light": {
         "total": 2,
         "measured": 2,
-        "failed": ["nav-toggle"],
+        "failed": [],
         "missing": []
       },
       "dark": {

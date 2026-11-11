@@ -1,7 +1,7 @@
 /**
  * Phase 4D 正文与容器对比度抽查
  *
- * 只做测量，不改任何颜色。基准取 WCAG 2.1 AA：
+ * 只做测量，不改任何颜色。基准取 WCAG 2.2 AA（SC 1.4.3 的阈值与 2.1 相同）：
  *   - 正文（< 18.66px 常规 / < 24px 粗体）≥ 4.5:1
  *   - 大字（≥ 24px，或 ≥ 18.66px 且 700 以上）≥ 3:1
  *
@@ -239,7 +239,7 @@ async function main() {
         stage: 'Phase 4D-0 对比度抽查',
         generatedAt: new Date().toISOString(),
         route: '/visual-tests/markdown',
-        standard: 'WCAG 2.1 AA（正文 4.5:1，大字 3:1）',
+        standard: 'WCAG 2.2 AA（正文 4.5:1，大字 3:1）',
         browser: chrome.version.browser,
         note: '背景按 alpha 逐层合成（半透明层叠在不透明基色上），只测真正渲染出来的元素。',
         results,
