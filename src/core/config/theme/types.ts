@@ -33,11 +33,71 @@ export interface ThemeFooter {
   icp: ThemeIcp
 }
 
+/**
+ * 图标来源类型。
+ *
+ * 三种类型的能力**并不对等**，这一点必须写在类型里而不是留给读者猜：
+ *   - `builtin`：主题自带的纯内联 SVG，随 RSC payload 一起到达，永远可用；
+ *   - `css`：一个图标字体 class 名，只有当 `iconStylesheets` 真的声明了
+ *     对应样式表时才有意义，否则浏览器无从解析这个 class；
+ *   - `iconify`：仅保存图标标识，**当前没有运行时加载器**，渲染时降级为
+ *     builtin 的兜底图形。保留该类型是为了让配置可以被无损解析、
+ *     被将来的加载器接管，而不是假装已经支持。
+ */
+export type SocialIconType = 'builtin' | 'css' | 'iconify'
+
+export interface ThemeSocialIcon {
+  type: SocialIconType
+  /**
+   * `builtin` → 内置图标键（如 `github`）
+   * `css` → 一个或多个 class 名，空格分隔（如 `fa fa-at`）
+   * `iconify` → 图标标识（如 `mingcute:telegram-fill`）
+   */
+  name: string
+}
+
+/**
+ * 单个社交项目。
+ *
+ * 与旧的 `order` + `icons` 映射的根本区别：**每一项都自带地址**，
+ * 不再由平台键推导 URL。因此同一平台可以出现多次（例如两个 Telegram
+ * 频道），也不会因为平台名相同而互相覆盖。
+ */
+export interface ThemeSocialItem {
+  /** 展示标题；缺失时由解析层用主机名兜底，不会留下无标题的链接 */
+  title: string
+  /** 已校验：http(s) 绝对地址或 mailto: */
+  url: string
+  /** null 表示不指定图标，由渲染层按 URL 猜一个兜底图形 */
+  icon: ThemeSocialIcon | null
+  /** 已校验为安全的颜色字面量（hex 或 var(--accent-strong)）；null 表示用主题默认色 */
+  color: string | null
+}
+
 export interface ThemeSocial {
   enabled: boolean
-  /** 平台键的展示顺序；未列出的平台排在后面，保持 /aggregate 原始顺序 */
+  /**
+   * 自定义社交项目，顺序即展示顺序。
+   *
+   * 这些项目会与 `/aggregate` 的 `user.social_ids` 合并：
+   * URL 相同的视为同一个项目，以这里的配置为准；其余追加在后面。
+   */
+  items: ThemeSocialItem[]
+  /**
+   * 为 `css` 类型图标准备的样式表地址（已校验、去重、截断）。
+   *
+   * 与 `custom.css` 分开配置，是因为两者的语义不同：`custom.css` 是
+   * 「整体外观覆盖」，这里只是「图标字体」，混在一起会让「我只想加一个
+   * 图标字体」变成「我顺手改了整个站点的样式」。
+   */
+  iconStylesheets: string[]
+  /**
+   * 旧配置字段，保留用于兼容与迁移。
+   *
+   * 它们**只作用于从 API 派生出来的项目**（排序、图标覆盖），
+   * 不参与唯一性判断——平台名不再作为键。
+   */
   order: string[]
-  /** 平台键 → 图标名覆盖；值只接受字符串，不接受 SVG/HTML */
   icons: Record<string, string>
 }
 

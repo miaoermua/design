@@ -10,7 +10,8 @@ import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
 import { getLocale } from '@/lib/i18n/server'
 import { loadSiteContext } from '@/lib/site'
-import { toSocialLinks } from '@/lib/social'
+import { getThemeConfig } from '@/core/config/theme'
+import { toSocialItems } from '@/lib/social'
 import { formatDate } from '@/lib/utils/date'
 
 export const metadata: Metadata = {
@@ -31,9 +32,13 @@ export default async function AboutPage() {
     throw error
   }
 
-  const { identity } = await loadSiteContext()
+  const [{ identity }, theme] = await Promise.all([loadSiteContext(), getThemeConfig()])
   const owner = identity?.owner
-  const socials = toSocialLinks(owner?.socialIds)
+  // 与首页/页脚共用同一套合并规则：自定义项目补在 API 账号前面，
+  // 否则「关于」页会和站点其它位置展示出不同的社交列表。
+  const socials = theme.social.enabled
+    ? toSocialItems(owner?.socialIds, { theme: theme.social })
+    : []
   const isMarkdown = page.contentFormat === 'markdown'
   const rendered = isMarkdown && page.content.trim() ? await renderMarkdown(page.content) : null
 
@@ -81,15 +86,16 @@ export default async function AboutPage() {
 
           {socials.length > 0 ? (
             <ul className="mt-6 space-y-1.5 border-t border-[var(--edge)] pt-4">
-              {socials.map((link) => (
-                <li key={`${link.label}-${link.href}`} className="group">
+              {socials.map((item) => (
+                <li key={item.id} className="group">
                   <a
-                    href={link.href}
+                    href={item.url}
                     rel="me noopener noreferrer"
-                    target={link.href.startsWith('mailto:') ? undefined : '_blank'}
+                    target={item.url.startsWith('mailto:') ? undefined : '_blank'}
+                    style={item.color ? { color: item.color } : undefined}
                     className="inline-flex items-center gap-1.5 py-1 text-small text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]"
                   >
-                    {link.label}
+                    {item.title}
                     <span
                       aria-hidden="true"
                       className="text-[var(--text-tertiary)] transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"

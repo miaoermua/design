@@ -547,6 +547,39 @@ export const mockThemeSnippet: Record<string, unknown> = {
   },
   social: {
     enabled: true,
+    // 三种图标类型都有示例：builtin（默认路径）、css（需配样式表）、
+    // iconify（当前降级，用于验证不会留白）。
+    items: [
+      {
+        url: 'https://github.com/miaoermua',
+        title: 'GitHub',
+        icon: { type: 'builtin', name: 'github' },
+        color: '#181717',
+      },
+      {
+        url: 'https://t.me/miaoer_subscribe/92',
+        title: 'Telegram Group',
+        icon: { type: 'css', name: 'fa fa-paper-plane' },
+        color: '#0088CC',
+      },
+      {
+        url: 'mailto:i@miaoer.net',
+        title: 'E-Mail',
+        icon: { type: 'css', name: 'fa fa-at' },
+        color: '#8E71C1',
+      },
+      {
+        // name 保留但当前不加载：渲染层会降级成兜底图形
+        url: 'https://t.me/miaoer_subscribe',
+        title: 'Telegram Channel',
+        icon: { type: 'iconify', name: 'mingcute:telegram-fill' },
+        color: '#FFA500',
+      },
+    ],
+    icon_stylesheets: [
+      'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css',
+    ],
+    // 旧字段继续生效，只作用于从 /aggregate 派生的项目
     order: ['github', 'bilibili', 'telegram', 'email'],
     icons: { bilibili: 'bilibili' },
   },

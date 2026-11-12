@@ -4,6 +4,9 @@ import {
   DEFAULT_THEME_CONFIG,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
+  IMPLEMENTED_ICON_TYPES,
+  SOCIAL_ICON_STYLESHEET_MAX,
+  SOCIAL_ITEM_MAX,
   footerYearRange,
   normalizeCustomCssList,
   normalizeCssUrl,
@@ -98,7 +101,7 @@ describe('Theme：Footer', () => {
   })
 })
 
-describe('Theme：Social', () => {
+describe('Theme：Social（旧字段兼容）', () => {
   it('order 生效且未列出的平台排在后面', () => {
     const config = parseThemeConfig({
       social: { order: ['bilibili', 'github'], icons: {} },
@@ -124,6 +127,219 @@ describe('Theme：Social', () => {
       social: { order: ['github', 'github', '<script>', 'x', 42] },
     })
     expect(config.social.order).toEqual(['github', 'x'])
+  })
+
+  it('只有旧字段时 items 为空，不凭空造项目', () => {
+    const config = parseThemeConfig({ social: { order: ['github'] } })
+    expect(config.social.items).toEqual([])
+    expect(config.social.iconStylesheets).toEqual([])
+  })
+})
+
+describe('Theme：Social items', () => {
+  it('解析完整项目：URL / 标题 / 图标 / 颜色', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          {
+            url: 'https://github.com/your-name',
+            title: 'GitHub',
+            icon: { type: 'builtin', name: 'github' },
+            color: '#181717',
+          },
+        ],
+      },
+    })
+    expect(config.social.items).toEqual([
+      {
+        url: 'https://github.com/your-name',
+        title: 'GitHub',
+        icon: { type: 'builtin', name: 'github' },
+        color: '#181717',
+      },
+    ])
+  })
+
+  it('同一平台允许多个项目，不按平台名去重', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://t.me/a', title: 'Telegram A' },
+          { url: 'https://t.me/b', title: 'Telegram B' },
+        ],
+      },
+    })
+    expect(config.social.items.map((item) => item.title)).toEqual(['Telegram A', 'Telegram B'])
+  })
+
+  it('相同 URL 只保留第一条', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://t.me/a', title: '第一条' },
+          { url: 'https://t.me/a', title: '第二条' },
+        ],
+      },
+    })
+    expect(config.social.items).toHaveLength(1)
+    expect(config.social.items[0]?.title).toBe('第一条')
+  })
+
+  it('标题缺失时用主机名兜底，链接不会消失', () => {
+    const config = parseThemeConfig({
+      social: { items: [{ url: 'https://www.example.com/me' }] },
+    })
+    expect(config.social.items[0]?.title).toBe('example.com')
+  })
+
+  it('mailto 允许，且标题兜底为邮箱地址', () => {
+    const config = parseThemeConfig({ social: { items: [{ url: 'mailto:i@miaoer.net' }] } })
+    expect(config.social.items[0]?.url).toBe('mailto:i@miaoer.net')
+    expect(config.social.items[0]?.title).toBe('i@miaoer.net')
+  })
+
+  it('拒绝伪协议与相对地址', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'javascript:alert(1)' },
+          { url: 'data:text/html,x' },
+          { url: '//evil.example/x' },
+          { url: '/relative' },
+          { url: 'mailto:' },
+          { url: 'https://ok.example' },
+        ],
+      },
+    })
+    expect(config.social.items.map((item) => item.url)).toEqual(['https://ok.example/'])
+  })
+
+  it('单条非法不影响其它条目', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [42, null, { url: 'https://a.example' }, { title: '没有地址' }, { url: 'https://b.example' }],
+      },
+    })
+    expect(config.social.items).toHaveLength(2)
+  })
+
+  it('超过上限时截断', () => {
+    const items = Array.from({ length: SOCIAL_ITEM_MAX + 5 }, (_, i) => ({
+      url: `https://example.com/${i}`,
+    }))
+    expect(parseThemeConfig({ social: { items } }).social.items).toHaveLength(SOCIAL_ITEM_MAX)
+  })
+
+  it('颜色只接受 hex 与 var(--token)', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://a.example', color: '#12b7f5' },
+          { url: 'https://b.example', color: 'var(--accent-strong)' },
+          { url: 'https://c.example', color: 'red;background:url(x)' },
+          { url: 'https://d.example', color: 'url(https://evil.example/p.png)' },
+          { url: 'https://e.example' },
+        ],
+      },
+    })
+    expect(config.social.items.map((item) => item.color)).toEqual([
+      '#12b7f5',
+      'var(--accent-strong)',
+      null,
+      null,
+      null,
+    ])
+  })
+})
+
+describe('Theme：Social 图标类型', () => {
+  it('builtin 名称小写化', () => {
+    const config = parseThemeConfig({
+      social: { items: [{ url: 'https://a.example', icon: { type: 'builtin', name: 'GitHub' } }] },
+    })
+    expect(config.social.items[0]?.icon).toEqual({ type: 'builtin', name: 'github' })
+  })
+
+  it('css 接受多个 class，但不接受选择器字符', () => {
+    const ok = parseThemeConfig({
+      social: {
+        items: [{ url: 'https://a.example', icon: { type: 'css', name: 'fa fa-paper-plane' } }],
+      },
+    })
+    expect(ok.social.items[0]?.icon).toEqual({ type: 'css', name: 'fa fa-paper-plane' })
+
+    const bad = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://b.example', icon: { type: 'css', name: 'fa" onload="x' } },
+          { url: 'https://c.example', icon: { type: 'css', name: '.fa>.x' } },
+          { url: 'https://d.example', icon: { type: 'css', name: 'a b c d e' } },
+        ],
+      },
+    })
+    expect(bad.social.items.map((item) => item.icon)).toEqual([null, null, null])
+  })
+
+  it('iconify 名称被保留（解析支持），但类型不在已实现清单里', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://a.example', icon: { type: 'iconify', name: 'mingcute:telegram-fill' } },
+        ],
+      },
+    })
+    expect(config.social.items[0]?.icon).toEqual({
+      type: 'iconify',
+      name: 'mingcute:telegram-fill',
+    })
+    expect(IMPLEMENTED_ICON_TYPES).not.toContain('iconify')
+  })
+
+  it('未知类型或缺失字段降级为 null', () => {
+    const config = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://a.example', icon: { type: 'fontawesome', name: 'github' } },
+          { url: 'https://b.example', icon: { type: 'css' } },
+          { url: 'https://c.example', icon: 'github' },
+        ],
+      },
+    })
+    expect(config.social.items.map((item) => item.icon)).toEqual([null, null, null])
+  })
+})
+
+describe('Theme：icon_stylesheets', () => {
+  it('校验、去重、保序', () => {
+    const config = parseThemeConfig({
+      social: {
+        icon_stylesheets: [
+          'https://cdn.example/all.min.css',
+          'https://cdn.example/all.min.css',
+          '//relative.example/x.css',
+          'javascript:alert(1)',
+          'https://cdn.example/extra.css',
+        ],
+      },
+    })
+    expect(config.social.iconStylesheets).toEqual([
+      'https://cdn.example/all.min.css',
+      'https://cdn.example/extra.css',
+    ])
+  })
+
+  it('camelCase 写法同样接受', () => {
+    const config = parseThemeConfig({
+      social: { iconStylesheets: ['https://cdn.example/all.css'] },
+    })
+    expect(config.social.iconStylesheets).toEqual(['https://cdn.example/all.css'])
+  })
+
+  it('超过上限时截断', () => {
+    const urls = Array.from({ length: SOCIAL_ICON_STYLESHEET_MAX + 2 }, (_, i) => `https://cdn.example/${i}.css`)
+    expect(parseThemeConfig({ social: { icon_stylesheets: urls } }).social.iconStylesheets).toHaveLength(
+      SOCIAL_ICON_STYLESHEET_MAX,
+    )
   })
 })
 

@@ -1,20 +1,23 @@
-import type { SocialLink } from '@/lib/social'
+import type { SocialIconType, ThemeSocialIcon } from '@/core/config/theme'
+import { IMPLEMENTED_ICON_TYPES, safeCssIconClass } from '@/core/config/theme/social'
 
 /**
  * 社交图标
  *
- * 只画几何图形（不用品牌字标），原因有两个：
- *   - 品牌标志有各自的商标与使用规范，主题不该内嵌别人的 logo；
- *   - 描边图形在所有尺寸下都清晰，也不需要额外授权。
+ * 三种图标来源，能力不同，这里逐条说明：
  *
- * 实现方式是**一个 switch + 纯内联 SVG path**，没有任何图标库、
- * 图标字体、CSS 或外部请求。这一条是刻意保持的：
- *   - 图标随组件进入 RSC payload，不额外下载字体文件；
- *   - 不需要为「图标没加载出来」处理 FOUC；
- *   - 配置只能传「图标名」，名字查表失败就降级，无法注入 SVG 片段。
+ *   - `builtin`：**唯一完全可用的默认路径**。纯内联 SVG，不走任何外部
+ *     请求，随组件进 RSC payload，不需要处理字体未加载时的 FOUC。
+ *   - `css`：渲染一个 `<i class="...">`，靠 `iconStylesheets` 里的样式表
+ *     把 class 变成字形。这是唯一会额外加载外部资源的类型，所以它的
+ *     前提条件也最硬——没有声明样式表时，class 只是一个没有意义的字符串，
+ *     这里直接降级，避免页面上出现看不见的空位。
+ *   - `iconify`：**尚未实现**。本主题没有 Iconify 运行时（那是要额外拉
+ *     `@iconify/*` 与按需 CSS 的客户端能力），因此这里只做降级。
+ *     配置层仍会解析并保留这个名称，方便将来接入；但不会假装它已经生效。
  *
- * 已知平台的图形由这里给出；未收录的平台退回首字母方块（下方 `default`）——
- * 比画一个猜错的图标诚实，也不会因为缺 icon 就不显示链接。
+ * 关键约束：**配置只能提供图标名，永远不能提供标记**。`builtin` 走 switch
+ * 查表，`css` 只接受白名单字符的 class 串，两者都不可能注入 SVG/HTML。
  */
 
 const BRAND_LABEL: Record<string, string> = {
@@ -30,17 +33,19 @@ const BRAND_LABEL: Record<string, string> = {
   rss: 'RSS 订阅',
 }
 
-export function socialLabel(link: SocialLink): string {
-  return BRAND_LABEL[link.label.toLowerCase()] ?? link.label
+/** 平台键 → 可读标题；未收录的平台直接用键名，不猜品牌 */
+export function socialLabel(platform: string): string {
+  return BRAND_LABEL[platform.toLowerCase()] ?? platform
 }
 
-interface SocialIconProps {
-  /** 小写平台键，例如 github */
+interface BuiltinIconProps {
+  /** 图标键，例如 github；未知键退回首字母方块 */
   name: string
   className?: string
 }
 
-export function SocialIcon({ name, className }: SocialIconProps) {
+/** 内置 SVG 图标集合：只用几何图形，不内嵌第三方品牌字标 */
+export function BuiltinSocialIcon({ name, className }: BuiltinIconProps) {
   const key = name.toLowerCase()
   const common = {
     'aria-hidden': true as const,
@@ -117,4 +122,38 @@ export function SocialIcon({ name, className }: SocialIconProps) {
         </svg>
       )
   }
+}
+
+/** 渲染时再校验一次 class：解析层校验过，但组件可能被别处直接调用 */
+function cssIconClass(icon: ThemeSocialIcon): string | null {
+  return safeCssIconClass(icon.name)
+}
+
+export function isIconTypeImplemented(type: SocialIconType): boolean {
+  return IMPLEMENTED_ICON_TYPES.includes(type)
+}
+
+interface SocialIconProps {
+  /** 图标描述；null / 未声明时渲染兜底图形 */
+  icon: ThemeSocialIcon | null
+  className?: string
+}
+
+export function SocialIcon({ icon, className }: SocialIconProps) {
+  if (!icon) return <BuiltinSocialIcon name="unknown" className={className} />
+
+  if (icon.type === 'css') {
+    const safe = cssIconClass(icon)
+    // 样式表缺失时 class 无法解析，这里不输出一个「看不见的 <i>」
+    return safe ? <i aria-hidden="true" className={safe} /> : (
+      <BuiltinSocialIcon name="unknown" className={className} />
+    )
+  }
+
+  if (icon.type === 'iconify') {
+    // 未实现：明确降级，而不是留白
+    return <BuiltinSocialIcon name="unknown" className={className} />
+  }
+
+  return <BuiltinSocialIcon name={icon.name} className={className} />
 }

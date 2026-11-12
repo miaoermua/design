@@ -9,6 +9,7 @@ import '@/design-system/styles/fonts.css'
 import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { CustomCssLinks } from '@/components/layout/custom-css-links'
+import { SocialIconStylesheets } from '@/components/layout/social-icon-stylesheets'
 import { ImageViewer } from '@/components/markdown/image-preview'
 import { DevtoolNotice } from '@/components/ui/devtool-notice'
 import { getThemeConfig } from '@/core/config/theme'
@@ -81,6 +82,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <link rel="stylesheet">。顺序、去重、上限都在 theme 模块里处理，
             这里只做「有就输出、没有就不输出」。 */}
         <CustomCssLinks custom={theme.custom} />
+
+        {/* 图标字体：只有存在 css 类型社交图标时才输出，避免多余请求 */}
+        <SocialIconStylesheets social={theme.social} />
 
         <div className="site-shell flex min-h-dvh flex-col">
           <SiteHeader identity={identity} />

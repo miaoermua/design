@@ -5,7 +5,7 @@ import { CoverImage } from '@/components/ui/cover-image'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
-import { SocialIcon, socialLabel } from '@/components/ui/social-icon'
+import { SocialIcon } from '@/components/ui/social-icon'
 import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
@@ -22,7 +22,7 @@ import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
-import { toSocialLinks } from '@/lib/social'
+import { toSocialItems } from '@/lib/social'
 import { cn } from '@/lib/utils/cn'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -94,7 +94,7 @@ export default async function HomePage() {
 
   const owner = identity?.owner
   const socials = theme.social.enabled
-    ? toSocialLinks(owner?.socialIds, { theme: theme.social })
+    ? toSocialItems(owner?.socialIds, { theme: theme.social })
     : []
   const name = owner?.name ?? siteTitle(identity)
 
@@ -130,17 +130,20 @@ export default async function HomePage() {
 
             {socials.length > 0 ? (
               <ul className="mt-4 flex flex-wrap items-center gap-1.5">
-                {socials.map((link) => (
-                  <li key={`${link.label}-${link.href}`}>
+                {socials.map((item) => (
+                  <li key={item.id}>
                     <a
-                      href={link.href}
+                      href={item.url}
                       rel="me noopener noreferrer"
-                      target={link.href.startsWith('mailto:') ? undefined : '_blank'}
-                      title={socialLabel(link)}
-                      aria-label={socialLabel(link)}
+                      target={item.url.startsWith('mailto:') ? undefined : '_blank'}
+                      title={item.title}
+                      aria-label={item.title}
+                      // 品牌色作为前景色：图标行本身是安静的，
+                      // 用大块背景色会把这行变成按钮墙
+                      style={item.color ? { color: item.color } : undefined}
                       className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
                     >
-                      <SocialIcon name={link.icon ?? link.label} className="size-[1.05rem]" />
+                      <SocialIcon icon={item.icon} className="size-[1.05rem]" />
                     </a>
                   </li>
                 ))}

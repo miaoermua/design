@@ -33,7 +33,6 @@ export const CUSTOM_CSS_URL_MAX_LENGTH = 2048
 
 /** 赞赏入口文案长度上限 */
 export const DONATE_LABEL_MAX = 16
-
 /** 二维码展示名长度上限：过长的名字会把浮层撑宽 */
 export const DONATE_NAME_MAX = 16
 
@@ -48,6 +47,34 @@ export const DONATE_QRCODE_MAX = 4
 /** 单条二维码地址长度上限，与消费层的校验保持一致 */
 export const DONATE_URL_MAX_LENGTH = 2048
 
+/**
+ * 自定义社交项目条数上限。
+ *
+ * 社交图标是「自我介绍」的一行，不是名片墙。24 条已经远超正常使用，
+ * 再多的配置只会把首页撑成一排按钮；上限同时保证 SSR 输出可预期。
+ */
+export const SOCIAL_ITEM_MAX = 24
+
+/** 单条社交地址长度上限；正常主页地址远小于这个值 */
+export const SOCIAL_URL_MAX_LENGTH = 2048
+
+/** 社交项目标题长度上限：过长的标题会破坏图标行的对齐 */
+export const SOCIAL_TITLE_MAX = 32
+
+/**
+ * CSS 图标样式表条数上限。
+ *
+ * 一个图标字体 = 一次额外请求（且通常带字体文件）。2 条足够
+ * 「Font Awesome + 一个补充字体」，再多就是配置失控。
+ */
+export const SOCIAL_ICON_STYLESHEET_MAX = 2
+
+/** 单个 CSS 图标 class 串的长度上限（如 `fa fa-at` 远小于这个值） */
+export const SOCIAL_ICON_CLASS_MAX = 48
+
+/** CSS 图标最多由几个 class 组成：`fa fa-at fa-lg` 已经是 3 个 */
+export const SOCIAL_ICON_CLASS_PARTS_MAX = 4
+
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   footer: {
     since: null,
@@ -56,6 +83,8 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   },
   social: {
     enabled: true,
+    items: [],
+    iconStylesheets: [],
     order: [],
     icons: {},
   },
