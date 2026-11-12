@@ -28,15 +28,20 @@ export async function listArticles(query: ArticleListQuery = {}): Promise<PageRe
   return toPageResult(body, toArticle)
 }
 
-/** GET /posts/:category/:slug */
+/**
+ * GET /posts/:category/:slug
+ *
+ * `fresh` 只给实时更新链路用：事件到达后必须先看到「有没有变」，
+ * 不能拿 300 秒的缓存去回答。它不是给页面用的常规开关。
+ */
 export async function getArticle(
   category: string,
   slug: string,
-  options: { lang?: string } = {},
+  options: { lang?: string; fresh?: boolean } = {},
 ): Promise<ArticleDetail> {
   const body = await requestV2<unknown>(
     `/posts/${encodeURIComponent(category)}/${encodeURIComponent(slug)}`,
-    { query: { lang: options.lang }, revalidate: 300, tags: TAG },
+    { query: { lang: options.lang }, revalidate: options.fresh ? 0 : 300, tags: TAG },
   )
   return toArticleDetail(expectObject<V2PostDetail>(body, `/posts/${category}/${slug}`))
 }
