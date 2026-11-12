@@ -11,10 +11,14 @@ import { SiteFooter } from '@/components/layout/site-footer'
 import { CustomCssLinks } from '@/components/layout/custom-css-links'
 import { SocialIconStylesheets } from '@/components/layout/social-icon-stylesheets'
 import { ImageViewer } from '@/components/markdown/image-preview'
+import { RealtimeRuntime } from '@/components/realtime/realtime-runtime'
 import { DevtoolNotice } from '@/components/ui/devtool-notice'
+import { StatusCapsule } from '@/components/ui/status-capsule'
+import { Toaster } from '@/components/ui/toaster'
 import { getThemeConfig } from '@/core/config/theme'
 import { describeError } from '@/lib/api'
 import { getLocale } from '@/lib/i18n/server'
+import { resolveRealtimeConfig } from '@/lib/realtime/config'
 import { loadSiteContext, siteBaseUrl, siteDescription, siteTitle } from '@/lib/site'
 
 /**
@@ -57,6 +61,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     getLocale(),
     getThemeConfig(),
   ])
+  // 网关地址只在服务端解析：浏览器拿到的是完整 URL，拿不到任何后端配置
+  const realtime = resolveRealtimeConfig(locale)
 
   return (
     <html lang={locale === 'en' ? 'en' : 'zh-CN'} suppressHydrationWarning>
@@ -112,6 +118,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {/* 全局唯一的图片预览宿主：正文里的普通图片 / 相册 / 轮播共用 */}
         <ImageViewer />
+
+        {/* 全站唯一的实时连接宿主：不渲染可见内容，只维护连接与事件总线 */}
+        <RealtimeRuntime url={realtime.url} lang={realtime.lang} />
+
+        {/* 通知与状态胶囊互相独立：通知承载内容事件，胶囊承载连接/请求状态 */}
+        <Toaster locale={locale} />
+        <StatusCapsule locale={locale} />
 
         {/* 仅在 Theme Snippet 显式开启时挂载；默认不输出任何客户端 JS */}
         {theme.bandevtool.enabled ? <DevtoolNotice /> : null}

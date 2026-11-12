@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { SearchHit } from '@/lib/api/domain/taxonomy'
 import { searchPath } from '@/lib/routes'
+import { statusStore } from '@/lib/status/store'
 import { cn } from '@/lib/utils/cn'
 
 interface SearchPanelProps {
@@ -111,10 +112,22 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
       })
       if (current !== requestId.current) return
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const data = (await response.json()) as { hits: SearchHit[]; total: number }
+      const data = (await response.json()) as {
+        hits: SearchHit[]
+        total: number
+        failed?: boolean
+      }
+      // BFF 用 200 + failed 表达「后端取数失败」，面板只需知道失败与否
+      if (data.failed) {
+        statusStore.reportApiFailure()
+        setState({ hits: [], total: 0, failed: true })
+        return
+      }
+      statusStore.reportApiSuccess()
       setState({ hits: data.hits ?? [], total: data.total ?? 0, failed: false })
     } catch {
       if (current !== requestId.current) return
+      statusStore.reportApiFailure()
       setState({ hits: [], total: 0, failed: true })
     } finally {
       if (current === requestId.current) setLoading(false)

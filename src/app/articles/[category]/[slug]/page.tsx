@@ -11,6 +11,7 @@ import { Toc } from '@/components/ui/toc'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { ArticleCard, ArticleNeighbors } from '@/features/articles'
+import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
 import { DonateSlot } from '@/features/donate'
 import {
   getArticle,
@@ -21,6 +22,7 @@ import {
   type ArticleDetail,
 } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
+import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { articlePath, categoryPath } from '@/lib/routes'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
 import { jsonLd } from '@/lib/seo'
@@ -120,6 +122,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   return (
     <Container>
+      {/* 实时更新接线：桌面与移动端同一个组件，事件只影响当前这篇文章 */}
+      <LiveArticleUpdater
+        identity={{
+          id: article.id,
+          category: article.category?.slug ?? category,
+          slug: article.slug,
+          modifiedAt: article.modifiedAt,
+        }}
+        enabled={isRealtimeEnabled()}
+      />
       <ReadingProgress targetId="article-content" />
       <script
         type="application/ld+json"
