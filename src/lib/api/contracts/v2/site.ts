@@ -61,14 +61,19 @@ export interface V2LatestNoteRef {
   nid: number
 }
 
-/** GET /aggregate 的响应 */
+/**
+ * GET /aggregate 的响应
+ *
+ * ⚠️ 实测（api.miaoer.net，2026-11）**没有** `theme` 字段——该键不存在，
+ * 不是 null。主题配置走独立的 Snippet（`GET /snippets/theme/:name`），
+ * 不要再往 aggregate 上挂主题配置。
+ */
 export interface V2Aggregate {
   user?: V2Owner
   seo?: V2Seo
   url?: V2Url
   comment_options?: V2CommentOptions
   latest_note_id?: V2LatestNoteRef | null
-  theme?: Record<string, unknown> | null
   ai?: { enable_summary?: boolean }
 }
 
@@ -78,7 +83,6 @@ export interface V2SiteInfo {
   description?: string
   keywords?: string[]
   icon?: string
-  theme?: Record<string, unknown> | null
 }
 
 /** TimelineType 枚举 */

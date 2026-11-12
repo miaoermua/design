@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
 import { SocialIcon, socialLabel } from '@/components/ui/social-icon'
-import { HOME_RECENT_ARTICLES, HOME_RECENT_DIARIES } from '@/core/config/site'
+import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
 import { DiaryCard } from '@/features/diaries'
@@ -23,6 +23,7 @@ import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
 import { toSocialLinks } from '@/lib/social'
+import { cn } from '@/lib/utils/cn'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { identity } = await loadSiteContext()
@@ -61,32 +62,47 @@ export default async function HomePage() {
   const locale = await getLocale()
   const lang = toContentLang(locale)
   const timeZone = getSiteTimezone()
-  const { identity } = await loadSiteContext()
+  const [{ identity }, theme] = await Promise.all([loadSiteContext(), getThemeConfig()])
+
+  // 区块开关与条数都来自 Theme Snippet。
+  // 关键点：**请求数量必须与最终生效的配置一致**——区块关闭时不发请求，
+  // 条数改了请求 size 也要跟着改，否则会多取数据或显示条数对不上。
+  const showArticles = isFeatureEnabled('articles') && theme.homepage.articles.enabled
+  const showNotes = isFeatureEnabled('diaries') && theme.homepage.notes.enabled
+  const showProfile = theme.homepage.profile.enabled
 
   const [articles, diaries] = await Promise.all([
     // 「最近写的」必须按发布时间倒序：v2 的 /posts 默认会把置顶文章排在最前
     // （实测线上第 1 条是 2023 年的置顶文），不显式传排序会让首页看起来错乱。
-    isFeatureEnabled('articles')
+    showArticles
       ? listArticles({
-          size: HOME_RECENT_ARTICLES,
+          size: theme.homepage.articles.limit,
           lang,
           sortBy: 'createdAt',
           sortOrder: -1,
         })
       : null,
-    isFeatureEnabled('diaries')
-      ? listDiaries({ size: HOME_RECENT_DIARIES, lang, sortBy: 'createdAt', sortOrder: -1 })
+    showNotes
+      ? listDiaries({
+          size: theme.homepage.notes.limit,
+          lang,
+          sortBy: 'createdAt',
+          sortOrder: -1,
+        })
       : null,
   ])
 
   const owner = identity?.owner
-  const socials = toSocialLinks(owner?.socialIds)
+  const socials = theme.social.enabled
+    ? toSocialLinks(owner?.socialIds, { theme: theme.social })
+    : []
   const name = owner?.name ?? siteTitle(identity)
 
   return (
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
-      <section className="pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
+      {showProfile ? (
+        <section className="pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
         <div className="flex items-start gap-5 sm:gap-6">
           {owner?.avatar ? (
             <CoverImage
@@ -124,7 +140,7 @@ export default async function HomePage() {
                       aria-label={socialLabel(link)}
                       className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
                     >
-                      <SocialIcon name={link.label} className="size-[1.05rem]" />
+                      <SocialIcon name={link.icon ?? link.label} className="size-[1.05rem]" />
                     </a>
                   </li>
                 ))}
@@ -153,10 +169,17 @@ export default async function HomePage() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       {/* ── Latest Blogs ───────────────────────────────────────── */}
       {articles ? (
-        <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">
+        <section
+          className={cn(
+            'pt-10',
+            // profile 关闭时这一块是首页第一段，不需要额外的虚线分隔与上边距
+            showProfile && 'border-t border-dashed border-[var(--edge-strong)]',
+          )}
+        >
           <SectionHeading
             title={t(locale, 'home.latestBlogs')}
             action={
@@ -185,7 +208,13 @@ export default async function HomePage() {
 
       {/* ── Latest Notes ───────────────────────────────────────── */}
       {diaries ? (
-        <section className="mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10">
+        <section
+          className={cn(
+            'mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10',
+            // 文章区关闭时，日记区紧跟品牌区，不需要再叠一层大间距
+            !articles && 'mt-0',
+          )}
+        >
           <SectionHeading
             title={t(locale, 'home.latestNotes')}
             action={

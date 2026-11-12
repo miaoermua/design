@@ -9,7 +9,9 @@ import { ReadingProgress } from '@/components/ui/reading-progress'
 import { SectionHeading } from '@/components/ui/page-header'
 import { Toc } from '@/components/ui/toc'
 import { requireFeature } from '@/core/registry/guard'
+import { getThemeConfig } from '@/core/config/theme'
 import { ArticleCard, ArticleNeighbors } from '@/features/articles'
+import { DonateSlot } from '@/features/donate'
 import {
   getArticle,
   getSiteTimezone,
@@ -94,6 +96,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const timeZone = getSiteTimezone()
   const { identity } = await loadSiteContext()
+  // 赞赏入口的开关与二维码都来自 Theme Snippet；可见性在服务端判断
+  const theme = await getThemeConfig()
 
   const isMarkdown = article.contentFormat === 'markdown'
   const rendered = isMarkdown && article.content.trim() ? await renderMarkdown(article.content) : null
@@ -161,7 +165,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 </p>
               ) : null}
 
-              <p className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
+              {/* 操作栏：阅读/喜欢等元信息与赞赏入口同一行。用 div 而非 p，
+                  因为 DonateSlot 内部是块级浮层容器。 */}
+              <div className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 {estimate ? <span>约 {estimate} 分钟</span> : null}
                 {article.readCount !== null ? (
                   <span className={estimate ? 'meta-sep' : undefined}>
@@ -176,7 +182,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     更新于 {formatDate(article.modifiedAt, timeZone)}
                   </span>
                 ) : null}
-              </p>
+                <DonateSlot theme={theme} className="meta-sep" />
+              </div>
 
               {article.tags.length > 0 ? (
                 <p className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-meta">

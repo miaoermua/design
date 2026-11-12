@@ -2,6 +2,8 @@ import Link from 'next/link'
 import type { Diary } from '@/lib/api'
 import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
+import { getThemeConfig } from '@/core/config/theme'
+import { DonateSlot } from '@/features/donate'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
@@ -15,6 +17,8 @@ interface DiaryEntryProps {
 /** 日记条目：以时间为轴，正文沿用同一套排版（紧凑变体） */
 export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const rendered = !diary.hasPassword && diary.content.trim() ? await renderMarkdown(diary.content) : null
+  // 与文章页同一个读取入口；getThemeConfig 在单次请求内已去重，列表里逐条调用不会重复取数
+  const theme = await getThemeConfig()
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
     (chip): chip is string => Boolean(chip),
   )
@@ -83,14 +87,15 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
           </div>
         ) : null}
 
-        <p className="meta mt-3">
+        <div className="meta mt-3 flex flex-wrap items-center">
           <Link href={diaryPath(diary.id)} className="link-quiet">
             永久链接
           </Link>
           {diary.readCount !== null ? (
             <span className="meta-sep">{diary.readCount.toLocaleString('zh-CN')} 次阅读</span>
           ) : null}
-        </p>
+          <DonateSlot theme={theme} className="meta-sep" />
+        </div>
       </div>
     </article>
   )

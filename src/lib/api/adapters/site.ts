@@ -44,11 +44,6 @@ export function toSiteIdentity(aggregate: V2Aggregate): SiteIdentity {
     },
     commentsEnabled: readField(commentOptions ?? {}, 'disable_comment', 'disableComment') !== true,
     latestDiaryId: toLatestNoteId(readField(aggregate, 'latest_note_id', 'latestNoteId')),
-    // theme 是部署方自定义内容：只做「是对象就保留」的检查，不假设内部键名
-    theme:
-      aggregate.theme && typeof aggregate.theme === 'object'
-        ? (aggregate.theme as Record<string, unknown>)
-        : null,
   }
 }
 

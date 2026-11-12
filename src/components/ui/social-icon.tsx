@@ -7,7 +7,13 @@ import type { SocialLink } from '@/lib/social'
  *   - 品牌标志有各自的商标与使用规范，主题不该内嵌别人的 logo；
  *   - 描边图形在所有尺寸下都清晰，也不需要额外授权。
  *
- * 已知平台的图形由这里给出；未收录的平台退回首字母方块——
+ * 实现方式是**一个 switch + 纯内联 SVG path**，没有任何图标库、
+ * 图标字体、CSS 或外部请求。这一条是刻意保持的：
+ *   - 图标随组件进入 RSC payload，不额外下载字体文件；
+ *   - 不需要为「图标没加载出来」处理 FOUC；
+ *   - 配置只能传「图标名」，名字查表失败就降级，无法注入 SVG 片段。
+ *
+ * 已知平台的图形由这里给出；未收录的平台退回首字母方块（下方 `default`）——
  * 比画一个猜错的图标诚实，也不会因为缺 icon 就不显示链接。
  */
 
@@ -21,6 +27,7 @@ const BRAND_LABEL: Record<string, string> = {
   email: 'Email',
   mail: 'Email',
   netease: '网易云音乐',
+  rss: 'RSS 订阅',
 }
 
 export function socialLabel(link: SocialLink): string {
@@ -92,6 +99,14 @@ export function SocialIcon({ name, className }: SocialIconProps) {
         <svg {...common}>
           <circle cx="12" cy="12" r="8.5" />
           <path d="M9.5 9v6l5-3z" />
+        </svg>
+      )
+    case 'rss':
+      // RSS 的通用符号：左下角的发射点 + 两道同心弧
+      return (
+        <svg {...common}>
+          <circle cx="5.5" cy="18.5" r="1.2" />
+          <path d="M5.5 11.5a7 7 0 0 1 7 7M5.5 5a13.5 13.5 0 0 1 13.5 13.5" />
         </svg>
       )
     default:

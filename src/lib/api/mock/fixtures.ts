@@ -449,7 +449,6 @@ export const mockAggregate: V2Aggregate = {
   url: { web_url: 'https://example.com' },
   comment_options: { disable_comment: false, allow_guest_comment: true },
   latest_note_id: { id: '31', nid: 31 },
-  theme: { accent: '#8c4a32' },
   ai: { enable_summary: false },
 }
 
@@ -525,3 +524,48 @@ export const mockPages: V2PageRow[] = [
     modified_at: '2026-09-12T04:00:00.000Z',
   },
 ]
+
+/**
+ * 主题 Snippet 的 mock 数据。
+ *
+ * 形状与真实后端的 YAML Snippet 一致：后端用 js-yaml 解析后返回对象，
+ * 所以这里直接是对象，不是 YAML 字符串。内容覆盖各功能分区，
+ * 让离线预览能验证 Footer 链接、ICP、Social 顺序、首页数量、Donate 与自定义 CSS。
+ */
+export const mockThemeSnippet: Record<string, unknown> = {
+  footer: {
+    since: 2021,
+    links: [
+      { name: '友链', url: 'https://www.miaoer.net/friends' },
+      { name: '留言', url: 'https://www.miaoer.net/message' },
+    ],
+    icp: {
+      enabled: true,
+      label: '粤ICP备2021127881号',
+      url: 'https://beian.miit.gov.cn/',
+    },
+  },
+  social: {
+    enabled: true,
+    order: ['github', 'bilibili', 'telegram', 'email'],
+    icons: { bilibili: 'bilibili' },
+  },
+  custom: {
+    // 与线上 Kami 片段同形状：外部样式表 URL 数组（内联 CSS 字符串已不再支持）
+    css: ['https://static.miaoer.net/static/remixicon/fonts/remixicon.css'],
+  },
+  homepage: {
+    profile: { enabled: true },
+    articles: { enabled: true, limit: 6 },
+    notes: { enabled: true, limit: 3 },
+  },
+  donate: {
+    enabled: true,
+    label: '赞赏',
+    qrcode: [
+      { name: '微信', url: 'https://picsum.photos/seed/donate-wechat/224' },
+      { name: '支付宝', url: 'https://picsum.photos/seed/donate-alipay/224' },
+    ],
+  },
+  bandevtool: { enabled: false },
+}

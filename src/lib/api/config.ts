@@ -59,12 +59,14 @@ export function getSiteUrl(): string | null {
   return readEnv('NEXT_PUBLIC_SITE_URL')?.replace(/\/+$/, '') ?? null
 }
 
+/**
+ * 主题 Snippet 名称（`GET /snippets/theme/:name`）。
+ *
+ * 这是 MX_THEME_NAME 唯一有意义的用途：同一个 Mix Space 后端可以挂多个主题，
+ * 各自用不同的 Snippet 名，避免互相覆盖配置。
+ */
 export function getThemeName(): string {
   return readEnv('MX_THEME_NAME') ?? 'folio'
-}
-
-export function getAboutPageSlug(): string {
-  return readEnv('MX_ABOUT_PAGE_SLUG') ?? 'about'
 }
 
 export function getSiteTimezone(): string {

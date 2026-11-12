@@ -17,6 +17,7 @@ import {
   mockPostDetail,
   mockPosts,
   mockTagSums,
+  mockThemeSnippet,
 } from './fixtures'
 
 interface MockResponse {
@@ -157,6 +158,17 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
   }
 
   if (path === '/links/all') return { status: 200, body: { data: mockLinks } }
+
+  // 主题 Snippet：真实后端返回 js-yaml 解析后的对象，mock 直接返回同形状对象。
+  // 只有 folio / kami 之外的名字才 404，用来在测试里验证降级路径。
+  const themeSnippetMatch = /^\/snippets\/theme\/([^/]+)$/.exec(path)
+  if (themeSnippetMatch) {
+    const themeName = decodeURIComponent(themeSnippetMatch[1] ?? '')
+    if (themeName === 'folio' || themeName === 'kami') {
+      return { status: 200, body: mockThemeSnippet }
+    }
+    return { status: 404, body: { ok: 0, code: 11003, message: 'Snippet 不存在' } }
+  }
 
   // 独立页面列表：线上是 { data, pagination }，mock 保持同一形状
   if (path === '/pages') {

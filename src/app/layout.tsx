@@ -8,7 +8,10 @@ import './globals.css'
 import '@/design-system/styles/fonts.css'
 import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
+import { CustomCssLinks } from '@/components/layout/custom-css-links'
 import { ImageViewer } from '@/components/markdown/image-preview'
+import { DevtoolNotice } from '@/components/ui/devtool-notice'
+import { getThemeConfig } from '@/core/config/theme'
 import { describeError } from '@/lib/api'
 import { getLocale } from '@/lib/i18n/server'
 import { loadSiteContext, siteBaseUrl, siteDescription, siteTitle } from '@/lib/site'
@@ -48,9 +51,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { identity, error } = await loadSiteContext()
-  // 与界面/内容语言保持一致：屏幕阅读器按 lang 选择发音，切换语言后必须同步
-  const locale = await getLocale()
+  const [{ identity, error }, locale, theme] = await Promise.all([
+    loadSiteContext(),
+    getLocale(),
+    getThemeConfig(),
+  ])
 
   return (
     <html lang={locale === 'en' ? 'en' : 'zh-CN'} suppressHydrationWarning>
@@ -71,6 +76,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         <div className="paper-grain" aria-hidden="true" />
         <div className="paper-ambient" aria-hidden="true" />
+
+        {/* 拥有者自定义样式表：`custom.css` 是一组外部 URL，由组件渲染成
+            <link rel="stylesheet">。顺序、去重、上限都在 theme 模块里处理，
+            这里只做「有就输出、没有就不输出」。 */}
+        <CustomCssLinks custom={theme.custom} />
 
         <div className="site-shell flex min-h-dvh flex-col">
           <SiteHeader identity={identity} />
@@ -98,6 +108,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {/* 全局唯一的图片预览宿主：正文里的普通图片 / 相册 / 轮播共用 */}
         <ImageViewer />
+
+        {/* 仅在 Theme Snippet 显式开启时挂载；默认不输出任何客户端 JS */}
+        {theme.bandevtool.enabled ? <DevtoolNotice /> : null}
       </body>
     </html>
   )
