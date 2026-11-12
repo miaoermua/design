@@ -71,8 +71,11 @@ describe('isNavItemActive', () => {
 })
 
 describe('interactions 开关', () => {
-  it('已开启：点赞与订阅有入口，评论仍关闭', () => {
+  it('已开启：点赞、订阅与评论入口都在', () => {
     expect(isInteractionEnabled()).toBe(true)
-    expect(featureFlags.comments).toBe(false)
+    // 评论已从「定义未启用」转为实现（Core v12 支持的部分），不再靠这个开关兜底
+    expect(featureFlags.comments).toBe(true)
+    expect(featureFlags.aiSummary).toBe(true)
+    expect(featureFlags.aiInsights).toBe(true)
   })
 })

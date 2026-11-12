@@ -24,7 +24,7 @@
 | --- | --- |
 | 已实现 | 有代码、有入口、有配置或协议支撑，主链路完整；具体测试覆盖见「验证情况」列 |
 | 部分实现 | 主链路可用，但缺少明确的边界能力（在「备注」里写缺什么） |
-| 定义未启用 | 类型/开关/文档存在，但运行时故意不生效（如 `featureFlags.comments`） |
+| 定义未启用 | 类型/开关/文档存在，但运行时故意不生效（如 `social.order`） |
 | 未实现 | 协议或 README 里提到，代码中不存在 |
 | 配置无消费者 | 配置键能被解析，但没有任何代码读取它 |
 
@@ -49,7 +49,7 @@
 | 错误分类 | NotFound / PasswordRequired / Api / Network / Configuration | 已实现 | 403 + `code === 14000` → `PasswordRequiredError` | `src/lib/api/errors/index.ts`、`client/http.ts` | 协议 | 单元 + 集成测试 | `describeError` 统一产出面向读者的短句 |
 | 离线预览 | `MX_MOCK=1` fixtures | 已实现 | `MX_MOCK=1`；未覆盖的接口抛 `ApiError` | `src/lib/api/mock/{handlers,fixtures}.ts` | 自主 | 测试与 `MX_MOCK=1 pnpm start` 使用 | mock 是「按路径匹配」的白名单，不是通用假后端 |
 | 部署校验 | 未配置后端时的可读提示 | 已实现 | `MX_SERVER_URL` 缺失 | `src/app/layout.tsx`、`src/app/page.tsx` | 自主 | 代码审阅 | 布局顶部条 + 首页 `ErrorState` 双处提示，不抛栈 |
-| 模块开关 | Feature Registry 单一开关源 | 已实现 | `featureFlags` 10 键（`comments` 关闭，`interactions` 开启） | `src/core/registry/features.ts` | 自主 | 单元测试 | 关闭 = 改一个布尔值；导航、路由、请求三处同时收敛。`interactions` 关闭时点赞/订阅入口与 `/subscribe/status` 探测一起消失 |
+| 模块开关 | Feature Registry 单一开关源 | 已实现 | `featureFlags` 12 键（`comments` / `aiSummary` / `aiInsights` / `interactions` 均开启） | `src/core/registry/features.ts` | 自主 | 单元测试 | 关闭 = 改一个布尔值；导航、路由、请求三处同时收敛。`interactions` 关闭时点赞/订阅入口与 `/subscribe/status` 探测一起消失；`aiSummary` / `aiInsights` 关闭时**不发请求**（`read.ts` 在取数前返回 null），不是「取回来再扔掉」 |
 | 模块开关 | 路由守卫 | 已实现 | 页面顶层 `requireFeature(key)` | `src/core/registry/guard.ts` | 自主 | 代码审阅 | 放在任何取数之前，因此禁用模块零请求 |
 | 模块开关 | 导航过滤 | 已实现 | `getPrimaryNav`（`getFooterNav` 已删除，页脚不再承载导航） | `src/core/navigation/index.ts` | 自主 | `tests/navigation.test.ts` | 导航项存字典键而非成品字符串，避免客户端切换语言后不更新；目录型入口的数据由 `site-header.tsx` 在 RSC 取回后交给客户端选择器 |
 | 模块声明 | manifest 描述路由与接口 | 已实现 | 9 个 manifest | `src/features/*/manifest.ts` | 自主 | 代码审阅 | **manifest 不参与运行时**，仅作文档；`search` 的 endpoints 写 `/search/post`，实际调用 `/search`（见 §14） |
@@ -125,7 +125,9 @@
 | 文章 | 非 Markdown 正文 | 部分实现 | `contentFormat !== 'markdown'` | 详情页 | 协议 | 代码审阅 | 显式提示「只渲染 Markdown」，不做结构化 JSON 的降级渲染 |
 | 文章 | 赞赏入口 | 已实现 | `donate.enabled` | `src/features/donate` | 自主 | `tests/donate-config.test.ts`、`tests/donate-action.test.tsx` | 未配置二维码时按钮仍可出现但不展示空浮层（配置层保证 `qrcode` 非空才启用） |
 | 文章 | 实时更新 | 已实现 | 见 §8 | `src/features/articles/live/*` | 协议（WS 网关） | `tests/live-article-controller.test.ts`、`live-article-route.test.ts` | 只在 `isRealtimeEnabled()` 时挂载客户端组件 |
-| 文章 | 评论 | 定义未启用 | `featureFlags.comments = false` | `src/lib/api/contracts/v2/comment.ts` | 协议 | 无 | 只有契约类型，没有列表/发布/审核链路。Core 12.10.0 侧评论后端完整（列表/匿名写入/楼中楼/分页/审核），缺口全在主题侧；能力边界与四分类判定见 `docs/audits/PHASE-5C-C-COMMENTS-AUDIT.md` §2 |
+| 文章 | 评论 | 已实现 | `GET /comments/ref/:refId`、`POST /comments`、`POST /comments/reply`、`GET /comments/thread/:rootId` | `src/features/comments/*`、`src/app/api/comments/*`、`src/lib/api/repositories/comments.ts` | 协议 | `tests/comment-tree.test.ts`、`tests/comment-submit.test.ts`、`tests/comments-ui.test.tsx`（Mock fetch） | 只做 Core v12 支持的部分：读取、匿名发表、匿名回复、根评论分页、长线程游标补页、置顶/最新/最早排序。不做点赞/举报/读者自助删改/悄悄话/图片/登录读者评论（Core 无对应接口）。**三处已修正的误读**：站点级 `disable_comment` 不等于单篇关闭（`posts`/`notes`/`pages` 都无 `allow_comment` 列）；`state` 是收件箱读态不是审核态；不从文章详情虚构评论数。评论区挂在 `#article-content` 容器之外，不进操作栏。**版面（Phase 5C-D）**：编辑式结构「标题 → 匿名表单 → 列表 → 回复 → 加载更多」，根评论与回复靠缩进和细线区分，不用卡片堆叠；回复用内联表单并带 `parentId`，可取消；长线程补页无进展时收掉入口；提交成功统一「评论已提交」，不推断审核状态；`localStorage` 只记昵称与网址，邮箱不回填不写入 |
+| 文章 | AI 摘要 | 已实现 | `GET /ai/summaries/article/:id?lang=&onlyDb=true` | `src/features/ai-summary/*`、`src/lib/api/repositories/ai.ts` | 协议（Core 12.10.0 公开端点，无鉴权） | `tests/ai-reading.test.tsx` | 只接受 **ID**（传 slug 得 422）；仅 post/note，page 返回 400 + `{"code":1002}`；无摘要时 200 + body `null`，此时不渲染任何容器。**`onlyDb=true` 必须带**，否则会触发 LLM 生成并写库。Core 不做跨语言回退，回退是 Folio 自己的行为，因此回退时必须标出「原文 X」。详情响应里的 `summary` 实测为 `null`，所以摘要必须单独请求，无法复用详情数据。**呈现（Phase 5C-D）**：卡片放在元信息之后、正文之前，可折叠（默认展开），折叠只切换可见性不卸载正文；「AI 精读」入口是卡片内独立按钮（有精读内容才渲染），点它不收起摘要；换文章用 `key={article.id}` 重挂载，不残留上一篇文章的摘要或回退语言标记 |
+| 文章 | AI 精读（Insights） | 已实现 | `GET /ai/insights/article/:id?lang=&onlyDb=true` | `src/features/ai-insights/*`、`src/lib/content/insights.ts`、`src/components/ui/dialog.tsx` | 协议 + 自主 | `tests/insights-document.test.ts`、`tests/ai-reading.test.tsx` | 呈现是**模态窗口**（Phase 5C-D 从文末块改为 `Dialog` 原语），不进正文、不进 TOC、不跳路由；服务端已产出安全 HTML，打开/关闭不产生任何请求。`content` 是 Markdown 字符串，约定含 `<ref quote section/>`、` ```mermaid ` 围栏、末行 `<!-- insights-meta: … -->`；`mermaid` 走现有安全渲染，meta 只用于头部元信息（阅读时长/难度/引用命中数），不显示原文。锚点用 `quote` 在原文里 `indexOf` 定位后再映射到标题 id，定位不到降级成无链接 `§` 并在底部报出「N 处无法在原文定位」，不制造无效跳转；跳转前先关窗等滚动锁解除，目标不存在则留在窗口 |
 
 ### 4.2 日记
 
@@ -140,6 +142,7 @@
 | 日记 | 目录 / 阅读进度 | 已实现 | 由正文 heading 生成（目标 `#diary-content`） | `src/app/diaries/[id]/page.tsx`、`src/components/reading/*` | 自主 | 同文章（共用组件） | 与文章同一套 `TocList` + 环形进度；标题少于 2 个时自然不输出，短手记不会出现空目录 |
 | 日记 | 点赞 | 已实现 | `POST /activity/like`（`type: 'Note'`） | `src/components/reading/action-rail.tsx` | 协议 | `tests/action-rail.test.tsx` | 与文章共用操作栏，`type` 传 `Note` |
 | 日记 | 阅读上报 | 未实现 | — | — | — | — | Core v2 没有可用的阅读量上报接口，主题侧不做假数据 |
+| 日记 | 评论 / AI 摘要 / AI 精读 | 已实现 | 同文章（复用同一套 repository 与组件） | `src/app/diaries/[id]/page.tsx`、`src/features/{comments,ai-summary,ai-insights}` | 协议 | `tests/content-integration.test.ts`（接入契约）、`tests/comments-ui.test.tsx` | 与文章完全同构：三块能力都用 `diary.id` 作 refId / 文章 id。差别只有一处——日记的非 Markdown 内容不渲染正文，因此 `rendered` 为空时**不请求**摘要与精读（避免为一个看不到正文的页面白跑两次接口） |
 
 ### 4.3 独立页面与关于
 
@@ -147,6 +150,8 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 页面 | 页面列表 | 已实现 | `GET /pages` | `src/app/pages/page.tsx` | 协议 | 无独立测试 | 与文章/日记并列的内容类型，不进时间轴 |
 | 页面 | 页面详情 | 已实现 | `GET /pages/slug/:slug` | `src/app/pages/[slug]/page.tsx` | 协议 | 无独立测试 | 支持 `?lang=` 内容语言 |
+| 页面 | 评论 | 已实现 | `GET /comments/ref/:refId` 等（与文章同一入口） | `src/app/pages/[slug]/page.tsx`、`src/features/comments/*` | 协议 | `tests/content-integration.test.ts`、`tests/comments-ui.test.tsx` | `PageContent` 为此新增 `id` 字段，评论用 `page.id` 作 refId（不是 slug） |
+| 页面 | AI 摘要 / AI 精读 | 未实现 | — | — | — | 线上 v12.10.0 实测：`GET /ai/summaries/article/:pageId` 与 `/ai/insights/article/:pageId` 均返回 400 + `{"code":1002}` | **有意不接**，不是遗漏。两类 AI 端点只解析 post / note，对 Page 无资源可读。页面侧因此不引入 `ai-summary` / `ai-insights`，不发空请求，由 `tests/content-integration.test.ts` 守住这条差异 |
 | 关于 | 固定 slug 页面 | 已实现 | `GET /pages/slug/about` | `src/app/about/page.tsx` | 协议 | 无独立测试 | 页面不存在时 404，不回退到硬编码介绍 |
 | 关于 | 作者信息与社交行 | 已实现 | `GET /aggregate` + `theme.social` | 同上、`src/lib/social.ts` | 协议 + 自主 | 单元测试 | 与首页/页脚共用同一合并规则，避免同一站点出现两套社交列表 |
 | 关于 | 更新时间 | 部分实现 | `updatedAt` | 同上 | 协议 | 代码审阅 | 时区硬编码为 `Asia/Shanghai`，未跟随 `MX_SITE_TIMEZONE` |
@@ -283,6 +288,8 @@
 | 错误 | 404 页面 | 已实现 | — | `src/app/not-found.tsx` | 依赖（Next） | 代码审阅 | 模块关闭、资源不存在共用 |
 | 错误 | 后端未配置 | 已实现 | `MX_SERVER_URL` / `MX_MOCK` | `src/app/layout.tsx`、首页 | 自主 | 代码审阅 | 顶部条 + 首页 `ErrorState`，读者能看到「为什么没有内容」 |
 | 错误 | 取数失败 | 已实现 | `ErrorState` | `src/components/ui/error-state.tsx` | 自主 | 代码审阅 | 与空态严格区分：失败不伪装成「没有内容」 |
+| 错误 | 评论提交失败 | 已实现 | 错误码 → 枚举 reason | `src/features/comments/errors.ts`、`src/app/api/comments/{route,reply}` | 协议 + 自主 | `tests/comment-submit.test.ts` | `30000`→站点已关闭；`14005`→不接受匿名；`16003`→内容不存在；`422`→输入不合法；`already said this`→重复提交（Core 幂等窗口 20 秒，因此按钮进入 pending 后不再接受点击）。BFF 只回枚举值与字段级提示，不透传上游 `message` |
+| 错误 | 附加内容降级 | 已实现 | — | `src/features/{ai-summary,ai-insights,comments}` | 自主 | `tests/ai-reading.test.tsx`、`tests/comments-ui.test.tsx` | 摘要/精读取数失败返回 `null`、评论取数失败只降级本块，三者都不影响正文渲染；评论关闭时给一行说明而不是整块消失 |
 | 空态 | 列表/搜索/友链 | 已实现 | — | `src/components/ui/empty-state.tsx` | 自主 | 代码审阅 | 每处空态都写「为什么空」，不只说「暂无数据」 |
 | 无障碍 | 跳转正文 | 已实现 | — | `src/app/layout.tsx` | 自主 | 未做自动化扫描 | 默认移出视口，聚焦时出现 |
 | 无障碍 | 语义化 HTML | 已实现 | — | 各页面 | 自主 | 未做 axe 扫描 | `figure/figcaption/details/summary/blockquote/table/nav/article` 优先，不用 `div + role` 重建语义 |
@@ -296,7 +303,9 @@
 
 | 项 | 状态 | 依据 |
 | --- | --- | --- |
-| 评论（列表 / 发布 / 审核） | 定义未启用 | `featureFlags.comments = false`；只有 `contracts/v2/comment.ts`。Core 侧已支持，详见 `docs/audits/PHASE-5C-C-COMMENTS-AUDIT.md` |
+| 评论的点赞 / 举报 / 读者自助编辑删除 / 悄悄话 / 图片上传 / 登录读者评论 | 未实现（有意） | Core v12 无对应端点。评论本身已实现（读取 + 匿名发表 + 匿名回复 + 分页 + 长线程 + 排序），缺的是后端能力，不是前端工作量 |
+| 评论审核状态展示 | 未实现 | 公开接口不返回审核态。`state` 是收件箱读态，不得据此推断「待审核」；提交成功统一提示「评论已提交」，既不承诺已发布也不谎称待审 |
+| 文章详情的评论数 | 未实现 | 详情响应不含可信的评论计数，主题侧不对评论数做任何推断或占位 |
 | 阅读上报 | 未实现 | Core v2 无对应接口；点赞与邮件订阅已在 `interactions` 下启用 |
 | 友链申请表单 | 未实现 | `/friends` 只读展示 |
 | 搜索面板 ↑/↓ 选择结果 | 未实现 | 只有 `Escape` 关闭，没有结果间键盘移动 |
@@ -337,12 +346,41 @@
 | `pnpm typecheck`（`tsc --noEmit`） | 通过（无输出，退出码 0） | 本次终端输出 |
 | `pnpm lint`（`eslint .`） | 通过（无输出，退出码 0） | 本次终端输出 |
 
-### 15.2 未执行（一律 `NOT TESTED`）
+### 15.1.1 Phase 5C-C 实跑（评论 / AI 阅读）
 
+| 命令 | 结果 | 证据 |
+| --- | --- | --- |
+| `npx vitest run --no-cache --testTimeout=60000 --maxWorkers=2` | **51 文件 / 776 用例全部通过**（670s） | `/tmp/folio-test-final.log`，`TEST_EXIT=0` |
+| `npx tsc --noEmit` | 通过 | `TSC_EXIT=0` |
+| `npx eslint src/features src/lib/api src/lib/content/insights.ts src/app/api/comments src/components/ui/reading-progress.tsx tests` | 通过（无输出） | 未跑 `eslint .` 整仓 |
+| `npx prettier --check`（本阶段新增/修改的源码与测试） | 通过 | `docs/FEATURE.md` 未整篇格式化（见下） |
+
+事实补充，避免把这份结果读得比实际更强：
+
+- **超时不是断言失败**。默认 5s 超时下 `design-tokens`、`footnotes`、`markdown`、`markdown-hardening`、`markdown-security` 5 个文件共 8 个用例会超时（Shiki 初始化使单用例耗时 ~4.2s）；放宽到 60s 后 131 用例全过。这是本机负载问题，与代码无关。
+- **本阶段新增 6 个测试文件，72 个用例**：`insights-document`(16)、`comment-tree`(9)、`comment-submit`(15)、`ai-reading`(12)、`comments-ui`(12)、`content-integration`(8)。
+- **`pnpm format:check` 全仓本来就不通过**（HEAD 上的 `docs/` 等文件未按 prettier 格式化）。本阶段只保证自己新增/修改的源码与测试通过，没有整篇格式化 `docs/FEATURE.md`——那会重写其它章节的表格对齐，属于无关改动。
+- **接口层已真实联调，渲染层没有**。AI 摘要/精读与评论的路径、鉴权、错误码、响应结构均对线上 Core **v12.10.0** 实测（证据见两份审计文档）；但「这三块在浏览器里长什么样」**NOT TESTED**——本机 `next dev` 被宿主 safe-delete 保护拦截（turn 级删除阈值），无法启动服务截图核对。
+
+### 15.1.2 Phase 5C-D 实跑（AI 呈现与评论 UI）
+
+| 命令 | 结果 | 证据 |
+| --- | --- | --- |
+| `pnpm test`（`vitest run`） | **51 文件 / 795 用例全部通过**（5.93s） | 本次终端输出 |
+| `pnpm typecheck`（`tsc --noEmit`） | 通过（无输出，退出码 0） | 本次终端输出 |
+| `pnpm lint`（`eslint .`） | 通过（无 error / warning） | 本次终端输出 |
+
+事实补充：
+
+- 本阶段重写了 `tests/ai-reading.test.tsx`（19 用例）与 `tests/comments-ui.test.tsx`（新增回复/分页/长线程/排序用例），并给 `comment-submit` 补了 401 映射用例、给 `content-integration` 补了摘要位置断言。
+- `--surface-lift` 首次有了消费者（阅读层卡片与精读窗口），已从 `KNOWN_DEAD_ALIASES` 移出，`docs/DESIGN-SYSTEM.md` §4 / §14.8 同步。
+- 浏览器与移动端表现、对比度抽样、键盘与屏幕阅读器走查 **均未执行**，见 §15.2。
+
+### 15.2 未执行（一律 `NOT TESTED`）
 | 项 | 原因 |
 | --- | --- |
 | `pnpm build` / `pnpm verify` | 本次未跑；构建期行为（如静态分析期 `getLocale` 回退）未验证 |
-| 真实 Mix Space Core 联调 | 无可用后端；所有「后端行为」结论来自代码与既有注释，不是本次实测 |
+| 真实 Core 的**浏览器端**联调 | 接口层已对线上 v12.10.0 实测（评论、AI 摘要、AI 精读）；缺的是渲染后的页面表现——本轮无法启动 `next dev` |
 | 浏览器矩阵（Chrome/Safari/Firefox） | 未启动服务 |
 | 移动真机 / 键盘全量走查 / 屏幕阅读器 | 未执行 |
 | 200% 缩放、forced-colors | 未执行 |
@@ -366,6 +404,8 @@
 | 模块开关与导航 | `src/core/registry/features.ts`、`src/core/registry/guard.ts`、`src/core/navigation/index.ts` |
 | 主题配置 | `src/core/config/theme/{types,defaults,parser,repository,social}.ts`、`src/core/config/site.ts` |
 | API 客户端与契约 | `src/lib/api/config.ts`、`src/lib/api/client/http.ts`、`src/lib/api/contracts/v2/*` |
+| 评论 | `src/lib/api/{contracts/v2/comment.ts,adapters/comment.ts,domain/comment.ts,repositories/comments.ts}`、`src/features/comments/**`、`src/app/api/comments/{route,reply/route,thread/route}.ts`、`docs/audits/PHASE-5C-C-COMMENTS-AUDIT.md` |
+| AI 摘要 / 精读 | `src/lib/api/{contracts/v2/ai.ts,repositories/ai.ts,domain/ai.ts}`、`src/lib/content/insights.ts`、`src/features/{ai-summary,ai-insights}/**`、`docs/audits/PHASE-5C-C-AI-INTEGRATION.md` |
 | Markdown 管线 | `src/lib/content/{markdown,containers,notice,alerts,gallery,inline-marks,mentions,footnotes,sanitize,highlight}.ts` |
 | 实时 | `src/lib/realtime/{config,protocol,client,bus}.ts`、`src/components/realtime/realtime-runtime.tsx` |
 | 文章实时更新 | `src/features/articles/live/{controller.ts,live-updater.tsx,refresh.ts}`、`src/app/api/articles/live/route.ts` |
@@ -377,4 +417,4 @@
 
 ---
 
-> 本矩阵描述的是 **2026-11-12 工作区状态**，不是发布状态。工作区有 9 个未提交改动，其中 `social.order` / `social.icons` 的删除会改变配置语义；提交前应重新核对 §2 与 §14 的相关行。
+> 本矩阵描述的是 **2026-11-12 工作区状态**，不是发布状态。工作区有 31 项未提交改动（14 修改 + 17 新增，其中 17 项属于 Phase 5C-C 的评论与 AI 阅读）。`social.order` / `social.icons` 的删除会改变配置语义；提交前应重新核对 §2 与 §14 的相关行。

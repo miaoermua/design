@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Prose } from '@/components/ui/prose'
 import { requireFeature } from '@/core/registry/guard'
+import { CommentsSection } from '@/features/comments'
 import { getPageBySlug, isNotFound } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
@@ -95,6 +96,8 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
           </div>
         )}
       </div>
+
+      <CommentsSection refId={page.id} />
 
       <p className="mt-14 border-t border-[var(--edge)] pt-6">
         <Link href="/pages" className="link-quiet meta">

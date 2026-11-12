@@ -56,10 +56,11 @@ describe('ReadingProgressRing 尺寸与可读性', () => {
     // jsdom 没有布局：尺寸看 svg 属性
     expect(svg.getAttribute('width')).toBe('26')
     expect(svg.getAttribute('height')).toBe('26')
-    // 环只画弧：文字既不在 svg 里，也在 svg 外层包装之后
+    // 环只画弧：文字既不在 svg 里，也不是叠在环心上的绝对定位元素
     expect(svg.contains(label)).toBe(false)
     expect(ring.contains(label)).toBe(true)
-    expect(svg.parentElement?.nextElementSibling).toBe(label)
+    // 横向排布：文字紧接在 svg 之后，同一层 flex 行内
+    expect(svg.nextElementSibling).toBe(label)
   })
 })
 

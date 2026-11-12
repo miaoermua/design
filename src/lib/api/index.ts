@@ -6,6 +6,8 @@
  */
 
 export * from './domain/article'
+export * from './domain/ai'
+export * from './domain/comment'
 export * from './domain/diary'
 export * from './domain/taxonomy'
 export * from './domain/common'
@@ -22,6 +24,19 @@ export {
 } from './repositories/taxonomy'
 export { getSiteIdentity, getTimeline, listFriendLinks } from './repositories/site'
 export { searchArticles } from './repositories/search'
+export { getArticleSummary, getArticleInsights } from './repositories/ai'
+export {
+  getCommentOptions,
+  listComments,
+  listThreadReplies,
+  createGuestComment,
+  replyToGuestComment,
+  type CommentInput,
+  type CommentOptions,
+  type CommentSort,
+  type ListCommentsOptions,
+  type ThreadReplies,
+} from './repositories/comments'
 export { getPageBySlug, listPages, type PageContent, type PageSummary } from './repositories/pages'
 export { listTopics, getTopicById, type Topic } from './repositories/topics'
 export {

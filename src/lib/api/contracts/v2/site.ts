@@ -52,7 +52,9 @@ export interface V2Url {
 
 export interface V2CommentOptions {
   disable_comment?: boolean
+  disableComment?: boolean
   allow_guest_comment?: boolean
+  allowGuestComment?: boolean
 }
 
 /** 实测 latest_note_id 的对象形状 */

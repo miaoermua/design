@@ -396,3 +396,34 @@
     font-size: 0.9375rem;
   }
 }
+
+/* ── AI 精读的引用上标 ──────────────────────────────────────────
+   `<ref/>` 被解析成 `sup.insight-ref`：命中原文的带链接，定位不到的
+   退化成 `--plain`（同样可见，但不制造无效跳转）。两者视觉上要区分，
+   否则读者会在点不动的标记上反复尝试。 */
+.prose .insight-ref {
+  margin-left: 0.1em;
+  font-size: 0.72em;
+  line-height: 1;
+  vertical-align: super;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.prose .insight-ref__link {
+  color: var(--accent-strong);
+  text-decoration: none;
+  border-bottom: 0;
+}
+
+.prose .insight-ref__link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.prose .insight-ref--plain {
+  color: var(--text-tertiary);
+  cursor: help;
+}
+

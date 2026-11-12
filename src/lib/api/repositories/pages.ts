@@ -10,6 +10,8 @@ import {
 import type { PageResult } from '../domain/common'
 
 export interface PageContent {
+  /** 页面实体 id：评论等按 refId 关联的能力需要它 */
+  id: string
   title: string
   subtitle: string | null
   content: string
@@ -68,6 +70,7 @@ export async function getPageBySlug(
   })
   const row = expectObject<V2PageRow>(body, `/pages/slug/${slug}`)
   return {
+    id: String(row.id),
     title: row.title,
     subtitle: stringOrNull(row.subtitle),
     content: stringOrNull(row.text) ?? stringOrNull(row.content) ?? '',

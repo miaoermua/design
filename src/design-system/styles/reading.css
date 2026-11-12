@@ -1,0 +1,703 @@
+/*
+ * 阅读面上的三块交互：AI 摘要卡、AI 精读窗口、评论区。
+ *
+ * 三者共用同一套语言：暖纸底、语义色、细化线、6px 圆角；
+ * 不做玻璃、不做高饱和底、不做逐条大卡片。
+ */
+
+/* ── AI 摘要卡 ──────────────────────────────────────────────────
+ * 定位：元信息之后的第二层导读。用「多出来的一张纸」表达层级
+ * （surface-lift 叠在 reading-surface 上 + 一层极浅投影），
+ * 而不是通知条或强调色块。
+ */
+
+.ai-summary {
+  position: relative;
+  margin-top: 1.75rem;
+  border: 1px solid var(--edge);
+  border-left: 2px solid var(--accent-line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--surface-lift) 72%, var(--reading-surface));
+  box-shadow: var(--shadow-raise);
+}
+
+.ai-summary__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem 0.65rem 0.95rem;
+}
+
+.ai-summary__toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.2rem 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-heading);
+  text-align: left;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.ai-summary__toggle:hover {
+  color: var(--accent-strong);
+}
+
+.ai-summary__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--accent-strong);
+}
+
+.ai-summary__label {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.ai-summary__note {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-summary__chevron {
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-left: 0.1rem;
+  color: var(--text-secondary);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.ai-summary[data-open='true'] .ai-summary__chevron {
+  transform: rotate(180deg);
+}
+
+/* 「AI 精读」是独立按钮：与折叠开关并列，点它不会顺带收起摘要 */
+.ai-summary__read {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  letter-spacing: 0.02em;
+  color: var(--accent-strong);
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.ai-summary__read:hover {
+  background: var(--accent-wash);
+}
+
+.ai-summary__read svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+/* 折叠用 grid 的 0fr/1fr：不测量高度、不截断文本，内容始终完整留在 DOM 里 */
+.ai-summary__body {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-out-soft),
+    opacity var(--duration-fast) linear;
+}
+
+.ai-summary[data-open='false'] .ai-summary__body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.ai-summary__body-inner {
+  overflow: hidden;
+}
+
+.ai-summary__content {
+  margin: 0 0.95rem;
+  padding: 0.85rem 0 0.95rem;
+  border-top: 1px dashed var(--edge);
+}
+
+.ai-summary__text {
+  max-width: 58ch;
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: 1.8;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* ── 通用模态窗口 ──────────────────────────────────────────────
+ * 视觉与 ImagePreview 的灯箱同源（ink 遮罩 + 8px 虚化），
+ * 但 blur 仍写在这里而不是升格成 material.css 的材质参数：
+ * 遮罩虚化属于「打开一个窗口」这个动作，不是站点材质。
+ */
+
+.folio-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.folio-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 5vh, 2.5rem);
+  background: color-mix(in oklab, var(--color-ink) 68%, transparent);
+  backdrop-filter: blur(8px);
+  animation: fade-in var(--duration-fast) var(--ease-out-soft);
+}
+
+.folio-dialog__panel {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-height: min(86dvh, 54rem);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  animation: rise-in var(--duration-base) var(--ease-out-soft);
+}
+
+.folio-dialog__panel:focus {
+  outline: none;
+}
+
+.folio-dialog__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.folio-dialog__close:hover {
+  color: var(--text-heading);
+  background: var(--accent-wash);
+}
+
+.folio-dialog__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ── AI 精读窗口 ──────────────────────────────────────────────── */
+
+.ai-insights {
+  max-width: 46rem;
+}
+
+.ai-insights__head {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.05rem 0.9rem 1.35rem;
+  border-bottom: 1px solid var(--edge);
+}
+
+.ai-insights__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.ai-insights__facts {
+  margin-top: 0.3rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 只有内容区滚动：标题栏与署名栏始终在位 */
+.ai-insights__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.15rem 1.35rem 1.4rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ai-insights__rest {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--edge);
+}
+
+.ai-insights__foot {
+  flex: none;
+  padding: 0.85rem 1.35rem max(0.95rem, env(safe-area-inset-bottom));
+  border-top: 1px dashed var(--edge);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 精读里的引用锚点：点一下关窗并跳回正文对应章节 */
+.ai-insights__body .insight-ref__link {
+  cursor: pointer;
+}
+
+/* 窄屏：窗口贴近全屏，去掉圆角与描边，让出安全区 */
+@media (max-width: 640px) {
+  .folio-dialog__backdrop {
+    padding: 0;
+  }
+
+  .folio-dialog__panel {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .ai-insights__head {
+    padding-top: max(1.05rem, env(safe-area-inset-top));
+  }
+
+  .ai-insights__body {
+    padding-inline: var(--spacing-gutter);
+  }
+}
+
+/* ── 评论区 ────────────────────────────────────────────────────
+ * 编辑式列表，不是信息流：标题 + 说明 + 输入 + 分隔线串起来的条目。
+ * 每条评论不套卡片，层级靠细线与「回复给谁」表达。
+ */
+
+.comments {
+  margin-top: var(--spacing-section);
+}
+
+.comments__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--edge);
+}
+
+.comments__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.comments__count {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.comments__sort {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+}
+
+.comments__sort-button {
+  padding: 0.15rem 0;
+  border-bottom: 1px solid transparent;
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.comments__sort-button:hover {
+  color: var(--accent-strong);
+}
+
+.comments__sort-button[aria-pressed='true'] {
+  color: var(--text-heading);
+  border-bottom-color: var(--accent);
+}
+
+.comments__notice {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+}
+
+.comments__empty {
+  margin-top: 1.75rem;
+  padding: 1.5rem 1.1rem;
+  border: 1px dashed var(--edge);
+  border-radius: var(--radius-md);
+  font-family: var(--font-serif);
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.comments__list {
+  margin-top: 1.5rem;
+}
+
+.comments__list > .comment {
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--edge);
+}
+
+.comments__list > .comment:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.comments__more {
+  display: inline-flex;
+  margin-top: 1.6rem;
+  align-items: center;
+  padding: 0.42rem 1rem;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.comments__more:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.comments__more:disabled {
+  opacity: 0.55;
+}
+
+.comments__error {
+  margin-top: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--color-danger);
+}
+
+/* ── 单条评论 ── */
+
+.comment__row {
+  display: flex;
+  gap: 0.85rem;
+}
+
+.comment__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.1rem;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunk);
+  font-family: var(--font-serif);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.comment__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.comment__main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.comment__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.55rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.6;
+}
+
+.comment__author {
+  color: var(--text-heading);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.comment__author a:hover {
+  color: var(--accent-strong);
+}
+
+.comment__time {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.comment__pin {
+  color: var(--accent-strong);
+}
+
+.comment__target {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.comment__text {
+  margin-top: 0.45rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: 1.75;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 1rem;
+  margin-top: 0.55rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+}
+
+.comment__action {
+  padding: 0.1rem 0;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment__action:hover {
+  color: var(--accent-strong);
+}
+
+.comment__action--accent {
+  color: var(--accent-strong);
+}
+
+/* 缩进只做一层：第三层起与第二层左对齐，中文不会被挤成一行三四个字 */
+.comment__replies {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 1.1rem;
+  padding-left: 1.05rem;
+  border-left: 1px solid var(--edge);
+}
+
+.comment__replies .comment__replies {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* ── 评论表单 ── */
+
+.comment-composer {
+  margin-top: 1.5rem;
+  padding: 1rem 1.05rem 1.05rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--surface-lift) 55%, var(--reading-surface));
+}
+
+.comment-composer--reply {
+  margin-top: 0.9rem;
+  padding: 0.8rem 0.9rem 0.9rem;
+  background: var(--surface-sunk);
+}
+
+.comment-composer__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.comment-composer__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  overflow-wrap: anywhere;
+}
+
+.comment-composer__cancel {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment-composer__cancel:hover {
+  color: var(--accent-strong);
+}
+
+.comment-composer__fields {
+  display: grid;
+  gap: 0.65rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .comment-composer__fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.comment-composer__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.comment-composer__field--wide {
+  margin-top: 0.7rem;
+}
+
+.comment-composer__input,
+.comment-composer__textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  transition: border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment-composer__input::placeholder,
+.comment-composer__textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.comment-composer__input:focus,
+.comment-composer__textarea:focus {
+  border-color: var(--accent);
+}
+
+.comment-composer__textarea {
+  min-height: 6rem;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.comment-composer__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.comment-composer__submit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.42rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  color: var(--surface-raised);
+  transition: opacity var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment-composer__submit:disabled {
+  opacity: 0.55;
+}
+
+.comment-composer__hint {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.comment-composer__count {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.comment-composer__message {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+}
+
+.comment-composer__message--ok {
+  color: var(--accent-strong);
+}
+
+.comment-composer__message--error {
+  color: var(--color-danger);
+}
+
+@media (max-width: 640px) {
+  .comment__row {
+    gap: 0.65rem;
+  }
+
+  .comment__replies {
+    padding-left: 0.75rem;
+  }
+}
+
+/* reduced-motion 的全局降级（globals.css 的 @layer base）已经把时长压到 0.01ms；
+   这里只额外去掉折叠的高度过渡，避免高度动画在降级下仍触发一次重排。 */
+@media (prefers-reduced-motion: reduce) {
+  .ai-summary__body {
+    transition: none;
+  }
+}

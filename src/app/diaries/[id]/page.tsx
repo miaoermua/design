@@ -8,11 +8,16 @@ import { ActionRail } from '@/components/reading/action-rail'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
+import { readArticleInsights } from '@/features/ai-insights'
+import { AISummaryCard, readArticleSummary } from '@/features/ai-summary'
+import { CommentsSection } from '@/features/comments'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
 import { renderMarkdown } from '@/lib/content/markdown'
+import { toContentLang } from '@/lib/i18n/config'
+import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, formatTime, formatWeekday } from '@/lib/utils/date'
@@ -110,6 +115,21 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
     (chip): chip is string => Boolean(chip),
   )
 
+  // 笔记同样只有 post/note 支持 AI 资源；受密码保护时正文为空，不请求
+  const locale = await getLocale()
+  const contentLang = toContentLang(locale)
+  const [summary, insights] = await Promise.all([
+    rendered ? readArticleSummary(diary.id, contentLang) : Promise.resolve(null),
+    rendered
+      ? readArticleInsights({
+          id: diary.id,
+          lang: contentLang,
+          source: diary.content,
+          toc: rendered.toc,
+        })
+      : Promise.resolve(null),
+  ])
+
   const { identity } = await loadSiteContext()
   const theme = await getThemeConfig()
   const subscribe = await readSubscribeOptions(theme.social)
@@ -147,6 +167,10 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
               {diary.bookmark ? <span className="meta-sep">收藏</span> : null}
             </p>
           </header>
+
+          {summary ? (
+            <AISummaryCard key={diary.id} summary={summary} insights={insights} />
+          ) : null}
 
           <ReadingInline items={rendered?.toc ?? []} targetId="diary-content" />
 
@@ -231,6 +255,9 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
           }
         />
       </div>
+
+      {/* 评论在 #diary-content 之外：阅读进度只算正文 */}
+      <CommentsSection refId={diary.id} timeZone={timeZone} />
     </Container>
   )
 }

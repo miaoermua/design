@@ -43,3 +43,18 @@ export function localeLabel(locale: Locale): string {
 export function localeName(locale: Locale): string {
   return locale === 'en' ? 'English' : '中文'
 }
+
+/**
+ * 任意 BCP 47 语言代码 → 中文名称
+ *
+ * AI 摘要 / 精读的语言由 Core 决定（`zh` / `en` / `ja` …），不受本主题的
+ * LOCALES 限制，所以不能用 `localeName`。取不到名称时退回代码本身，
+ * 宁可显示 `ja` 也不显示 `undefined`。
+ */
+export function languageLabel(code: string): string {
+  try {
+    return new Intl.DisplayNames(['zh-CN'], { type: 'language' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}

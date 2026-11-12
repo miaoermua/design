@@ -102,7 +102,7 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------- |
 | `--surface`                                                                          | `--color-paper`                                         | 页面底                                                   | 有                                                 |
 | `--surface-raised`                                                                   | `--color-paper-raised`                                  | 卡片/浮层、`.glass-panel`                                | 有                                                 |
-| `--surface-lift`                                                                     | `--color-paper-lift`                                    | （预留：最高层）                                         | **无消费者**，见 §14.8                             |
+| `--surface-lift`                                                                     | `--color-paper-lift`                                    | 阅读层最高层：AI 摘要卡、AI 精读窗口                     | 有                                                 |
 | `--surface-sunk`                                                                     | `--color-paper-sunk`                                    | 代码块、空状态                                           | 有                                                 |
 | `--surface-glass`                                                                    | `--color-frost`                                         | （预留：玻璃基色；冰面实际由 `--material-glass-*` 驱动） | **无消费者**，见 §14.8                             |
 | `--text-primary` / `--text-strong`                                                   | ink / ink-soft                                          | 正文 / 强调                                              | 有                                                 |
@@ -264,6 +264,9 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | `ArticleRow`                | `features/articles/...`          | 标题 16→20px，hover 变 `--accent-strong`；日期/分类/阅读数 pill                                           |
 | `ArticleCard`               | 同上                             | 首页主推：图 + 标签 + 32px 衬线标题 + 摘要                                                                |
 | `ReadingProgress`           | `ui/reading-progress.tsx`        | 顶部 1px `--accent` 进度条，`motion-safe` 过渡                                                            |
+| `AISummaryCard`             | `features/ai-summary/...`        | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性 |
+| `Dialog` / `InsightsDialog` | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚 |
+| `Comments`                  | `features/comments/...`          | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件 |
 | `Toc` / `TocList`           | `ui/toc.tsx` / `ui/toc-list.tsx` | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动                             |
 | `ArticleNeighbors`          | `features/articles/...`          | 虚线分隔的上一篇/下一篇，标题 hover 变主题色                                                              |
 | `DiaryDayGroup`             | `features/diaries/...`           | 40px 衬线日号 + `2026.11` + 星期                                                                          |
@@ -300,6 +303,7 @@ Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必
 | `containers.css`                 | Callout / Banner / Details / Spoiler 等块级容器：外壳、图标区、类型配色、折叠与剧透状态 |
 | `media.css`                      | Gallery / Carousel、图片预览层（`.md-preview`）等媒体交互                               |
 | `footnotes.css` / `mentions.css` | 脚注、@提及                                                                             |
+| `reading.css`                    | AI 摘要卡、AI 精读窗口（含窗口内的 Markdown 排版）、评论区；只消费语义 Token，不新增全局材质 |
 
 - **Callout 类型配色只有一个实现**：`.md-callout--*` 的左边线与标题色在 `containers.css`；`prose.css` **不得**再出现同名规则，否则两个文件会争夺同一属性、调色时只改一处就静默失效。
 - **Callout 的装饰色与文字色必须分开**：`--notice-tone` 只做左边线、圆点与 8% 底纹（装饰下限 3:1），标题文字用 `--notice-ink`（下限 4.5:1）。中性提示没有功能色，`--notice-ink` 取 `--text-primary`，**不得**复用 `--edge-strong` 这类描边色——Phase 4D-1 之前二者共用同一变量，实测标题只有 1.5:1。
@@ -369,6 +373,7 @@ src/design-system/styles/media.css                    ← 图片 / Gallery / 预
 src/design-system/styles/containers.css               ← 提示块 / 横幅 / 折叠 / 剧透
 src/design-system/styles/footnotes.css                ← 脚注
 src/design-system/styles/mentions.css                 ← @提及
+src/design-system/styles/reading.css                  ← AI 摘要卡 / 精读窗口 / 评论区
 src/app/globals.css                                   ← base 层 + @import 编排
 
 tests/design-tokens.test.ts                           ← Token 结构 / 引用 / 硬编码 / 对比度
@@ -470,8 +475,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 | Token                                 | 状态                                                                                          | 处理             |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
-| `--surface-lift`                      | 别名无消费者；底层 `--color-paper-lift` 经 `--material-glass-rim` / `--material-ambient` 活着 | 本轮只记录，不删 |
-| `--surface-glass`                     | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着                                     | 同上             |
+| `--surface-glass`                     | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着                                     | 本轮只记录，不删 |
 | `--duration-base` / `--duration-slow` | 无 `var()`、无 `duration-*` 工具类使用                                                        | 同上             |
 | `--ease-in-out-soft`                  | 无 `var()`、无 `ease-*` 工具类使用                                                            | 同上             |
 

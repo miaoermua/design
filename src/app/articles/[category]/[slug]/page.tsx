@@ -9,7 +9,10 @@ import { ActionRail } from '@/components/reading/action-rail'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
+import { readArticleInsights } from '@/features/ai-insights'
+import { AISummaryCard, readArticleSummary } from '@/features/ai-summary'
 import { ArticleCard, ArticleNeighbors } from '@/features/articles'
+import { CommentsSection } from '@/features/comments'
 import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
@@ -23,6 +26,8 @@ import {
 } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { isRealtimeEnabled } from '@/lib/realtime/config'
+import { toContentLang } from '@/lib/i18n/config'
+import { getLocale } from '@/lib/i18n/server'
 import { articlePath, categoryPath } from '@/lib/routes'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
 import { jsonLd } from '@/lib/seo'
@@ -116,7 +121,22 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const rendered =
     isMarkdown && article.content.trim() ? await renderMarkdown(article.content) : null
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
-  const neighbors = await findNeighbors(article)
+
+  // AI 资源与相邻文章都是附加信息：并行取，任一失败都只影响自己那一块
+  const locale = await getLocale()
+  const contentLang = toContentLang(locale)
+  const [neighbors, summary, insights] = await Promise.all([
+    findNeighbors(article),
+    readArticleSummary(article.id, contentLang),
+    rendered
+      ? readArticleInsights({
+          id: article.id,
+          lang: contentLang,
+          source: article.content,
+          toc: rendered.toc,
+        })
+      : Promise.resolve(null),
+  ])
   const canonical = absoluteUrl(
     identity,
     articlePath(article.category?.slug, article.slug) ?? '/articles',
@@ -241,6 +261,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               ) : null}
             </header>
 
+            {summary ? (
+              <AISummaryCard key={article.id} summary={summary} insights={insights} />
+            ) : null}
+
             <ReadingInline items={rendered?.toc ?? []} targetId="article-content" />
 
             <div className="mt-10 sm:mt-12">
@@ -301,6 +325,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           />
         </div>
       </article>
+
+      {/* 评论区在 #article-content 之外：阅读进度的口径是正文，不该把评论算进去 */}
+      <CommentsSection refId={article.id} timeZone={timeZone} />
 
       {article.related.length > 0 ? (
         <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">
