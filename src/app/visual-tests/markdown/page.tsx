@@ -57,6 +57,7 @@ export default async function MarkdownVisualTestsPage() {
           </div>
 
           <aside className="hidden xl:block">
+            <p className="meta mb-2 text-[var(--text-tertiary)]">目录</p>
             <Toc items={rendered.toc} />
           </aside>
         </div>

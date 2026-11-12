@@ -76,6 +76,16 @@ describe('SubscribePanel 邮件订阅', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('邮箱地址')))
   })
 
+  it('邮箱输入保留原生 email 校验，同时关掉自动填充提示', () => {
+    openPanel()
+    const input = screen.getByLabelText('邮箱地址') as HTMLInputElement
+
+    // 不靠改 type / readonly 骗过密码管理器：只声明 autocomplete="off"
+    expect(input.type).toBe('email')
+    expect(input.required).toBe(true)
+    expect(input.getAttribute('autocomplete')).toBe('off')
+  })
+
   it('两种订阅类型都以默认勾选呈现', () => {
     openPanel()
     expect((screen.getByLabelText('新文章') as HTMLInputElement).checked).toBe(true)

@@ -46,6 +46,23 @@ function percentText() {
   return screen.getByText(/%$/).textContent
 }
 
+describe('ReadingProgressRing 尺寸与可读性', () => {
+  it('环缩到 26px，百分比在环右侧而不是圈内', () => {
+    render(<ReadingProgressRing targetId="missing" />)
+    const ring = document.querySelector('[data-reading-progress]') as HTMLElement
+    const label = screen.getByText(/%$/)
+    const svg = ring.querySelector('svg') as SVGElement
+
+    // jsdom 没有布局：尺寸看 svg 属性
+    expect(svg.getAttribute('width')).toBe('26')
+    expect(svg.getAttribute('height')).toBe('26')
+    // 环只画弧：文字既不在 svg 里，也在 svg 外层包装之后
+    expect(svg.contains(label)).toBe(false)
+    expect(ring.contains(label)).toBe(true)
+    expect(svg.parentElement?.nextElementSibling).toBe(label)
+  })
+})
+
 describe('ReadingProgressRing', () => {
   it('没有正文元素时安静地停在 0%', () => {
     render(<ReadingProgressRing targetId="missing" />)

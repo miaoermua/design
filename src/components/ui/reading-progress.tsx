@@ -10,18 +10,23 @@ interface ReadingProgressRingProps {
   className?: string
 }
 
-const SIZE = 30
-const STROKE = 2
-const RADIUS = (SIZE - STROKE) / 2
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-
 /**
- * 环形阅读进度。
+ * 环形阅读进度
+ *
+ * 尺寸刻意压到 26px：它是目录标题行右侧的辅助信息，不该和目录抢视觉主体。
+ * 百分比放在圆圈**内部**——文字绝对居中、不参与布局，所以三位数也不会把环撑大；
+ * 字号 9px 是 22px 内径下 `100%` 还能完整留在描边内的上限（四字符 ≈ 20px），
+ * 再大就会贴边。`tabular-nums` 让数字换位时不抖动。
  *
  * 只读取真实滚动位置，不做插值动画：数字与环永远描述同一时刻。
  * 环本身 `aria-hidden`，百分比以普通文本呈现——它不播报，
  * 否则每滚一行都会打断读屏用户。
  */
+const SIZE = 26
+const STROKE = 2
+const RADIUS = (SIZE - STROKE) / 2
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
 export function ReadingProgressRing({ targetId, className }: ReadingProgressRingProps) {
   const [percent, setPercent] = useState(0)
   const frame = useRef(0)
@@ -65,7 +70,8 @@ export function ReadingProgressRing({ targetId, className }: ReadingProgressRing
 
   return (
     <div
-      className={cn('flex items-center gap-2 text-[var(--text-secondary)]', className)}
+      className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
+      style={{ width: SIZE, height: SIZE }}
       data-reading-progress={percent}
     >
       <svg
@@ -73,7 +79,7 @@ export function ReadingProgressRing({ targetId, className }: ReadingProgressRing
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         width={SIZE}
         height={SIZE}
-        className="shrink-0 -rotate-90"
+        className="absolute inset-0 -rotate-90"
       >
         <circle
           cx={SIZE / 2}
@@ -96,7 +102,9 @@ export function ReadingProgressRing({ targetId, className }: ReadingProgressRing
           className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-150"
         />
       </svg>
-      <span className="text-meta tabular-nums">{percent}%</span>
+      <span className="text-[0.5625rem] leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
+        {percent}%
+      </span>
     </div>
   )
 }

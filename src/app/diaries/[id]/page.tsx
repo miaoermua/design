@@ -121,10 +121,10 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   return (
     <Container width="wide">
-      <div className="mx-auto mt-10 grid max-w-[calc(var(--container-prose)+7rem)] gap-10 sm:mt-14 xl:max-w-[var(--container-wide)] xl:grid-cols-[3.25rem_minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+      <div className="mx-auto mt-10 grid max-w-[calc(var(--container-prose)+7rem)] gap-10 sm:mt-14 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
         <article
           id="diary-content"
-          className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-2 xl:row-start-1"
+          className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1"
         >
           <header>
             <p className="meta flex flex-wrap items-center gap-x-1">
@@ -215,19 +215,21 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
           </footer>
         </article>
 
-        {/* 移动端操作栏落在文末；桌面端由显式列位置提到左侧 */}
-        <div className="order-2 border-t border-dashed border-[var(--edge)] pt-4 xl:order-none xl:col-start-1 xl:row-start-1 xl:border-0 xl:pt-0">
-          <ActionRail
-            id={diary.id}
-            type="Note"
-            shareUrl={canonical}
-            like={isInteractionEnabled()}
-            subscribe={subscribe}
-            donate={donate}
-          />
-        </div>
-
-        <ReadingAside items={rendered?.toc ?? []} targetId="diary-content" />
+        {/* 移动端跟在文末，桌面端落在右侧目录列表下方 */}
+        <ReadingAside
+          items={rendered?.toc ?? []}
+          targetId="diary-content"
+          actions={
+            <ActionRail
+              id={diary.id}
+              type="Note"
+              shareUrl={canonical}
+              like={isInteractionEnabled()}
+              subscribe={subscribe}
+              donate={donate}
+            />
+          }
+        />
       </div>
     </Container>
   )

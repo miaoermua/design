@@ -99,10 +99,7 @@ export function ActionRail({
 
   return (
     <div
-      className={cn(
-        'flex flex-row items-center gap-1 xl:sticky xl:top-28 xl:flex-col xl:items-stretch xl:gap-1.5',
-        className,
-      )}
+      className={cn('flex flex-row items-center justify-between gap-1', className)}
       aria-label="文章操作"
       role="group"
     >
@@ -128,7 +125,9 @@ export function ActionRail({
         <SubscribePanel types={subscribe.types} channels={subscribe.channels} />
       ) : null}
 
-      {donate ? <DonateAction label={donate.label} qrcodes={donate.qrcodes} /> : null}
+      {donate ? (
+        <DonateAction label={donate.label} qrcodes={donate.qrcodes} variant="rail" />
+      ) : null}
     </div>
   )
 }

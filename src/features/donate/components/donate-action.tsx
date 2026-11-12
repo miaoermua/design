@@ -10,6 +10,11 @@ interface DonateActionProps {
   label: string
   qrcodes: DonateQrcode[]
   className?: string
+  /**
+   * inline = 日记条目里的行内小字（默认，无内边距、无悬停底色）
+   * rail   = 与 Like / Share / Subscribe 共用的操作栏按钮（同一套尺寸与图标风格）
+   */
+  variant?: 'inline' | 'rail'
 }
 
 type OpenedBy = 'hover' | 'click'
@@ -25,7 +30,7 @@ type OpenedBy = 'hover' | 'click'
  * 浮层是绝对定位的普通元素，不锁定滚动、不挂 portal、不抢焦点，
  * 因此不会干扰页面正常滚动与阅读位置。
  */
-export function DonateAction({ label, qrcodes, className }: DonateActionProps) {
+export function DonateAction({ label, qrcodes, className, variant = 'inline' }: DonateActionProps) {
   const [open, setOpen] = useState(false)
   const [openedBy, setOpenedBy] = useState<OpenedBy>('click')
   const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set())
@@ -132,12 +137,16 @@ export function DonateAction({ label, qrcodes, className }: DonateActionProps) {
         aria-controls={open ? panelId : undefined}
         aria-haspopup="dialog"
         onClick={handleClick}
-        className="meta inline-flex items-center gap-1.5 text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]"
+        className={
+          variant === 'rail'
+            ? 'action-rail-button'
+            : 'meta inline-flex items-center gap-1.5 text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]'
+        }
       >
         <svg
           aria-hidden="true"
           viewBox="0 0 24 24"
-          className="size-[0.95rem]"
+          className={variant === 'rail' ? 'size-[1.05rem]' : 'size-[0.95rem]'}
           fill="none"
           stroke="currentColor"
           strokeWidth="1.6"

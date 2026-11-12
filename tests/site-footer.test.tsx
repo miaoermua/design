@@ -57,17 +57,17 @@ async function renderFooter(
 }
 
 describe('Footer 第一栏', () => {
-  it('把 Since 年份、名字与个性签名放在同一段信息里', async () => {
+  it('把年份区间、名字与个性签名放在同一段信息里', async () => {
     await renderFooter()
 
-    expect(screen.getByText('Since 2021')).toBeTruthy()
+    expect(screen.getByText(`© 2021–${new Date().getFullYear()}`)).toBeTruthy()
     expect(screen.getByText('Miao')).toBeTruthy()
     expect(screen.getByText('写点东西')).toBeTruthy()
   })
 
   it('没有配置 since 时退回当前年份，不编造站龄', async () => {
     await renderFooter({ since: null })
-    expect(screen.getByText(`Since ${new Date().getFullYear()}`)).toBeTruthy()
+    expect(screen.getByText(`© ${new Date().getFullYear()}`)).toBeTruthy()
   })
 
   it('identity 缺失时用站点标题兜底，不出现 undefined', async () => {

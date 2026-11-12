@@ -160,7 +160,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
                 name="email"
                 type="email"
                 required
-                autoComplete="email"
+                autoComplete="off"
                 placeholder="name@example.com"
                 disabled={status === 'sent'}
                 className="text-small mt-1.5 w-full border border-[var(--edge)] bg-[var(--surface)] px-2.5 py-2 text-[var(--text-heading)] outline-none focus:border-[var(--accent)]"

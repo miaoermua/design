@@ -154,8 +154,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       <article id="article-content" className="pb-[var(--spacing-section)]">
         {/* 桌面：左操作栏 / 中间正文 / 右阅读辅助；移动：正文在前，操作栏跟在文末 */}
-        <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[3.25rem_minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
-          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-2 xl:row-start-1">
+        <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1">
             <header className="pt-10 sm:pt-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--accent-line)]" />
@@ -284,19 +284,21 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </footer>
           </div>
 
-          {/* 操作栏：移动端留在文末，桌面端由显式列位置提到左侧 */}
-          <div className="order-2 border-t border-dashed border-[var(--edge)] pt-4 xl:order-none xl:col-start-1 xl:row-start-1 xl:border-0 xl:pt-0">
-            <ActionRail
-              id={article.id}
-              type="Post"
-              shareUrl={canonical}
-              like={isInteractionEnabled()}
-              subscribe={subscribe}
-              donate={donate}
-            />
-          </div>
-
-          <ReadingAside items={rendered?.toc ?? []} targetId="article-content" />
+          {/* 移动端跟在文末，桌面端落在右侧目录列表下方 */}
+          <ReadingAside
+            items={rendered?.toc ?? []}
+            targetId="article-content"
+            actions={
+              <ActionRail
+                id={article.id}
+                type="Post"
+                shareUrl={canonical}
+                like={isInteractionEnabled()}
+                subscribe={subscribe}
+                donate={donate}
+              />
+            }
+          />
         </div>
       </article>
 
