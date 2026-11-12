@@ -140,48 +140,18 @@ export function parseFooter(value: unknown, currentYear: number): ThemeFooter {
 
 /* ── social ─────────────────────────────────────────────────── */
 
-/** 平台键只允许字母数字与 - _，防止用奇怪键名去冒充图标 */
-const PLATFORM_KEY = /^[a-z0-9_-]{1,32}$/i
-
 /**
  * 解析 Social 配置。
  *
- * 这里同时接受**两种形态**，因为旧配置不能因为升级就失效：
+ * 只有一种形态：`items[]`，每个项目自带 URL / 标题 / 图标 / 颜色。
  *
- *   1. 旧形态：`order` + `icons`，账号从 `/aggregate` 派生；
- *   2. 新形态：`items[]`，每个项目自带 URL / 标题 / 图标 / 颜色。
- *
- * 两者不是二选一：`order` 与 `icons` 在新形态下仍然作用于**从 API 派生
- * 出来的项目**（排序与图标覆盖），`items` 则是额外补充的自定义项目。
- * 合并发生在 `lib/social.ts`，那里能看到 API 数据；解析层只负责把
- * 配置本身清理干净。
- *
- * 迁移策略因此是「叠加」而不是「切换」：旧配置继续工作，
- * 新配置逐条加进来，不存在必须一次性改完的断点。
+ * 刻意**不再接受**旧的 `order` + `icons` 字段。旧形态的语义是「按平台名
+ * 排序、按平台名覆盖图标」，而平台名恰恰是新结构要摆脱的东西——同一平台
+ * 允许多个项目之后，「平台名 → 某个图标」这个映射就没有唯一解了。
+ * 保留它只会让两套语义长期并存，所以直接不支持；写了也不会生效。
  */
 function parseSocial(value: unknown): ThemeSocial {
   const source = record(value)
-
-  const order: string[] = []
-  if (Array.isArray(source.order)) {
-    for (const item of source.order) {
-      if (typeof item !== 'string') continue
-      const key = item.trim().toLowerCase()
-      if (!PLATFORM_KEY.test(key)) continue
-      if (!order.includes(key)) order.push(key)
-    }
-  }
-
-  const icons: Record<string, string> = {}
-  const rawIcons = record(source.icons)
-  for (const [key, rawName] of Object.entries(rawIcons)) {
-    const platform = key.trim().toLowerCase()
-    if (!PLATFORM_KEY.test(platform)) continue
-    const iconName = readString(rawName, 32)
-    // 只接受「图标名」，不接受 SVG / HTML：值是字符串，交给图标组件查表
-    if (iconName && /^[a-z0-9_-]+$/i.test(iconName)) icons[platform] = iconName.toLowerCase()
-  }
-
   // snake_case（YAML 习惯）与 camelCase（JS 习惯）都接受：
   // Snippet 是手写的，纠结大小写只会制造无谓的报错。
   const rawStylesheets = source.icon_stylesheets ?? source.iconStylesheets
@@ -190,8 +160,6 @@ function parseSocial(value: unknown): ThemeSocial {
     enabled: readBool(source.enabled, true),
     items: parseSocialItems(source.items),
     iconStylesheets: parseIconStylesheets(rawStylesheets).urls,
-    order,
-    icons,
   }
 }
 

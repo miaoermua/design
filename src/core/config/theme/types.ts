@@ -59,9 +59,8 @@ export interface ThemeSocialIcon {
 /**
  * 单个社交项目。
  *
- * 与旧的 `order` + `icons` 映射的根本区别：**每一项都自带地址**，
- * 不再由平台键推导 URL。因此同一平台可以出现多次（例如两个 Telegram
- * 频道），也不会因为平台名相同而互相覆盖。
+ * 每一项都自带地址，不由平台键推导 URL。因此同一平台可以出现多次
+ * （例如两个 Telegram 频道），也不会因为平台名相同而互相覆盖。
  */
 export interface ThemeSocialItem {
   /** 展示标题；缺失时由解析层用主机名兜底，不会留下无标题的链接 */
@@ -91,14 +90,6 @@ export interface ThemeSocial {
    * 图标字体」变成「我顺手改了整个站点的样式」。
    */
   iconStylesheets: string[]
-  /**
-   * 旧配置字段，保留用于兼容与迁移。
-   *
-   * 它们**只作用于从 API 派生出来的项目**（排序、图标覆盖），
-   * 不参与唯一性判断——平台名不再作为键。
-   */
-  order: string[]
-  icons: Record<string, string>
 }
 
 export interface ThemeCustom {

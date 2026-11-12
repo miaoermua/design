@@ -61,42 +61,32 @@ describe('Social：API 数据', () => {
   })
 })
 
-describe('Social：旧配置（order / icons）', () => {
-  it('order 排序：列出的按顺序，未列出的保持原序排在后面', () => {
+describe('Social：旧协议字段不再生效', () => {
+  it('order 被忽略，API 项保持 /aggregate 原始顺序', () => {
     const theme = parseThemeConfig({ social: { order: ['telegram', 'github'] } }).social
     expect(toSocialItems(ids, { theme }).map((i) => i.platform)).toEqual([
-      'telegram',
       'github',
       'bilibili',
+      'telegram',
       'weird',
     ])
   })
 
-  it('order 中有无效平台不影响其它账号', () => {
-    const theme = parseThemeConfig({ social: { order: ['not-exist', 'github'] } }).social
-    const items = toSocialItems(ids, { theme })
-    expect(items[0]?.platform).toBe('github')
-    expect(items).toHaveLength(4)
-  })
-
-  it('icons 覆盖只改图标名，不改 URL', () => {
+  it('icons 被忽略，API 项图标仍是平台键', () => {
     const theme = parseThemeConfig({ social: { icons: { bilibili: 'rss' } } }).social
     const bili = toSocialItems(ids, { theme }).find((i) => i.platform === 'bilibili')
-    expect(bili?.icon).toEqual({ type: 'builtin', name: 'rss' })
-    expect(bili?.url).toBe('https://space.bilibili.com/41605906')
+    expect(bili?.icon).toEqual({ type: 'builtin', name: 'bilibili' })
   })
 
-  it('未知图标名不会让该账号消失', () => {
-    const theme = parseThemeConfig({ social: { icons: { github: 'nonexistent-icon' } } }).social
-    const github = toSocialItems(ids, { theme }).find((i) => i.platform === 'github')
-    expect(github).toBeDefined()
-    expect(github?.url).toBe('https://github.com/miaoermua')
+  it('旧字段不进入解析结果', () => {
+    const social = parseThemeConfig({ social: { order: ['github'], icons: { github: 'rss' } } }).social
+    expect(Object.keys(social).sort()).toEqual(['enabled', 'iconStylesheets', 'items'])
   })
 
-  it('排序不修改传入的 socialIds', () => {
+  it('不修改传入的 socialIds', () => {
     const input = { ...ids }
     const before = Object.keys(input)
-    const theme = parseThemeConfig({ social: { order: ['telegram'] } }).social
+    const theme = parseThemeConfig({ social: {} }).social
     toSocialItems(input, { theme })
     expect(Object.keys(input)).toEqual(before)
   })

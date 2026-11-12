@@ -101,38 +101,27 @@ describe('Theme：Footer', () => {
   })
 })
 
-describe('Theme：Social（旧字段兼容）', () => {
-  it('order 生效且未列出的平台排在后面', () => {
+describe('Theme：Social（旧协议字段被忽略）', () => {
+  it('order / icons 不进入解析结果', () => {
     const config = parseThemeConfig({
-      social: { order: ['bilibili', 'github'], icons: {} },
+      social: { order: ['bilibili', 'github'], icons: { github: 'rss' } },
     })
-    expect(config.social.order).toEqual(['bilibili', 'github'])
-  })
-
-  it('图标只接受图标名，拒绝 SVG / HTML', () => {
-    const config = parseThemeConfig({
-      social: {
-        icons: {
-          github: 'github',
-          evil: '<svg onload="alert(1)">',
-          alsoBad: 'has space',
-        },
-      },
-    })
-    expect(config.social.icons).toEqual({ github: 'github' })
-  })
-
-  it('order 中重复与非法键被清理', () => {
-    const config = parseThemeConfig({
-      social: { order: ['github', 'github', '<script>', 'x', 42] },
-    })
-    expect(config.social.order).toEqual(['github', 'x'])
+    expect(Object.keys(config.social).sort()).toEqual(['enabled', 'iconStylesheets', 'items'])
   })
 
   it('只有旧字段时 items 为空，不凭空造项目', () => {
-    const config = parseThemeConfig({ social: { order: ['github'] } })
+    const config = parseThemeConfig({ social: { order: ['github'], icons: { github: 'github' } } })
     expect(config.social.items).toEqual([])
     expect(config.social.iconStylesheets).toEqual([])
+  })
+
+  it('旧字段的恶意值不会造成影响', () => {
+    const config = parseThemeConfig({
+      social: { icons: { evil: '<svg onload="alert(1)">' }, order: ['<script>'] },
+    })
+    expect(config.social.items).toEqual([])
+    expect(JSON.stringify(config.social)).not.toContain('onload')
+    expect(JSON.stringify(config.social)).not.toContain('script')
   })
 })
 

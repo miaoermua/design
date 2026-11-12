@@ -579,9 +579,6 @@ export const mockThemeSnippet: Record<string, unknown> = {
     icon_stylesheets: [
       'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css',
     ],
-    // 旧字段继续生效，只作用于从 /aggregate 派生的项目
-    order: ['github', 'bilibili', 'telegram', 'email'],
-    icons: { bilibili: 'bilibili' },
   },
   custom: {
     // 与线上 Kami 片段同形状：外部样式表 URL 数组（内联 CSS 字符串已不再支持）

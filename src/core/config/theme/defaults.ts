@@ -85,8 +85,6 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
     enabled: true,
     items: [],
     iconStylesheets: [],
-    order: [],
-    icons: {},
   },
   custom: {
     css: [],

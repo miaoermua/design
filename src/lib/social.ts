@@ -105,38 +105,22 @@ function apiItems(socialIds: Record<string, string> | null | undefined): SocialI
  *
  * 同一个 URL 同时出现在 API 与配置中时，**以配置为准**：
  * 配置带了标题、图标和颜色，是更明确的表达；API 只给出账号值。
- * 位置也以配置为准（配置项排在前面），避免「我调了顺序但没生效」。
+ * 位置也以配置为准（配置项整体排在 API 项之前）。
  *
  * ## 顺序
  *
  * 配置项按 `items` 顺序在前，然后是 API 派生项。
- * API 派生项内部按旧配置 `order` 排序，未列出的保持 `/aggregate` 原始
- * 顺序——这样「新增一个账号」不会因为忘了改 order 就消失。
+ * API 派生项保持 `/aggregate` 的原始顺序——不支持按平台名重排序，
+ * 因为那是旧协议的语义，与「同平台多项」互斥。
  */
 export function toSocialItems(
   socialIds: Record<string, string> | null | undefined,
-  options: { theme?: Pick<ThemeSocial, 'items' | 'order' | 'icons'> } = {},
+  options: { theme?: Pick<ThemeSocial, 'items'> } = {},
 ): SocialItem[] {
   const fromApi = apiItems(socialIds)
   const theme = options.theme
 
   if (!theme) return fromApi
-
-  // 旧配置的图标覆盖：只改外观，不改「这个链接是否存在」的判断
-  const overridden = fromApi.map((item) => {
-    const override = theme.icons[item.platform ?? '']
-    return override ? { ...item, icon: { type: 'builtin' as const, name: override } } : item
-  })
-
-  const rank = new Map(theme.order.map((key, index) => [key, index]))
-  const ordered =
-    rank.size === 0
-      ? overridden
-      : [...overridden].sort((a, b) => {
-          const ra = rank.get(a.platform ?? '') ?? Number.MAX_SAFE_INTEGER
-          const rb = rank.get(b.platform ?? '') ?? Number.MAX_SAFE_INTEGER
-          return ra - rb
-        })
 
   const fromTheme: SocialItem[] = theme.items.map((item, index) => ({
     id: `theme:${index}`,
@@ -152,7 +136,7 @@ export function toSocialItems(
   const claimed = new Set(fromTheme.map((item) => item.url))
   const merged = [...fromTheme]
 
-  for (const item of ordered) {
+  for (const item of fromApi) {
     if (claimed.has(item.url)) continue
     claimed.add(item.url)
     merged.push(item)
