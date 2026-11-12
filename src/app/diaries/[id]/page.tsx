@@ -4,9 +4,14 @@ import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
-import { Rule } from '@/components/ui/rule'
+import { ActionRail } from '@/components/reading/action-rail'
+import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
+import { getThemeConfig } from '@/core/config/theme'
+import { isDonateVisible, readDonateConfig } from '@/features/donate'
+import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
+import { absoluteUrl, loadSiteContext } from '@/lib/site'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
@@ -46,10 +51,10 @@ function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
     <Container width="narrow">
       <div className="py-24">
         <p className="meta">日记</p>
-        <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
+        <h1 className="text-title mt-3 font-serif text-[var(--text-heading)]">
           这篇日记受密码保护
         </h1>
-        <p className="mt-3 text-small text-[var(--text-secondary)]">
+        <p className="text-small mt-3 text-[var(--text-secondary)]">
           {wrong ? '密码不正确，或后端仍未通过校验。' : '输入作者设置的密码后可以阅读。'}
         </p>
 
@@ -63,11 +68,11 @@ function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
             type="password"
             required
             autoComplete="off"
-            className="min-w-0 flex-1 border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-small text-[var(--text-heading)] outline-none focus:border-[var(--accent)]"
+            className="text-small min-w-0 flex-1 border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-[var(--text-heading)] outline-none focus:border-[var(--accent)]"
           />
           <button
             type="submit"
-            className="border border-[var(--text-primary)] bg-[var(--text-primary)] px-4 py-2 text-small text-[var(--surface)]"
+            className="text-small border border-[var(--text-primary)] bg-[var(--text-primary)] px-4 py-2 text-[var(--surface)]"
           >
             阅读
           </button>
@@ -105,95 +110,125 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
     (chip): chip is string => Boolean(chip),
   )
 
+  const { identity } = await loadSiteContext()
+  const theme = await getThemeConfig()
+  const subscribe = await readSubscribeOptions(theme.social)
+  const donateConfig = readDonateConfig(theme)
+  const donate = isDonateVisible(donateConfig)
+    ? { label: donateConfig.label, qrcodes: donateConfig.qrcodes }
+    : null
+  const canonical = absoluteUrl(identity, diaryPath(diary.id))
+
   return (
     <Container width="wide">
-      <article className="reading-sheet mx-auto mt-10 w-full max-w-[calc(var(--container-prose)+7rem)] sm:mt-14">
-        <header>
-          <p className="meta flex flex-wrap items-center gap-x-1">
-            <Link href="/diaries" className="link-quiet">
-              日记
+      <div className="mx-auto mt-10 grid max-w-[calc(var(--container-prose)+7rem)] gap-10 sm:mt-14 xl:max-w-[var(--container-wide)] xl:grid-cols-[3.25rem_minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+        <article
+          id="diary-content"
+          className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-2 xl:row-start-1"
+        >
+          <header>
+            <p className="meta flex flex-wrap items-center gap-x-1">
+              <Link href="/diaries" className="link-quiet">
+                日记
+              </Link>
+              <time className="meta-sep" dateTime={diary.publishedAt}>
+                {formatDate(diary.publishedAt, timeZone)}
+              </time>
+              <span className="meta-sep">{formatWeekday(diary.publishedAt, timeZone)}</span>
+              <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
+            </p>
+
+            <h1 className="text-title mt-4 font-serif leading-[1.28] text-[var(--text-heading)]">
+              {diary.title}
+            </h1>
+
+            <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
+              {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}
+              {diary.bookmark ? <span className="meta-sep">收藏</span> : null}
+            </p>
+          </header>
+
+          <ReadingInline items={rendered?.toc ?? []} targetId="diary-content" />
+
+          <div className="mt-8">
+            {rendered ? (
+              <Prose html={rendered.html} />
+            ) : (
+              <div className="border border-dashed border-[var(--edge)] px-5 py-6">
+                <p className="text-small text-[var(--text-heading)]">
+                  这篇日记的正文格式是「{diary.contentFormat}」。
+                </p>
+                <p className="text-caption mt-2 text-[var(--text-secondary)]">
+                  Folio 目前只渲染 Markdown，因此不展示结构化 JSON 原文。
+                </p>
+              </div>
+            )}
+          </div>
+
+          {diary.images.length > 0 ? (
+            <div
+              className={cn(
+                'mt-8 grid gap-2',
+                diary.images.length === 1
+                  ? 'max-w-[26rem] grid-cols-1'
+                  : 'grid-cols-2 sm:grid-cols-3',
+              )}
+            >
+              {diary.images.map((image) =>
+                image.kind === 'video' ? (
+                  <video
+                    key={image.src}
+                    src={image.src}
+                    controls
+                    preload="metadata"
+                    className="aspect-[4/3] w-full bg-[var(--surface-sunk)] object-cover"
+                  />
+                ) : (
+                  <CoverImage
+                    key={image.src}
+                    src={image.src}
+                    alt={`${diary.title} 配图`}
+                    width={image.width}
+                    height={image.height}
+                    className="aspect-[4/3] w-full border border-[var(--edge)]"
+                  />
+                ),
+              )}
+            </div>
+          ) : null}
+
+          <footer className="mt-14 border-t border-dashed border-[var(--edge-strong)] pt-6">
+            <p className="meta flex flex-wrap items-center gap-x-1">
+              {diary.readCount !== null ? (
+                <span>{diary.readCount.toLocaleString('zh-CN')} 次阅读</span>
+              ) : null}
+              {diary.likeCount !== null ? (
+                <span className="meta-sep">{diary.likeCount.toLocaleString('zh-CN')} 次喜欢</span>
+              ) : null}
+              {diary.modifiedAt && diary.modifiedAt !== diary.publishedAt ? (
+                <span className="meta-sep">更新于 {formatDate(diary.modifiedAt, timeZone)}</span>
+              ) : null}
+            </p>
+            <Link href="/diaries" className="link-quiet meta mt-5 inline-block">
+              ← 全部日记
             </Link>
-            <time className="meta-sep" dateTime={diary.publishedAt}>
-              {formatDate(diary.publishedAt, timeZone)}
-            </time>
-            <span className="meta-sep">{formatWeekday(diary.publishedAt, timeZone)}</span>
-            <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
-          </p>
+          </footer>
+        </article>
 
-          <h1 className="mt-4 font-serif text-title leading-[1.28] text-[var(--text-heading)]">
-            {diary.title}
-          </h1>
+        {/* 移动端操作栏落在文末；桌面端由显式列位置提到左侧 */}
+        <div className="order-2 border-t border-dashed border-[var(--edge)] pt-4 xl:order-none xl:col-start-1 xl:row-start-1 xl:border-0 xl:pt-0">
+          <ActionRail
+            id={diary.id}
+            type="Note"
+            shareUrl={canonical}
+            like={isInteractionEnabled()}
+            subscribe={subscribe}
+            donate={donate}
+          />
+        </div>
 
-          <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
-            {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}
-            {diary.bookmark ? <span className="meta-sep">收藏</span> : null}
-          </p>
-        </header>
-
-        <Rule className="my-8" />
-
-        {rendered ? (
-          <Prose html={rendered.html} />
-        ) : (
-          <div className="border border-dashed border-[var(--edge)] px-5 py-6">
-            <p className="text-small text-[var(--text-heading)]">
-              这篇日记的正文格式是「{diary.contentFormat}」。
-            </p>
-            <p className="mt-2 text-caption text-[var(--text-secondary)]">
-              Folio 目前只渲染 Markdown，因此不展示结构化 JSON 原文。
-            </p>
-          </div>
-        )}
-
-        {diary.images.length > 0 ? (
-          <div
-            className={cn(
-              'mt-8 grid gap-2',
-              diary.images.length === 1
-                ? 'max-w-[26rem] grid-cols-1'
-                : 'grid-cols-2 sm:grid-cols-3',
-            )}
-          >
-            {diary.images.map((image) =>
-              image.kind === 'video' ? (
-                <video
-                  key={image.src}
-                  src={image.src}
-                  controls
-                  preload="metadata"
-                  className="aspect-[4/3] w-full bg-[var(--surface-sunk)] object-cover"
-                />
-              ) : (
-                <CoverImage
-                  key={image.src}
-                  src={image.src}
-                  alt={`${diary.title} 配图`}
-                  width={image.width}
-                  height={image.height}
-                  className="aspect-[4/3] w-full border border-[var(--edge)]"
-                />
-              ),
-            )}
-          </div>
-        ) : null}
-
-        <footer className="mt-14 border-t border-dashed border-[var(--edge-strong)] pt-6">
-          <p className="meta flex flex-wrap items-center gap-x-1">
-            {diary.readCount !== null ? (
-              <span>{diary.readCount.toLocaleString('zh-CN')} 次阅读</span>
-            ) : null}
-            {diary.likeCount !== null ? (
-              <span className="meta-sep">{diary.likeCount.toLocaleString('zh-CN')} 次喜欢</span>
-            ) : null}
-            {diary.modifiedAt && diary.modifiedAt !== diary.publishedAt ? (
-              <span className="meta-sep">更新于 {formatDate(diary.modifiedAt, timeZone)}</span>
-            ) : null}
-          </p>
-          <Link href="/diaries" className="link-quiet meta mt-5 inline-block">
-            ← 全部日记
-          </Link>
-        </footer>
-      </article>
+        <ReadingAside items={rendered?.toc ?? []} targetId="diary-content" />
+      </div>
     </Container>
   )
 }

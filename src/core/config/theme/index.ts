@@ -16,7 +16,7 @@
 export { getThemeConfig, loadThemeConfig, type LoadedTheme } from './loader'
 export { fetchThemeSnippet, type ThemeFetchResult, type ThemeFetchStatus } from './repository'
 export {
-  footerYearRange,
+  footerSinceYear,
   parseThemeConfig,
   parseFooter,
   parseHomepage,
@@ -58,7 +58,6 @@ export type {
   ThemeDonate,
   ThemeDonateQrcode,
   ThemeFooter,
-  ThemeFooterLink,
   ThemeHomepage,
   ThemeHomepageSection,
   ThemeIcp,

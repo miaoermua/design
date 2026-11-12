@@ -5,8 +5,6 @@ import {
   DONATE_NAME_MAX,
   DONATE_QRCODE_MAX,
   DONATE_URL_MAX_LENGTH,
-  FOOTER_LINK_MAX,
-  FOOTER_LINK_NAME_MAX,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
   SINCE_MIN,
@@ -18,7 +16,6 @@ import type {
   ThemeDonate,
   ThemeDonateQrcode,
   ThemeFooter,
-  ThemeFooterLink,
   ThemeHomepage,
   ThemeHomepageSection,
   ThemeIcp,
@@ -101,21 +98,6 @@ function parseSince(value: unknown, currentYear: number): number | null {
   return year
 }
 
-function parseFooterLinks(value: unknown): ThemeFooterLink[] {
-  if (!Array.isArray(value)) return []
-  const links: ThemeFooterLink[] = []
-  for (const item of value) {
-    if (!isRecord(item)) continue
-    const name = readString(item.name, FOOTER_LINK_NAME_MAX)
-    const url = safeHttpUrl(item.url)
-    // 名称与地址缺一不可：只有地址没有名称的链接无法阅读
-    if (!name || !url) continue
-    links.push({ name, url })
-    if (links.length >= FOOTER_LINK_MAX) break
-  }
-  return links
-}
-
 function parseFooterIcp(value: unknown): ThemeIcp {
   const source = record(value)
   const label = readString(source.label, 64)
@@ -133,7 +115,6 @@ export function parseFooter(value: unknown, currentYear: number): ThemeFooter {
   const source = record(value)
   return {
     since: parseSince(source.since, currentYear),
-    links: parseFooterLinks(source.links),
     icp: parseFooterIcp(source.icp),
   }
 }
@@ -286,8 +267,12 @@ export function parseThemeConfig(
   }
 }
 
-/** 供 UI 判断：since 是否早于当前年（决定是否渲染成 2021–2026 的区间） */
-export function footerYearRange(since: number | null, currentYear: number): string {
-  if (since === null || since >= currentYear) return String(currentYear)
-  return `${since}–${currentYear}`
+/**
+ * `Since` 行显示哪一年。
+ *
+ * 配置了就用配置，没有配置退回当前年——不把「未配置」渲染成某个
+ * 看起来像站龄的固定年份（那是在编造数据）。
+ */
+export function footerSinceYear(since: number | null, currentYear: number): number {
+  return since ?? currentYear
 }

@@ -28,12 +28,7 @@ function urls(items: { url: string }[]): string[] {
 describe('Social：API 数据', () => {
   it('只对有规则或完整 http(s) 的值生成链接', () => {
     const items = toSocialItems(ids)
-    expect(items.map((item) => item.platform)).toEqual([
-      'github',
-      'bilibili',
-      'telegram',
-      'weird',
-    ])
+    expect(items.map((item) => item.platform)).toEqual(['github', 'bilibili', 'telegram', 'weird'])
     expect(items.find((i) => i.platform === 'github')?.url).toBe('https://github.com/miaoermua')
     expect(items.find((i) => i.platform === 'weird')?.url).toBe('https://example.com/me')
     // netease 没有确定 URL 规则，值又是纯数字 id，因此跳过——猜地址会生成死链
@@ -79,7 +74,9 @@ describe('Social：旧协议字段不再生效', () => {
   })
 
   it('旧字段不进入解析结果', () => {
-    const social = parseThemeConfig({ social: { order: ['github'], icons: { github: 'rss' } } }).social
+    const social = parseThemeConfig({
+      social: { order: ['github'], icons: { github: 'rss' } },
+    }).social
     expect(Object.keys(social).sort()).toEqual(['enabled', 'iconStylesheets', 'items'])
   })
 
@@ -154,6 +151,28 @@ describe('Social：API 与自定义项目合并', () => {
     expect(toSocialItems(ids, { theme: emptyTheme }).map((i) => i.url)).toEqual(
       toSocialItems(ids).map((i) => i.url),
     )
+  })
+})
+
+describe('Social：频道标记', () => {
+  it('默认 false：普通社交链接不会被当成订阅频道', () => {
+    const social = parseThemeConfig({
+      social: { items: [{ url: 'https://t.me/a', title: 'A' }] },
+    }).social
+    expect(social.items[0]?.channel).toBe(false)
+  })
+
+  it('只有布尔 true 才算频道，字符串 "true" 不算', () => {
+    const social = parseThemeConfig({
+      social: {
+        items: [
+          { url: 'https://t.me/a', title: 'A', channel: true },
+          { url: 'https://t.me/b', title: 'B', channel: 'true' },
+          { url: 'https://t.me/c', title: 'C', channel: 1 },
+        ],
+      },
+    }).social
+    expect(social.items.map((item) => item.channel)).toEqual([true, false, false])
   })
 })
 

@@ -13,7 +13,7 @@ export * from './domain/common'
 export * from './errors'
 
 export { listArticles, getArticle } from './repositories/posts'
-export { listDiaries, getDiary, getDiaryByNid } from './repositories/notes'
+export { listDiaries, listDiariesByTopic, getDiary, getDiaryByNid } from './repositories/notes'
 export {
   listCategories,
   listTags,
@@ -23,5 +23,12 @@ export {
 export { getSiteIdentity, getTimeline, listFriendLinks } from './repositories/site'
 export { searchArticles } from './repositories/search'
 export { getPageBySlug, listPages, type PageContent, type PageSummary } from './repositories/pages'
+export { listTopics, getTopicById, type Topic } from './repositories/topics'
+export {
+  likeRecord,
+  getSubscribeCapability,
+  subscribeEmail,
+  type SubscribeCapability,
+} from './repositories/interactions'
 
 export { API_VERSION, getSiteTimezone, getSiteUrl, isApiConfigured } from './config'

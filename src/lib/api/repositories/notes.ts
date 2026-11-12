@@ -21,6 +21,30 @@ export async function listDiaries(query: DiaryListQuery = {}): Promise<PageResul
 }
 
 /**
+ * GET /notes/topics/:id —— 按专栏取日记。
+ *
+ * 顶栏的「Note 专栏」直接指向 `/diaries?topic=<id>`：列表页换的是查询参数，
+ * 路由形状不变，也就不需要为专栏再开一条详情路由。
+ */
+export async function listDiariesByTopic(
+  topicId: string,
+  query: DiaryListQuery = {},
+): Promise<PageResult<Diary>> {
+  const { page = 1, size = 10, sortBy, sortOrder, lang } = query
+
+  const body = await requestV2<{ data?: V2NoteRow[] }>(
+    `/notes/topics/${encodeURIComponent(topicId)}`,
+    {
+      query: { page, size, sortBy, sortOrder, lang },
+      revalidate: 60,
+      tags: TAG,
+    },
+  )
+
+  return toPageResult(body, toDiary)
+}
+
+/**
  * GET /notes/:id?password=
  *
  * 受密码保护时抛 PasswordRequiredError（403 / code 14000），由页面转成「需要密码」状态。

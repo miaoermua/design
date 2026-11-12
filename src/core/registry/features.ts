@@ -21,8 +21,14 @@ export const featureFlags = {
   friends: true,
   /** P3：评论需要登录态与审核策略，本版本未启用 */
   comments: false,
-  /** P3：点赞/阅读上报等写操作未启用，站点为只读 */
-  interactions: false,
+  /**
+   * 点赞 / 邮件订阅（`src/features/interactions`）
+   *
+   * 与 `comments` 分开：这两件事都有官方接口且已接入
+   * （POST /activity/like、GET /subscribe/status + POST /subscribe）。
+   * 关掉它会让操作栏的 Like / Subscribe 一起消失，并且不再探测 /subscribe/status。
+   */
+  interactions: true,
 } as const
 
 export type FeatureKey = keyof typeof featureFlags

@@ -18,7 +18,7 @@ import {
   isMockMode,
 } from '../config'
 import { ApiError, NetworkError, NotFoundError, PasswordRequiredError } from '../errors'
-import { getMockResponse } from '../mock/handlers'
+import { getMockMutation, getMockResponse } from '../mock/handlers'
 import type { V2ErrorBody } from '../contracts/v2/common'
 
 /** 日记密码保护的业务码（core: ErrorCodeEnum.NoteForbidden） */
@@ -121,6 +121,63 @@ export async function requestV2<T>(path: string, options: RequestOptions = {}): 
   }
 
   return body as T
+}
+
+/**
+ * 请求 `POST /api/v2<path>`
+ *
+ * 写操作只允许在 Route Handler 里调用：浏览器不直连后端，主题的网络边界不变。
+ * 写操作不缓存（`no-store`），失败语义与 `requestV2` 一致。
+ */
+export async function postV2<T>(path: string, body: unknown): Promise<T> {
+  if (isMockMode()) {
+    const mocked = getMockMutation(path, body)
+    if (!mocked) {
+      throw new ApiError(`Mock 未覆盖该接口：POST ${path}`, {
+        status: 404,
+        path,
+        body: { source: 'mock' },
+      })
+    }
+    if (mocked.status >= 400) throwMappedError(path, mocked.status, mocked.body)
+    return mocked.body as T
+  }
+
+  const base = getServerUrl()
+  const url = `${base}${API_PREFIX}${path}`
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'user-agent': THEME_USER_AGENT,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(getTimeoutMs()),
+      cache: 'no-store',
+    })
+  } catch (error) {
+    throw new NetworkError(`请求失败：POST ${url}`, { path, cause: error })
+  }
+
+  const rawText = await response.text()
+  let parsed: unknown = null
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText)
+    } catch {
+      parsed = rawText
+    }
+  }
+
+  if (!response.ok) {
+    throwMappedError(path, response.status, parsed)
+  }
+
+  return parsed as T
 }
 
 function throwMappedError(path: string, status: number, body: unknown): never {

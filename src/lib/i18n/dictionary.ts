@@ -19,6 +19,16 @@ const zh = {
   'nav.pages': '页面',
   'nav.about': '关于',
   'nav.friends': '友链',
+  'nav.allArticles': '全部文章',
+  'nav.allDiaries': '全部日记',
+  'nav.allPages': '全部页面',
+  'nav.noCategories': '还没有分类',
+  'nav.noTopics': '还没有专栏',
+  'nav.noPages': '还没有独立页面',
+  'nav.categoriesUnavailable': '分类暂时取不到',
+  'nav.topicsUnavailable': '专栏暂时取不到',
+  'nav.pagesUnavailable': '页面暂时取不到',
+  'nav.directory': '展开更多',
 
   'home.kicker': '文章 · 日记 · 归档',
   'home.latestBlogs': '最近写的',
@@ -62,16 +72,6 @@ const zh = {
   'search.failed': '搜索请求失败',
   'search.openFull': '查看全部结果',
 
-  'footer.browse': '浏览',
-  'footer.subscribe': '订阅',
-  'footer.links': '链接',
-  'footer.about': '关于',
-  'footer.community': 'Mix Space 社区',
-  'footer.coreRepo': 'Mix Space 后端',
-  'footer.themeRepo': 'Folio 主题',
-  'footer.icp': '备案',
-  'footer.builtWith': '基于 Mix Space API v2',
-
   'state.langUnavailable': '该语言暂无译文',
 } as const
 
@@ -84,6 +84,16 @@ const en: Record<MessageKey, string> = {
   'nav.pages': 'Pages',
   'nav.about': 'About',
   'nav.friends': 'Links',
+  'nav.allArticles': 'All articles',
+  'nav.allDiaries': 'All notes',
+  'nav.allPages': 'All pages',
+  'nav.noCategories': 'No categories yet',
+  'nav.noTopics': 'No topics yet',
+  'nav.noPages': 'No pages yet',
+  'nav.categoriesUnavailable': 'Categories unavailable',
+  'nav.topicsUnavailable': 'Topics unavailable',
+  'nav.pagesUnavailable': 'Pages unavailable',
+  'nav.directory': 'Show more',
 
   'home.kicker': 'Articles · Notes · Archive',
   'home.latestBlogs': 'Latest writing',
@@ -127,16 +137,6 @@ const en: Record<MessageKey, string> = {
   'search.failed': 'Search request failed',
   'search.openFull': 'See all results',
 
-  'footer.browse': 'Browse',
-  'footer.subscribe': 'Subscribe',
-  'footer.links': 'Links',
-  'footer.about': 'About',
-  'footer.community': 'Mix Space community',
-  'footer.coreRepo': 'Mix Space core',
-  'footer.themeRepo': 'Folio theme',
-  'footer.icp': 'ICP',
-  'footer.builtWith': 'Built on Mix Space API v2',
-
   'state.langUnavailable': 'No translation available for this language',
 }
 
@@ -153,11 +153,7 @@ export function t(locale: Locale, key: MessageKey): string {
  * 刻意不引入 i18n 模板库：本项目的变量只有「数量」一种，
  * 一个 replace 就够，ICU 语法在这里是过度设计。
  */
-export function tf(
-  locale: Locale,
-  key: MessageKey,
-  vars: Record<string, string | number>,
-): string {
+export function tf(locale: Locale, key: MessageKey, vars: Record<string, string | number>): string {
   let text = t(locale, key)
   for (const [name, value] of Object.entries(vars)) {
     text = text.replaceAll(`{${name}}`, String(value))

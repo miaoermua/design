@@ -12,7 +12,7 @@ import type { SocialIconType, ThemeSocialIcon, ThemeSocialItem } from './types'
 /**
  * 社交项目的解析与校验
  *
- * 与 `footer.links` / `donate.qrcode` 的差别在于**地址协议**：
+ * 与 `donate.qrcode` 的差别在于**地址协议**：
  * 社交地址除 http(s) 外还允许 `mailto:`（邮箱是社交入口的常见形态），
  * 但仍然只允许这一个额外协议。`javascript:`、`data:`、`tel:` 之类不进来。
  *
@@ -200,6 +200,8 @@ function parseSocialItem(value: unknown): ThemeSocialItem | null {
     url,
     icon,
     color: safeSocialColor(value.color),
+    // 只认布尔 true：`channel: 'true'` 这种 YAML 手滑不该悄悄把链接变成频道
+    channel: value.channel === true,
   }
 }
 

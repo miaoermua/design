@@ -357,7 +357,7 @@ Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必
 以下路径均已核对存在（`tests/design-doc-sync.test.ts` 会重复检查本节，路径失效即失败）：
 
 ```
-docs/design/DESIGN-SYSTEM.md                          ← 本文
+docs/DESIGN-SYSTEM.md                                 ← 本文
 
 src/design-system/tokens/tokens.css                   ← 唯一 Token 来源（含语义字体栈）
 src/design-system/styles/fonts.css                    ← 自托管字体 @font-face（生成物，勿手改）

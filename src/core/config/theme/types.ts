@@ -15,11 +15,6 @@
  * 所有字段都是可选的：Snippet 缺失、字段缺失、字段非法，都退化为默认值。
  */
 
-export interface ThemeFooterLink {
-  name: string
-  url: string
-}
-
 export interface ThemeIcp {
   enabled: boolean
   label: string | null
@@ -27,9 +22,8 @@ export interface ThemeIcp {
 }
 
 export interface ThemeFooter {
-  /** 起始年份，用于 `© 2021–2026`；null 表示不配置，只显示当前年 */
+  /** 起始年份，用于页脚 `Since 2021`；null 表示不配置，退回当前年 */
   since: number | null
-  links: ThemeFooterLink[]
   icp: ThemeIcp
 }
 
@@ -71,6 +65,13 @@ export interface ThemeSocialItem {
   icon: ThemeSocialIcon | null
   /** 已校验为安全的颜色字面量（hex 或 var(--accent-strong)）；null 表示用主题默认色 */
   color: string | null
+  /**
+   * 是否同时作为「频道订阅」出现在订阅弹窗里。
+   *
+   * 默认 false：社交链接不等于订阅频道，只有显式声明 `channel: true` 的项
+   * 才会进弹窗。弹窗不重新维护一套标题 / 图标 / 地址，直接复用本项。
+   */
+  channel: boolean
 }
 
 export interface ThemeSocial {

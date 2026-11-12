@@ -5,7 +5,7 @@ import { TocList } from './toc-list'
 interface TocProps {
   items: TocItem[]
   /**
-   * rail  = 桌面端右侧常驻栏（自带「目录」小标题、吸顶）
+   * rail  = 桌面端右侧常驻栏（自带「目录」小标题，滚动由外层容器接管）
    * inline = 移动端折叠在正文里的列表（标题由外层 <summary> 提供）
    */
   variant?: 'rail' | 'inline'
@@ -20,11 +20,9 @@ export function Toc({ items, variant = 'rail' }: TocProps) {
   return (
     <nav
       aria-label="本文目录"
-      className={isRail ? 'sticky top-28 max-h-[calc(100dvh-9rem)] overflow-y-auto pb-2' : undefined}
+      className={isRail ? 'max-h-[calc(100dvh-18rem)] overflow-y-auto pb-1' : undefined}
     >
-      {isRail ? (
-        <p className={cn('meta mb-2 text-[var(--text-tertiary)]')}>目录</p>
-      ) : null}
+      {isRail ? <p className={cn('meta mb-2 text-[var(--text-tertiary)]')}>目录</p> : null}
       <TocList items={items} variant={variant} />
     </nav>
   )

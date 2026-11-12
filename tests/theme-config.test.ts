@@ -7,7 +7,7 @@ import {
   IMPLEMENTED_ICON_TYPES,
   SOCIAL_ICON_STYLESHEET_MAX,
   SOCIAL_ITEM_MAX,
-  footerYearRange,
+  footerSinceYear,
   normalizeCustomCssList,
   normalizeCssUrl,
   parseFooter,
@@ -41,16 +41,11 @@ describe('Theme：Footer', () => {
     const footer = parseFooter(
       {
         since: 2021,
-        links: [
-          { name: '友链', url: 'https://example.com/friends' },
-          { name: '留言', url: 'https://example.com/message' },
-        ],
         icp: { enabled: true, label: '沪ICP备00000000号', url: 'https://beian.miit.gov.cn/' },
       },
       YEAR,
     )
     expect(footer.since).toBe(2021)
-    expect(footer.links).toHaveLength(2)
     expect(footer.icp).toEqual({
       enabled: true,
       label: '沪ICP备00000000号',
@@ -58,19 +53,13 @@ describe('Theme：Footer', () => {
     })
   })
 
-  it('非法链接被独立忽略，合法链接仍然保留', () => {
+  it('旧版 footer.links 已移除：配置里留着也不再生效', () => {
     const footer = parseFooter(
-      {
-        links: [
-          { name: '坏链接', url: 'javascript:alert(1)' },
-          { name: '好链接', url: 'https://example.com/ok' },
-          { name: '', url: 'https://example.com/empty-name' },
-          { name: '无地址' },
-        ],
-      },
+      { links: [{ name: '旧入口', url: 'https://example.com/old' }] },
       YEAR,
     )
-    expect(footer.links).toEqual([{ name: '好链接', url: 'https://example.com/ok' }])
+    expect('links' in footer).toBe(false)
+    expect(footer.since).toBeNull()
   })
 
   it('since 超出合理区间时降级为 null', () => {
@@ -94,10 +83,9 @@ describe('Theme：Footer', () => {
     expect(icp.url).toBeNull()
   })
 
-  it('年份区间：跨年显示区间，同年只显示一个', () => {
-    expect(footerYearRange(2021, 2026)).toBe('2021–2026')
-    expect(footerYearRange(2026, 2026)).toBe('2026')
-    expect(footerYearRange(null, 2026)).toBe('2026')
+  it('Since 年份：配置优先，未配置退回当前年', () => {
+    expect(footerSinceYear(2021, 2026)).toBe(2021)
+    expect(footerSinceYear(null, 2026)).toBe(2026)
   })
 })
 
@@ -126,7 +114,7 @@ describe('Theme：Social（旧协议字段被忽略）', () => {
 })
 
 describe('Theme：Social items', () => {
-  it('解析完整项目：URL / 标题 / 图标 / 颜色', () => {
+  it('解析完整项目：URL / 标题 / 图标 / 颜色 / 是否频道', () => {
     const config = parseThemeConfig({
       social: {
         items: [
@@ -145,6 +133,7 @@ describe('Theme：Social items', () => {
         title: 'GitHub',
         icon: { type: 'builtin', name: 'github' },
         color: '#181717',
+        channel: false,
       },
     ])
   })
@@ -206,7 +195,13 @@ describe('Theme：Social items', () => {
   it('单条非法不影响其它条目', () => {
     const config = parseThemeConfig({
       social: {
-        items: [42, null, { url: 'https://a.example' }, { title: '没有地址' }, { url: 'https://b.example' }],
+        items: [
+          42,
+          null,
+          { url: 'https://a.example' },
+          { title: '没有地址' },
+          { url: 'https://b.example' },
+        ],
       },
     })
     expect(config.social.items).toHaveLength(2)
@@ -325,10 +320,13 @@ describe('Theme：icon_stylesheets', () => {
   })
 
   it('超过上限时截断', () => {
-    const urls = Array.from({ length: SOCIAL_ICON_STYLESHEET_MAX + 2 }, (_, i) => `https://cdn.example/${i}.css`)
-    expect(parseThemeConfig({ social: { icon_stylesheets: urls } }).social.iconStylesheets).toHaveLength(
-      SOCIAL_ICON_STYLESHEET_MAX,
+    const urls = Array.from(
+      { length: SOCIAL_ICON_STYLESHEET_MAX + 2 },
+      (_, i) => `https://cdn.example/${i}.css`,
     )
+    expect(
+      parseThemeConfig({ social: { icon_stylesheets: urls } }).social.iconStylesheets,
+    ).toHaveLength(SOCIAL_ICON_STYLESHEET_MAX)
   })
 })
 
@@ -497,7 +495,7 @@ describe('Theme：整体解析', () => {
       donate: { enabled: true, qrcode: [{ name: '好', url: 'https://ok.example/qr.webp' }] },
     })
     expect(config.footer.since).toBeNull()
-    expect(config.footer.links).toEqual([])
+    expect('links' in config.footer).toBe(false)
     expect(config.homepage.articles.enabled).toBe(false)
     expect(config.donate.enabled).toBe(true)
     expect(config.donate.qrcode).toHaveLength(1)

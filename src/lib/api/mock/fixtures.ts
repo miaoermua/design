@@ -13,8 +13,28 @@ import type { V2PostDetail, V2PostRow } from '../contracts/v2/post'
 import type { V2Aggregate, V2LinkRow } from '../contracts/v2/site'
 import type { V2CategoryRow, V2TagSum } from '../contracts/v2/taxonomy'
 import type { V2PageRow } from '../contracts/v2/content'
+import type { V2TopicRow } from '../contracts/v2/topic'
 
 const cover = (seed: string) => `https://picsum.photos/seed/${seed}/1600/1000`
+
+/* ────────────────────────── 日记专栏 ────────────────────────── */
+
+export const mockTopics: V2TopicRow[] = [
+  {
+    id: 't1',
+    name: '日常',
+    slug: 'daily',
+    description: '一天里值得留下来的部分',
+    created_at: '2024-03-02T08:00:00.000Z',
+  },
+  {
+    id: 't2',
+    name: '阅读',
+    slug: 'reading-notes',
+    description: null,
+    created_at: '2024-06-01T08:00:00.000Z',
+  },
+]
 
 /* ────────────────────────── 分类 / 标签 ────────────────────────── */
 
@@ -341,6 +361,8 @@ const noteRows: V2NoteRow[] = [
     images: [{ src: cover('folio-note-wind'), width: 1600, height: 1000 }],
     read_count: 96,
     like_count: 12,
+    topic_id: 't1',
+    topic: { id: 't1', name: '日常', slug: 'daily' },
     public_at: '2026-11-06T10:20:00.000Z',
     created_at: '2026-11-06T10:12:00.000Z',
     modified_at: null,
@@ -360,6 +382,8 @@ const noteRows: V2NoteRow[] = [
     images: null,
     read_count: 143,
     like_count: 25,
+    topic_id: 't2',
+    topic: { id: 't2', name: '阅读', slug: 'reading-notes' },
     public_at: '2026-11-03T12:40:00.000Z',
     created_at: '2026-11-03T12:40:00.000Z',
   },
@@ -575,10 +599,16 @@ export const mockThemeSnippet: Record<string, unknown> = {
         icon: { type: 'iconify', name: 'mingcute:telegram-fill' },
         color: '#FFA500',
       },
+      {
+        // 只有显式 channel: true 的项才会出现在订阅弹窗里
+        url: 'https://t.me/folio_demo',
+        title: 'Telegram 频道',
+        icon: { type: 'builtin', name: 'telegram' },
+        color: '#0088CC',
+        channel: true,
+      },
     ],
-    icon_stylesheets: [
-      'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css',
-    ],
+    icon_stylesheets: ['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css'],
   },
   custom: {
     // 与线上 Kami 片段同形状：外部样式表 URL 数组（内联 CSS 字符串已不再支持）

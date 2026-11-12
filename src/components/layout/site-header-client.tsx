@@ -3,18 +3,22 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { isNavItemActive, type NavItem } from '@/core/navigation'
+import { isNavItemActive, type NavGroup, type NavItem } from '@/core/navigation'
 import type { Locale } from '@/lib/i18n/config'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
 import { LanguageButton } from './language-button'
+import { NavSelector } from './nav-selector'
 import { SearchPanel } from './search-panel'
 import { ThemeToggle } from './theme-toggle'
 import { ToolbarButton, ToolbarGroup } from './toolbar-button'
 import { useHeaderScroll } from './use-header-scroll'
 
 interface SiteHeaderClientProps {
-  items: NavItem[]
+  /** 目录型入口：Blog 分类 / Note 专栏 / Pages */
+  groups: NavGroup[]
+  /** 普通链接入口：探索 / 关于 */
+  links: NavItem[]
   title: string
   locale: Locale
   messages: Record<MessageKey, string>
@@ -38,7 +42,8 @@ interface SiteHeaderClientProps {
  * 改的是这个文件里的一处挂载点。
  */
 export function SiteHeaderClient({
-  items,
+  groups,
+  links,
   title,
   locale,
   messages,
@@ -72,22 +77,20 @@ export function SiteHeaderClient({
   }, [searchEnabled])
 
   /**
- * 隐藏状态用内联 transform 而不是 Tailwind 任意值类。
- *
- * 原因：`-translate-y-[calc(100%+0.75rem)]` 在 Tailwind v4 的任意值里
- * 需要把 `+` 写成空格，容易失效且构建时不报错——实测该类没有被生成，
- * 导致 state 正确但 transform 仍是 none。这里直接写 transform，
- * 位移量用 CSS 变量拼出来，语义清楚也不依赖工具类解析。
- */
-const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
+   * 隐藏状态用内联 transform 而不是 Tailwind 任意值类。
+   *
+   * 原因：`-translate-y-[calc(100%+0.75rem)]` 在 Tailwind v4 的任意值里
+   * 需要把 `+` 写成空格，容易失效且构建时不报错——实测该类没有被生成，
+   * 导致 state 正确但 transform 仍是 none。这里直接写 transform，
+   * 位移量用 CSS 变量拼出来，语义清楚也不依赖工具类解析。
+   */
+  const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
 
   return (
     <>
       <header
         style={{ transform: hidden ? HIDDEN_TRANSFORM : 'translate3d(0, 0, 0)' }}
-        className={cn(
-          'site-header-bar fixed inset-x-0 top-0 z-40 pt-3 sm:pt-4',
-        )}
+        className={cn('site-header-bar fixed inset-x-0 top-0 z-40 pt-3 sm:pt-4')}
       >
         <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
           <div
@@ -106,10 +109,17 @@ const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
               {title}
             </Link>
 
-            {/* 桌面导航：与工具组用一条细分隔线分开，避免两者被读成一列 */}
-            <nav aria-label="主导航" className="hidden min-w-0 flex-1 sm:block">
+            {/* 桌面导航：与工具组用一条细分隔线分开，避免两者被读成一列。
+                三个目录型入口收进选择器，避免把分类 / 专栏全铺在顶栏。 */}
+            <nav aria-label="主导航" className="hidden min-w-0 flex-1 md:block">
               <ul className="flex items-center gap-1">
-                {items.map((item) => {
+                {groups.map((group) => (
+                  <li key={group.key}>
+                    <NavSelector group={group} messages={messages} />
+                  </li>
+                ))}
+
+                {links.map((item) => {
                   const active = isNavItemActive(item, pathname)
                   return (
                     <li key={item.href}>
@@ -117,7 +127,7 @@ const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                          'rounded-full px-3 py-1.5 text-small transition-colors duration-[var(--duration-fast)]',
+                          'text-small rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
                           active
                             ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
@@ -132,6 +142,16 @@ const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
             </nav>
 
             <div className="ml-auto flex items-center gap-1 sm:ml-0">
+              {/* 无 JS 时的搜索出口：搜索面板是客户端组件，脚本不可用时按钮点不开，
+                  这里退回普通链接。注意必须用 dangerouslySetInnerHTML —— React 会把
+                  <noscript> 的子节点转义成文本，否则无 JS 时展示的是一段源码。
+                  内容是本地写死的静态字符串，没有注入面。 */}
+              <noscript
+                dangerouslySetInnerHTML={{
+                  __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
+                }}
+              />
+
               <ToolbarGroup>
                 {searchEnabled ? (
                   <ToolbarButton
@@ -156,7 +176,7 @@ const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
               </ToolbarGroup>
 
               {/* 移动端导航：工具组之后，保证「工具 → 菜单」的阅读顺序 */}
-              <MobileMenu items={items} messages={messages} className="sm:hidden" />
+              <MobileMenu groups={groups} links={links} messages={messages} className="md:hidden" />
             </div>
           </div>
         </div>
@@ -185,13 +205,20 @@ const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
   )
 }
 
-/** 移动端菜单：仅此一处客户端状态，随路由变化自动收起 */
+/**
+ * 移动端菜单：仅此一处客户端状态，随路由变化自动收起。
+ *
+ * 目录型入口在菜单里直接展开成小列表——触屏没有「悬停」可用，
+ * 再套一层折叠只会让用户多点两次。列表超出可视高度时在面板内滚动。
+ */
 function MobileMenu({
-  items,
+  groups,
+  links,
   messages,
   className,
 }: {
-  items: NavItem[]
+  groups: NavGroup[]
+  links: NavItem[]
   messages: Record<MessageKey, string>
   className?: string
 }) {
@@ -218,18 +245,55 @@ function MobileMenu({
       {open ? (
         <div
           id="site-mobile-nav"
-          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 min-w-[11rem] overflow-hidden"
+          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(70vh,32rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <ul className="flex flex-col p-1.5">
-            {items.map((item) => {
+            {groups.map((group) => (
+              <li key={group.key}>
+                <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
+                  {messages[group.label]}
+                </p>
+                <Link
+                  href={group.href}
+                  aria-current={pathname === group.href ? 'page' : undefined}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    'text-small block rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
+                    pathname === group.href
+                      ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                      : 'text-[var(--text-heading)]',
+                  )}
+                >
+                  {messages[group.allLabel]}
+                </Link>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className="text-meta block truncate rounded-[var(--radius-sm)] py-1.5 pr-3 pl-6 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                {group.status !== 'ok' ? (
+                  <p className="text-meta px-3 py-1.5 text-[var(--text-tertiary)]">
+                    {messages[group.status === 'error' ? group.errorLabel : group.emptyLabel]}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+
+            {links.map((item) => {
               const active = isNavItemActive(item, pathname)
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
+                    onClick={() => setOpen(false)}
                     className={cn(
-                      'block rounded-[var(--radius-sm)] px-3 py-2.5 text-small transition-colors duration-[var(--duration-fast)]',
+                      'text-small mt-1 block rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-[var(--duration-fast)]',
                       active
                         ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',

@@ -190,17 +190,21 @@ describe('DonateSlot 可见性开关', () => {
 describe('文章与日记共用同一个 Donate 组件', () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 
-  it('文章页与日记条目都通过 DonateSlot 接入，没有第二份浮层实现', () => {
+  it('文章页与日记条目都复用 Donate 实现，没有第二份浮层', () => {
     const articlePage = read('src/app/articles/[category]/[slug]/page.tsx')
+    const actionRail = read('src/components/reading/action-rail.tsx')
     const diaryEntry = read('src/features/diaries/components/diary-entry.tsx')
 
+    // 文章页只决定「是否可见 + 用哪份配置」，浮层仍由 donate 模块提供
     expect(articlePage).toContain("from '@/features/donate'")
-    expect(articlePage).toContain('<DonateSlot')
+    expect(articlePage).not.toContain('role="dialog"')
+
+    expect(actionRail).toContain("from '@/features/donate'")
+    expect(actionRail).toContain('<DonateAction')
+    expect(actionRail).not.toContain('role="dialog"')
+
     expect(diaryEntry).toContain("from '@/features/donate'")
     expect(diaryEntry).toContain('<DonateSlot')
-
-    // 两个接入点都不应自己写 popover / dialog
-    expect(articlePage).not.toContain('role="dialog"')
     expect(diaryEntry).not.toContain('role="dialog"')
   })
 })

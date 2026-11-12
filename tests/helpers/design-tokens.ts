@@ -12,7 +12,7 @@ import { join, relative } from 'node:path'
 export const ROOT = process.cwd()
 export const SRC = join(ROOT, 'src')
 export const TOKENS = join(SRC, 'design-system/tokens/tokens.css')
-export const DOC = join(ROOT, 'docs/design/DESIGN-SYSTEM.md')
+export const DOC = join(ROOT, 'docs/DESIGN-SYSTEM.md')
 
 /** 由运行时代码提供、不在本项目 CSS 里定义的变量前缀 */
 export const EXTERNAL_PREFIXES = ['--tw-', '--shiki', '--katex', '--mermaid', '--hljs']

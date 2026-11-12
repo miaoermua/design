@@ -3,16 +3,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { CoverImage } from '@/components/ui/cover-image'
-import { BackToTop } from '@/components/ui/back-to-top'
 import { Prose } from '@/components/ui/prose'
-import { ReadingProgress } from '@/components/ui/reading-progress'
 import { SectionHeading } from '@/components/ui/page-header'
-import { Toc } from '@/components/ui/toc'
+import { ActionRail } from '@/components/reading/action-rail'
+import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { ArticleCard, ArticleNeighbors } from '@/features/articles'
 import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
-import { DonateSlot } from '@/features/donate'
+import { isDonateVisible, readDonateConfig } from '@/features/donate'
+import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import {
   getArticle,
   getSiteTimezone,
@@ -39,7 +39,10 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   try {
     const article = await getArticle(category, slug)
     const { identity } = await loadSiteContext()
-    const canonical = absoluteUrl(identity, articlePath(article.category?.slug, article.slug) ?? '/articles')
+    const canonical = absoluteUrl(
+      identity,
+      articlePath(article.category?.slug, article.slug) ?? '/articles',
+    )
 
     return {
       title: article.title,
@@ -64,7 +67,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 }
 
 /** 相邻文章来自列表窗口；查询失败属于附加信息缺失，不阻断正文 */
-async function findNeighbors(article: ArticleDetail): Promise<{ newer: Article | null; older: Article | null }> {
+async function findNeighbors(
+  article: ArticleDetail,
+): Promise<{ newer: Article | null; older: Article | null }> {
   try {
     const list = await listArticles({
       page: 1,
@@ -100,12 +105,22 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { identity } = await loadSiteContext()
   // 赞赏入口的开关与二维码都来自 Theme Snippet；可见性在服务端判断
   const theme = await getThemeConfig()
+  // 订阅入口是否出现取决于后端能力探测：失败一律视为「没有这个能力」
+  const subscribe = await readSubscribeOptions(theme.social)
+  const donateConfig = readDonateConfig(theme)
+  const donate = isDonateVisible(donateConfig)
+    ? { label: donateConfig.label, qrcodes: donateConfig.qrcodes }
+    : null
 
   const isMarkdown = article.contentFormat === 'markdown'
-  const rendered = isMarkdown && article.content.trim() ? await renderMarkdown(article.content) : null
+  const rendered =
+    isMarkdown && article.content.trim() ? await renderMarkdown(article.content) : null
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
   const neighbors = await findNeighbors(article)
-  const canonical = absoluteUrl(identity, articlePath(article.category?.slug, article.slug) ?? '/articles')
+  const canonical = absoluteUrl(
+    identity,
+    articlePath(article.category?.slug, article.slug) ?? '/articles',
+  )
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -132,15 +147,15 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         }}
         enabled={isRealtimeEnabled()}
       />
-      <ReadingProgress targetId="article-content" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }}
       />
 
       <article id="article-content" className="pb-[var(--spacing-section)]">
-        <div className="mx-auto grid max-w-[calc(var(--container-prose)+23.5rem)] gap-12 xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-14">
-          <div className="reading-sheet mx-auto w-full min-w-0 max-w-[calc(var(--container-prose)+7rem)]">
+        {/* 桌面：左操作栏 / 中间正文 / 右阅读辅助；移动：正文在前，操作栏跟在文末 */}
+        <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[3.25rem_minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-2 xl:row-start-1">
             <header className="pt-10 sm:pt-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--accent-line)]" />
@@ -172,13 +187,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               </h1>
 
               {article.summary ? (
-                <p className="mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:text-lead sm:leading-[1.75]">
+                <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
                   {article.summary}
                 </p>
               ) : null}
 
-              {/* 操作栏：阅读/喜欢等元信息与赞赏入口同一行。用 div 而非 p，
-                  因为 DonateSlot 内部是块级浮层容器。 */}
+              {/* 元信息行：只留阅读数据。喜欢 / 分享 / 订阅 / 赞赏在操作栏，
+                  这里再放一个赞赏入口会让同一动作出现两次。 */}
               <div className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 {estimate ? <span>约 {estimate} 分钟</span> : null}
                 {article.readCount !== null ? (
@@ -187,18 +202,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   </span>
                 ) : null}
                 {article.likeCount !== null ? (
-                  <span className="meta-sep">{article.likeCount.toLocaleString('zh-CN')} 次喜欢</span>
+                  <span className="meta-sep">
+                    {article.likeCount.toLocaleString('zh-CN')} 次喜欢
+                  </span>
                 ) : null}
                 {article.modifiedAt && article.modifiedAt !== article.createdAt ? (
                   <span className="meta-sep">
                     更新于 {formatDate(article.modifiedAt, timeZone)}
                   </span>
                 ) : null}
-                <DonateSlot theme={theme} className="meta-sep" />
               </div>
 
               {article.tags.length > 0 ? (
-                <p className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-meta">
+                <p className="text-meta mt-4 flex flex-wrap gap-x-3 gap-y-1">
                   {article.tags.map((tag) => (
                     <Link
                       key={tag}
@@ -225,22 +241,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               ) : null}
             </header>
 
-            {rendered && rendered.toc.length >= 2 ? (
-              <details className="mt-10 border-t border-dashed border-[var(--edge)] pt-4 xl:hidden">
-                <summary className="toc-summary meta flex cursor-pointer items-center justify-between select-none">
-                  目录
-                  <span
-                    aria-hidden="true"
-                    className="toc-chevron text-[var(--text-tertiary)]"
-                  >
-                    ›
-                  </span>
-                </summary>
-                <div className="mt-1">
-                  <Toc items={rendered.toc} variant="inline" />
-                </div>
-              </details>
-            ) : null}
+            <ReadingInline items={rendered?.toc ?? []} targetId="article-content" />
 
             <div className="mt-10 sm:mt-12">
               {rendered ? (
@@ -250,7 +251,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   <p className="text-small text-[var(--text-heading)]">
                     这篇正文的 contentFormat 是「{article.contentFormat}」。
                   </p>
-                  <p className="mt-2 text-caption text-[var(--text-secondary)]">
+                  <p className="text-caption mt-2 text-[var(--text-secondary)]">
                     Folio 目前只渲染 Markdown。为避免把结构化 JSON 当成正文展示，这里不做降级渲染。
                   </p>
                 </div>
@@ -273,17 +274,29 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} />
 
               <div className="mt-10 flex items-center justify-between border-t border-dashed border-[var(--edge)] pt-6">
-                <Link href="/articles" className="link-quiet text-small text-[var(--text-secondary)]">
+                <Link
+                  href="/articles"
+                  className="link-quiet text-small text-[var(--text-secondary)]"
+                >
                   ← 返回文章列表
                 </Link>
-                <BackToTop />
               </div>
             </footer>
           </div>
 
-          <aside className="hidden xl:block">
-            {rendered ? <Toc items={rendered.toc} /> : null}
-          </aside>
+          {/* 操作栏：移动端留在文末，桌面端由显式列位置提到左侧 */}
+          <div className="order-2 border-t border-dashed border-[var(--edge)] pt-4 xl:order-none xl:col-start-1 xl:row-start-1 xl:border-0 xl:pt-0">
+            <ActionRail
+              id={article.id}
+              type="Post"
+              shareUrl={canonical}
+              like={isInteractionEnabled()}
+              subscribe={subscribe}
+              donate={donate}
+            />
+          </div>
+
+          <ReadingAside items={rendered?.toc ?? []} targetId="article-content" />
         </div>
       </article>
 

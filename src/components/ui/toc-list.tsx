@@ -71,8 +71,11 @@ export function TocList({ items, variant }: TocListProps) {
             <a
               href={`#${item.id}`}
               aria-current={active ? 'location' : undefined}
+              // 单行截断：目录是「定位器」不是正文，长标题不该把栏撑宽或折成两行。
+              // 完整文本仍在 DOM 里（读屏按原文朗读），鼠标可经 title 看到全文。
+              title={item.text}
               className={cn(
-                'relative block py-1.5 pr-2 text-caption leading-[1.5] transition-colors duration-[var(--duration-fast)]',
+                'text-caption relative block truncate py-1.5 pr-2 leading-[1.5] transition-colors duration-[var(--duration-fast)]',
                 item.depth === 3 ? 'pl-6' : 'pl-4',
                 active
                   ? 'text-[var(--text-heading)]'

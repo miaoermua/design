@@ -18,6 +18,7 @@ import {
   mockPosts,
   mockTagSums,
   mockThemeSnippet,
+  mockTopics,
 } from './fixtures'
 
 interface MockResponse {
@@ -30,7 +31,11 @@ function toPositiveInt(value: string | null, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-function paginate<T>(rows: T[], page: number, size: number): { data: T[]; pagination: V2Pagination } {
+function paginate<T>(
+  rows: T[],
+  page: number,
+  size: number,
+): { data: T[]; pagination: V2Pagination } {
   const safeSize = Math.min(50, Math.max(1, size))
   const total = rows.length
   const total_page = Math.max(1, Math.ceil(total / safeSize))
@@ -82,7 +87,8 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
     // 线上 v2 只认 year / categoryIds（tag 会被忽略），mock 保持一致
     const categoryIds = (params.get('categoryIds') ?? '').split(',').filter(Boolean)
     const rows = filterByYear(mockPosts, year).filter(
-      (row) => categoryIds.length === 0 || (row.category ? categoryIds.includes(row.category.id) : false),
+      (row) =>
+        categoryIds.length === 0 || (row.category ? categoryIds.includes(row.category.id) : false),
     )
     return { status: 200, body: paginate(rows, page, size) }
   }
@@ -93,7 +99,9 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
       decodeURIComponent(postMatch[1] ?? ''),
       decodeURIComponent(postMatch[2] ?? ''),
     )
-    return row ? { status: 200, body: row } : { status: 404, body: { ok: 0, message: '文章不存在' } }
+    return row
+      ? { status: 200, body: row }
+      : { status: 404, body: { ok: 0, message: '文章不存在' } }
   }
 
   if (path === '/notes') {
@@ -106,6 +114,28 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
 
   const nidMatch = /^\/notes\/nid\/(\d+)$/.exec(path)
   if (nidMatch) return mockNoteDetail(String(nidMatch[1])) ?? notFound(path)
+
+  // 专栏：列表与「按专栏取日记」（线上只认 entity id）
+  if (path === '/topics/all') return { status: 200, body: { data: mockTopics } }
+
+  const topicNotesMatch = /^\/notes\/topics\/([^/]+)$/.exec(path)
+  if (topicNotesMatch) {
+    const topicId = decodeURIComponent(topicNotesMatch[1] ?? '')
+    const rows = mockNotes.filter((row) => row.topic_id === topicId || row.topic?.id === topicId)
+    return { status: 200, body: paginate(rows, page, size) }
+  }
+
+  if (path === '/subscribe/status') {
+    return {
+      status: 200,
+      body: {
+        enable: true,
+        bit_map: { post_c: 2, note_c: 1 },
+        allow_bits: [2, 1],
+        allow_types: ['note_c', 'post_c'],
+      },
+    }
+  }
 
   const noteMatch = /^\/notes\/([^/]+)$/.exec(path)
   if (noteMatch) return mockNoteDetail(String(noteMatch[1])) ?? notFound(path)
@@ -181,6 +211,36 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
     const slug = decodeURIComponent(pageMatch[1] ?? '')
     const row = mockPages.find((item) => item.slug === slug)
     return row ? { status: 200, body: row } : notFound(path)
+  }
+
+  return null
+}
+
+/**
+ * 写操作 mock（仅 `MX_MOCK=1`）
+ *
+ * 与读接口一样只回放真实形状：core 的 `POST /activity/like` 与 `POST /subscribe`
+ * 成功时都是 `{ ok: 1, data: ... }`，失败时 `ok: 0` + message。
+ */
+export function getMockMutation(path: string, body: unknown): MockResponse | null {
+  const payload = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+
+  if (path === '/activity/like') {
+    const id = typeof payload.id === 'string' ? payload.id.trim() : ''
+    const type = payload.type
+    if (!id || (type !== 'Post' && type !== 'Note')) {
+      return { status: 400, body: { ok: 0, message: 'id 与 type 不合法' } }
+    }
+    return { status: 200, body: { ok: 1, data: true } }
+  }
+
+  if (path === '/subscribe') {
+    const email = typeof payload.email === 'string' ? payload.email.trim() : ''
+    const types = Array.isArray(payload.types) ? payload.types : []
+    if (!email.includes('@') || types.length === 0) {
+      return { status: 400, body: { ok: 0, message: '邮箱或订阅类型不合法' } }
+    }
+    return { status: 200, body: { ok: 1, data: true } }
   }
 
   return null

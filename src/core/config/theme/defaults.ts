@@ -13,9 +13,6 @@ import type { ThemeConfig } from './types'
 export const SINCE_MIN = 1990
 /** 年份上限用「当前年 + 1」，允许跨年时提前写好 */
 
-export const FOOTER_LINK_NAME_MAX = 24
-export const FOOTER_LINK_MAX = 12
-
 /** 首页条数上下限：下限 1（否则等于关闭），上限对齐 v2 的 size 上限 50 */
 export const HOME_LIMIT_MIN = 1
 export const HOME_LIMIT_MAX = 50
@@ -78,7 +75,6 @@ export const SOCIAL_ICON_CLASS_PARTS_MAX = 4
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   footer: {
     since: null,
-    links: [],
     icp: { enabled: false, label: null, url: null },
   },
   social: {

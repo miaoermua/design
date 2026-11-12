@@ -10,10 +10,10 @@
 | --- | --- |
 | Git HEAD | `b3a2a9f` Remove archived audit artifacts and phase reports |
 | 已合并功能分支 | `phase-5c-a-social-snippets`（`8283918`）、`phase-5c-b-realtime`（`d888fdf`） |
-| 未提交改动 | 9 个文件（`AGENTS.md`、`package.json`、`core/config/theme/{defaults,parser,types}.ts`、`lib/api/mock/fixtures.ts`、`lib/social.ts`、`tests/theme-{config,social}.test.ts`），另有一个未跟踪目录 `docs/reports/` |
+| 未提交改动 | 49 项（31 个修改 + 18 个新增）：新增 `src/components/reading/`、`src/features/interactions/`（含 `channels.ts`）、`src/app/api/interactions/`、`nav-selector.tsx`、交互契约与 repository、`src/lib/reading/` 及 9 个新测试文件；其余为本次重设计触及的页面、导航、主题配置与既有测试 |
 | 运行时 | Next.js 15.5.29（App Router）、React 19.3.1、TypeScript 5.9、Tailwind CSS v4 |
 | 工具链 | pnpm 10.34.9、Node ≥ 22.12、Vitest 5.1.0 |
-| 本次实跑 | `pnpm test` 35 文件 / 616 用例全过；`pnpm typecheck` 通过；`pnpm lint` 通过 |
+| 本次实跑 | `pnpm test` 44 文件 / 695 用例全过；`pnpm typecheck` 通过；`pnpm lint` 通过。`pnpm build` **NOT TESTED**（沙箱 safe-delete 保护拦截了 `.next/static/media` 的批量清理，非代码错误）；真实 Core 浏览器矩阵同样 **NOT TESTED** |
 | 本次未跑 | `pnpm build`、真实 Core 联调、浏览器/真机矩阵、`scripts/visual/*` 采集 |
 
 **基线注意**：未提交改动把 `social.order` / `social.icons` 两个键从配置层删除了（HEAD 上仍然存在）。本文描述的是**当前工作区**的实现；凡受该改动影响的行，备注里单独标注。
@@ -49,9 +49,9 @@
 | 错误分类 | NotFound / PasswordRequired / Api / Network / Configuration | 已实现 | 403 + `code === 14000` → `PasswordRequiredError` | `src/lib/api/errors/index.ts`、`client/http.ts` | 协议 | 单元 + 集成测试 | `describeError` 统一产出面向读者的短句 |
 | 离线预览 | `MX_MOCK=1` fixtures | 已实现 | `MX_MOCK=1`；未覆盖的接口抛 `ApiError` | `src/lib/api/mock/{handlers,fixtures}.ts` | 自主 | 测试与 `MX_MOCK=1 pnpm start` 使用 | mock 是「按路径匹配」的白名单，不是通用假后端 |
 | 部署校验 | 未配置后端时的可读提示 | 已实现 | `MX_SERVER_URL` 缺失 | `src/app/layout.tsx`、`src/app/page.tsx` | 自主 | 代码审阅 | 布局顶部条 + 首页 `ErrorState` 双处提示，不抛栈 |
-| 模块开关 | Feature Registry 单一开关源 | 已实现 | `featureFlags` 10 键（其中 `comments` / `interactions` 关闭） | `src/core/registry/features.ts` | 自主 | 单元测试 | 关闭 = 改一个布尔值；导航、路由、请求三处同时收敛 |
+| 模块开关 | Feature Registry 单一开关源 | 已实现 | `featureFlags` 10 键（`comments` 关闭，`interactions` 开启） | `src/core/registry/features.ts` | 自主 | 单元测试 | 关闭 = 改一个布尔值；导航、路由、请求三处同时收敛。`interactions` 关闭时点赞/订阅入口与 `/subscribe/status` 探测一起消失 |
 | 模块开关 | 路由守卫 | 已实现 | 页面顶层 `requireFeature(key)` | `src/core/registry/guard.ts` | 自主 | 代码审阅 | 放在任何取数之前，因此禁用模块零请求 |
-| 模块开关 | 导航过滤 | 已实现 | `getPrimaryNav` / `getFooterNav` | `src/core/navigation/index.ts` | 自主 | 代码审阅 | 导航项存字典键而非成品字符串，避免客户端切换语言后不更新 |
+| 模块开关 | 导航过滤 | 已实现 | `getPrimaryNav`（`getFooterNav` 已删除，页脚不再承载导航） | `src/core/navigation/index.ts` | 自主 | `tests/navigation.test.ts` | 导航项存字典键而非成品字符串，避免客户端切换语言后不更新；目录型入口的数据由 `site-header.tsx` 在 RSC 取回后交给客户端选择器 |
 | 模块声明 | manifest 描述路由与接口 | 已实现 | 9 个 manifest | `src/features/*/manifest.ts` | 自主 | 代码审阅 | **manifest 不参与运行时**，仅作文档；`search` 的 endpoints 写 `/search/post`，实际调用 `/search`（见 §14） |
 | 环境变量 | 运行期配置面 | 已实现 | `MX_SERVER_URL`、`MX_MOCK`、`MX_THEME_NAME`、`MX_SITE_TIMEZONE`、`MX_API_TIMEOUT_MS`、`MX_REALTIME`、`MX_REALTIME_URL`、`NEXT_PUBLIC_SITE_URL` | `src/lib/api/config.ts`、`src/lib/realtime/config.ts` | 自主 | 代码审阅 | `MX_SITE_TIMEZONE` 只影响展示时区，不影响后端存储 |
 
@@ -66,8 +66,8 @@
 | 配置读取 | Snippet 拉取与缓存 | 已实现 | `revalidate: 600`、tag `theme-config` | `src/core/config/theme/repository.ts` | 协议 | `tests/theme-repository.test.ts`、`tests/snippet.test.ts` | 后端返回的是**已解析对象**，不是 YAML 字符串，因此前端不引入 YAML 库 |
 | 配置读取 | 失败降级 | 已实现 | `status: ok / missing / unavailable / invalid / forbidden` | 同上 | 自主 | 单元测试 | 任何失败都返回完整默认配置，永不抛错；`missing`(404) 视为正常状态 |
 | 配置读取 | 形状校验与收敛 | 已实现 | 长度上限、条数上限、URL 协议白名单、去重 | `src/core/config/theme/parser.ts`、`defaults.ts` | 自主 | `tests/theme-config.test.ts` | 无效条目按条丢弃，不整块丢弃 |
-| 页脚 | 版权起始年 / 链接 / ICP | 已实现 | `footer.since`、`footer.links[]`、`footer.icp` | `src/components/layout/site-footer.tsx` | 参考 + 自主 | 单元测试 | 起始年区间 `[1990, 当前年+1]`；链接最多 12 条、名称 ≤ 24 字 |
-| 社交 | 自定义项目（标题/地址/图标/颜色） | 已实现 | `social.items[]`，最多 24 条 | `src/core/config/theme/{types,parser}.ts`、`src/lib/social.ts` | 自主 | `tests/theme-social.test.ts`、`tests/theme-social-icon.test.tsx` | 每项自带 URL，因此同平台可重复出现；与 `/aggregate` 按 URL 合并，配置优先 |
+| 页脚 | 起始年 / ICP | 已实现 | `footer.since`、`footer.icp` | `src/core/config/theme/{parser,defaults}.ts`、`src/components/layout/site-footer.tsx` | 参考 + 自主 | `tests/theme-config.test.ts`、`tests/site-footer.test.tsx` | 起始年区间 `[1990, 当前年+1]`，缺省取当前年；旧 `footer.links[]` 已删除（只服务被移除的页脚导航），配置里留着也不再生效 |
+| 社交 | 自定义项目（标题/地址/图标/颜色/频道标记） | 已实现 | `social.items[]`（最多 24 条），`channel` 默认 false | `src/core/config/theme/{types,parser,social}.ts`、`src/lib/social.ts` | 自主 | `tests/theme-social.test.ts`、`tests/theme-social-icon.test.tsx` | 每项自带 URL，因此同平台可重复出现；与 `/aggregate` 按 URL 合并，配置优先。`channel: true` 表示这项同时作为订阅弹窗的频道入口——社交链接不会被自动当成频道，只认显式布尔 `true` |
 | 社交 | 总开关 | 已实现 | `social.enabled` | `src/components/ui/social-icon.tsx` 调用点 | 自主 | 单元测试 | 关闭后首页、关于页、页脚同时不渲染 |
 | 社交 | 图标字体样式表 | 已实现 | `social.iconStylesheets[]`（最多 2 条） | `src/components/layout/social-icon-stylesheets.tsx` | 自主 | `tests/social-icon-stylesheets.test.tsx` | 只有存在 `css` 类型图标时才输出 `<link>`，避免多余请求 |
 | 社交 | 旧键 `social.order` / `social.icons` | 定义未启用 | 已从当前工作区的类型与默认值中删除 | `src/lib/social.ts` | 自主 | `tests/theme-social.test.ts` 已同步 | HEAD 上仍存在；删除理由是新模型「同平台多项」与按平台名排序互斥 |
@@ -84,19 +84,20 @@
 
 | 功能区 | 功能项 | 实现状态 | 配置/API | 核心代码 | 技术来源 | 验证情况 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 头部 | 站点身份与主导航 | 已实现 | `GET /aggregate` 的 `seo` / `owner` | `src/components/layout/site-header.tsx` | 协议 + 参考 | 代码审阅 | 导航扁平为 文章 / 日记 / 探索 / 页面 / 关于；归档与标签合并进「探索」 |
+| 头部 | 站点身份与主导航 | 已实现 | `GET /aggregate` 的 `seo` / `owner` | `src/components/layout/site-header.tsx` | 协议 + 参考 | `tests/navigation.test.ts` | 六个入口：文章 / 日记 / 探索 / 友链 / 页面 / 关于；归档与标签合并进「探索」，`/categories` 高亮归「文章」 |
 | 头部 | 滚动收缩 | 已实现 | — | `src/components/layout/use-header-scroll.ts` | 参考 | 代码审阅 | 只读 scrollY，不监听 resize；无 JS 时导航仍可用 |
 | 头部 | 移动端菜单 | 已实现 | — | `src/components/layout/site-header-client.tsx` | 自主 | 无自动化测试 | 客户端组件最小子树；菜单按钮具备 `aria-expanded` |
-| 头部 | 工具按钮（搜索 / 语言 / 主题） | 已实现 | — | `src/components/layout/toolbar-button.tsx`、`language-button.tsx`、`theme-toggle.tsx` | 自主 | `tests/realtime-ssr.test.ts` 间接覆盖 | 搜索按钮唤起命令面板；无 JS 时页脚仍有 `/search` 文字入口 |
+| 头部 | 工具按钮（搜索 / 语言 / 主题） | 已实现 | — | `src/components/layout/toolbar-button.tsx`、`language-button.tsx`、`theme-toggle.tsx` | 自主 | `tests/realtime-ssr.test.ts` 间接覆盖 | 搜索按钮唤起命令面板；无 JS 时顶栏 `<noscript>` 里有 `/search` 文字链接 |
+| 头部 | 目录型选择器（Pages / Blog 分类 / Note 专栏） | 已实现 | `GET /pages`、`GET /categories?type=0`、`GET /topics/all` | `src/components/layout/nav-selector.tsx`、`site-header.tsx` | 自主 + 协议 | `tests/nav-selector.test.tsx` | 顶栏只放固定入口，条目收进 Popover：hover + click 展开、点外 / `Escape` 关闭、↑↓ / Home / End 移动焦点、长列表内部滚动；空态与失败态各自给文案，`status` 由服务端传入 |
 | 主题 | 明暗切换 | 已实现 | `localStorage['folio-theme']`、`prefers-color-scheme` | `src/components/layout/theme-toggle.tsx`、`src/app/layout.tsx` | 自主 | `tests/design-tokens.test.ts` | 内联脚本在首帧前写 `data-theme`，避免先画浅色再翻黑 |
 | 设计系统 | Token 三层（原始 / 语义 / 材质） | 已实现 | `@theme` + `:root` + `[data-theme='dark']` | `src/design-system/tokens/tokens.css`、`src/design-system/styles/*` | 自主 | `tests/design-tokens.test.ts`、`tests/design-doc-sync.test.ts` | 组件只消费语义 Token；硬编码颜色会被测试拦截 |
 | 字体 | 自托管 Noto Sans SC / Noto Serif SC | 已实现 | 202 个 WOFF2 分片、`unicode-range` 命中 | `src/assets/fonts/**`、`src/app/fonts.css` | 依赖（自托管素材） | `tests/self-hosted-fonts.test.ts` | 字体栈只在 `tokens.css` 的 `@theme` 定义，`fonts.css` 只声明 `@font-face` |
-| 页脚 | 站点导航 + 配置链接 + ICP + 版权 | 已实现 | `footer.*`、`GET /aggregate` | `src/components/layout/site-footer.tsx` | 参考 + 自主 | 单元测试 | 页脚额外承载 `/search` 与 `/friends` 文字入口 |
+| 页脚 | 两栏信息（Since 行 / Powered by + ICP） | 已实现 | `footer.since`、`footer.icp`、`GET /aggregate` | `src/components/layout/site-footer.tsx` | 参考 + 自主 | `tests/site-footer.test.tsx` | 左栏 `Since {年份} {名字} ｜ {签名}`，右栏 `Powered by Mix-Space. Design.` + ICP；已删除页脚导航、重复社交、RSS 与项目宣传链接；第三栏预留（未实现，无占位元素） |
 | 社交 | 图标渲染（builtin） | 已实现 | 10 个内置键 | `src/components/ui/social-icon.tsx`、`src/lib/social.ts` | 自主 | 单元 + 组件测试 | 纯内联 SVG，随 RSC payload 到达，不依赖外部资源 |
 | 社交 | 图标渲染（css） | 部分实现 | `social.iconStylesheets[]` + class 白名单 | 同上 | 自主 | `tests/theme-social-icon.test.tsx` | **不校验样式表是否真的声明了该 class**，配置写错只会得到空白图标 |
 | 社交 | 图标渲染（iconify） | 未实现 | 类型保留 `iconify` | 同上 | — | 单元测试断言降级 | 没有运行时加载器；渲染时退回 builtin 兜底图形，配置不丢但图标不对 |
 | 全局 | 图片预览宿主 | 已实现 | — | `src/components/markdown/image-preview.tsx`、`media-enhancer.tsx` | 参考 | `tests/gallery-interaction.test.tsx` | 全站唯一宿主，正文普通图 / 相册 / 轮播共用 |
-| 全局 | 回到顶部 | 已实现 | — | `src/components/ui/back-to-top.tsx` | 参考 | 无自动化测试 | 文章页页脚出现 |
+| 全局 | 回到顶部 | 已实现 | — | `src/components/ui/back-to-top.tsx`、`src/components/reading/reading-tools.tsx` | 参考 | 无自动化测试 | 文章 / 日记的阅读辅助区（TOC 下方）；`window.scrollTo({ behavior })`，`prefers-reduced-motion` 下退化为瞬时跳转 |
 | 全局 | 分页 | 已实现 | `?page=` | `src/components/ui/pagination.tsx` | 自主 | 代码审阅 | 用 `<Link>` 而非按钮，无 JS 可用 |
 | 全局 | 空态 / 错误态 / 加载态 | 已实现 | — | `src/components/ui/{empty-state,error-state,page-loading}.tsx` | 自主 | 代码审阅 | 空态与错误态严格区分：列表为空不是失败 |
 | 无障碍 | 跳转正文 / 可见焦点 | 已实现 | — | `src/app/layout.tsx`、各组件 | 自主 | 未做 axe 扫描 | 跳转链接默认移出视口、聚焦时出现；`prefers-reduced-motion` 在材质层降级 |
@@ -114,8 +115,9 @@
 | 文章 | 详情页 | 已实现 | `GET /posts/:category/:slug` | `src/app/articles/[category]/[slug]/page.tsx` | 协议 | 无独立测试 | `requireFeature('articles')` 在取数前执行 |
 | 文章 | 元信息 | 已实现 | 分类、发布日期、阅读时长、标签 | 同上、`src/lib/utils/text.ts` | 自主 | 代码审阅 | 阅读时长按正文字数估算，不是后端字段 |
 | 文章 | 封面图 | 已实现 | `cover` | `src/components/ui/cover-image.tsx` | 协议 | 代码审阅 | 显式 `aspect-ratio`，避免布局偏移 |
-| 文章 | 目录（TOC） | 已实现 | 由服务端渲染的 heading 生成 | `src/lib/content/markdown.ts`、`src/components/ui/toc.tsx`、`toc-list.tsx` | 自主 | 代码审阅 | 桌面右侧常驻栏 + 移动端 `<details>` 折叠；少于 2 个标题不输出 |
-| 文章 | 阅读进度条 | 已实现 | — | `src/components/ui/reading-progress.tsx` | 参考 | 无自动化测试 | 2px 细线，只读真实滚动位置；`targetId` 指向正文容器 |
+| 文章 | 目录（TOC） | 已实现 | 由服务端渲染的 heading 生成 | `src/lib/content/markdown.ts`、`src/components/ui/toc-list.tsx`、`src/components/reading/{reading-aside,reading-inline}.tsx` | 自主 | `tests/toc-list.test.tsx` | 文章与日记共用 `TocList`：单行 `truncate`、`title` 保留全文、h3 缩进；桌面常驻右栏、移动端 `<details>` 折叠；少于 2 个标题不输出 |
+| 文章 | 阅读进度（环形 + 百分比） | 已实现 | — | `src/lib/reading/progress.ts`、`src/components/ui/reading-progress.tsx` | 参考 | `tests/reading-progress.test.ts`、`tests/reading-progress-ring.test.tsx` | 位于 TOC 下方，按「正文顶部到底部」计算，正文底部对齐视口即 100%；`requestAnimationFrame` 节流，只用 `transform` / `stroke-dashoffset` |
+| 文章 | 操作栏（Like / Share / Subscribe / Donate） | 已实现 | `POST /activity/like`、`GET /subscribe/status`、`POST /subscribe`、`donate.*` | `src/components/reading/action-rail.tsx`、`subscribe-panel.tsx`、`src/app/api/interactions/*` | 协议 + 自主 | `tests/action-rail.test.tsx`、`tests/subscribe-panel.test.tsx` | 桌面在正文左侧竖排、移动端横排置顶；明确不含评论。点赞按 IP 计数、成功后本地锁定防重复；分享优先 `navigator.share`，否则复制 canonical；订阅入口在邮件订阅 `enable` **或**存在频道配置时出现；弹窗三块为邮件表单、`/feed.xml` 链接、外链频道（标题/图标/颜色/地址复用 `social.items`，不另建配置），成功文案是「确认邮件已发送」。Shiro 的频道取自 core 的 `module.subscription.tg`（单个 Telegram）；本仓库未消费该配置，改用 `social.items[].channel` 显式标记，不为频道新增接口 |
 | 文章 | 上下篇 | 已实现 | 复用 `GET /posts?size=50` | `src/features/articles/components/article-neighbors.tsx` | 自主（协议无相邻接口） | 无自动化测试 | 只在前 50 条窗口内计算；文章不在窗口内就不显示该方向，不猜「最接近」标题 |
 | 文章 | 相关阅读 | 已实现 | `GET /posts/:category/:slug` 的 `related` 字段 | `src/lib/api/adapters/article.ts` | 协议 | 代码审阅 | 为空则整段不渲染 |
 | 文章 | 版权声明 | 已实现 | `copyright: true` | 详情页 footer | 协议 | 代码审阅 | 只输出一句固定署名提示，不生成作者自定义协议 |
@@ -123,7 +125,7 @@
 | 文章 | 非 Markdown 正文 | 部分实现 | `contentFormat !== 'markdown'` | 详情页 | 协议 | 代码审阅 | 显式提示「只渲染 Markdown」，不做结构化 JSON 的降级渲染 |
 | 文章 | 赞赏入口 | 已实现 | `donate.enabled` | `src/features/donate` | 自主 | `tests/donate-config.test.ts`、`tests/donate-action.test.tsx` | 未配置二维码时按钮仍可出现但不展示空浮层（配置层保证 `qrcode` 非空才启用） |
 | 文章 | 实时更新 | 已实现 | 见 §8 | `src/features/articles/live/*` | 协议（WS 网关） | `tests/live-article-controller.test.ts`、`live-article-route.test.ts` | 只在 `isRealtimeEnabled()` 时挂载客户端组件 |
-| 文章 | 评论 | 定义未启用 | `featureFlags.comments = false` | `src/lib/api/contracts/v2/comment.ts` | 协议 | 无 | 只有契约类型，没有列表/发布/审核链路 |
+| 文章 | 评论 | 定义未启用 | `featureFlags.comments = false` | `src/lib/api/contracts/v2/comment.ts` | 协议 | 无 | 只有契约类型，没有列表/发布/审核链路。Core 12.10.0 侧评论后端完整（列表/匿名写入/楼中楼/分页/审核），缺口全在主题侧；能力边界与四分类判定见 `docs/audits/PHASE-5C-C-COMMENTS-AUDIT.md` §2 |
 
 ### 4.2 日记
 
@@ -135,8 +137,9 @@
 | 日记 | 情绪 / 天气 / 地点 / 话题 | 已实现 | `mood`、`weather`、`location`、`topic` | 同上 | 协议 | 代码审阅 | 只渲染存在的字段，组成 chips 行 |
 | 日记 | 图片组 | 已实现 | `images[]` | 同上、`image-preview.tsx` | 协议 | `tests/gallery-interaction.test.tsx` 覆盖通用预览 | 与正文相册共用全站唯一预览宿主 |
 | 日记 | Markdown 渲染 | 已实现 | `contentFormat === 'markdown'` | `src/lib/content/markdown.ts` | 协议 + 依赖 | Markdown 测试组 | 非 Markdown 内容不做降级渲染 |
-| 日记 | 目录 / 阅读进度 | 未实现 | — | — | — | — | 手记定位是短内容，未挂 TOC 与进度条（有意省略，不是遗漏） |
-| 日记 | 点赞 / 阅读上报 | 定义未启用 | `featureFlags.interactions = false` | — | 协议 | 无 | 站点当前是只读的；没有写操作入口 |
+| 日记 | 目录 / 阅读进度 | 已实现 | 由正文 heading 生成（目标 `#diary-content`） | `src/app/diaries/[id]/page.tsx`、`src/components/reading/*` | 自主 | 同文章（共用组件） | 与文章同一套 `TocList` + 环形进度；标题少于 2 个时自然不输出，短手记不会出现空目录 |
+| 日记 | 点赞 | 已实现 | `POST /activity/like`（`type: 'Note'`） | `src/components/reading/action-rail.tsx` | 协议 | `tests/action-rail.test.tsx` | 与文章共用操作栏，`type` 传 `Note` |
+| 日记 | 阅读上报 | 未实现 | — | — | — | — | Core v2 没有可用的阅读量上报接口，主题侧不做假数据 |
 
 ### 4.3 独立页面与关于
 
@@ -178,7 +181,7 @@
 | 搜索 | 命令面板 | 已实现 | `Cmd/Ctrl+K` | `src/components/layout/search-panel.tsx` | 参考 | 无自动化测试 | 220ms 防抖；新请求 abort 上一次；取前 5 条 |
 | 搜索 | 面板数据源 | 已实现 | BFF `GET /api/search?q=` | `src/app/api/search/route.ts` | 自主 | 代码审阅 | 只做转接，复用同一 repository / adapter / 语言参数；失败返回 200 + 空列表 + `failed` 标记 |
 | 搜索 | 面板键盘导航 | 部分实现 | — | 同上 | — | 代码审阅 | 支持 `Escape` 关闭、焦点管理、`role="dialog"`；**不支持 ↑/↓ 在结果间移动** |
-| 搜索 | 无 JS 可用性 | 已实现 | — | `src/core/navigation/index.ts` | 自主 | 代码审阅 | 页脚保留 `/search` 文字入口 |
+| 搜索 | 无 JS 可用性 | 已实现 | — | `src/components/layout/site-header-client.tsx` | 自主 | 代码审阅 | 顶栏 `<noscript>` 里保留 `/search` 文字链接（页脚已不再承载导航） |
 | 搜索 | 搜索 manifest 准确性 | 部分实现 | manifest 写 `GET /search/post` | `src/features/search/manifest.ts` | — | 代码审阅 | 实际调用 `/search`；manifest 不参与运行时，但作为文档是错的（见 §14） |
 
 ---
@@ -254,7 +257,7 @@
 | 结构化数据 | `BlogPosting` JSON-LD | 已实现 | — | 文章详情页、`src/lib/seo.ts` | 自主 | 代码审阅 | 仅文章详情有；站点级没有 `WebSite` 结构化数据 |
 | Sitemap | `/sitemap.xml` | 部分实现 | `GET /posts`、`/notes`、`/categories`（含标签），各取前 50 条 | `src/app/sitemap.ts` | 自主 | 代码审阅 | 静态路由按 `featureFlags` 过滤；动态条目只覆盖第 1 页，分页 2+ 的页面不进 sitemap；取数失败只保留静态条目并打日志；无站点绝对地址时返回空数组 |
 | Robots | `/robots.txt` | 已实现 | `NEXT_PUBLIC_SITE_URL` 可选 | `src/app/robots.ts` | 自主 | 代码审阅 | `Disallow: /search`；未配置绝对地址时不给 `Sitemap:` 行 |
-| RSS | `/feed.xml`（RSS 2.0） | 部分实现 | `GET /posts`，取前 20 条 | `src/app/feed.xml/route.ts` | 自主 | 代码审阅 | **只含文章，不含日记与页面**；`<language>` 硬编码 `zh-CN`；缺绝对地址或取数失败返回 503 + 原因文本 |
+| RSS | `/feed.xml`（RSS 2.0） | 部分实现 | `GET /posts`，取前 20 条 | `src/app/feed.xml/route.ts` | 自主 | 代码审阅 | **只含文章，不含日记与页面**；`<language>` 硬编码 `zh-CN`；缺绝对地址或取数失败返回 503 + 原因文本。订阅弹窗里的 RSS 入口指向真实路径 `/feed.xml`（没有 `/feed` 别名，不伪造入口） |
 | 缓存 | RSS 缓存头 | 已实现 | `s-maxage=600`、`stale-while-revalidate=1200` | 同上 | 自主 | 代码审阅 | 页面本身是 `force-dynamic`，RSS 靠自己的 CDN 头承担缓存 |
 | 站点地图 | 页面/探索收录 | 部分实现 | — | `src/app/sitemap.ts` | 自主 | 代码审阅 | 静态路由含 `/about`、`/friends`、`/archives`，但**不含 `/explore`、`/pages` 列表与各独立页面**（协议有 `GET /pages`，未接入 sitemap） |
 
@@ -265,7 +268,7 @@
 | 功能区 | 功能项 | 实现状态 | 配置/API | 核心代码 | 技术来源 | 验证情况 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 内容语言 | 后端翻译 | 已实现 | cookie `folio-lang`；取数带 `?lang=en`（默认语言不传） | `src/lib/i18n/config.ts`、`src/lib/i18n/server.ts` | 协议 | 代码审阅 | 主题**不做任何机器翻译**，也不调用未公开的 AI 接口 |
-| 界面语言 | 本地字典 | 部分实现 | 中/英两套，114 个键 | `src/lib/i18n/dictionary.ts` | 自主 | 无独立测试 | 覆盖导航、顶栏、首页、Explore、Pages、Footer；**其余内页文案仍是中文硬编码**，切换语言后中英混排 |
+| 界面语言 | 本地字典 | 部分实现 | 中/英两套，每个语种 54 个键 | `src/lib/i18n/dictionary.ts` | 自主 | 无独立测试 | 覆盖导航、顶栏、首页、Explore、Pages、Footer；**其余内页文案仍是中文硬编码**，切换语言后中英混排 |
 | 语言切换 | 顶栏按钮 | 已实现 | 写 cookie（1 年）+ `router.refresh()` | `src/components/layout/language-button.tsx` | 自主 | 代码审阅 | URL 不变、滚动位置保留；代价是同一链接对不同访客语言不同，分享链接与 RSS 始终默认语言 |
 | 语言 | URL 前缀方案 | 未实现（有意） | — | — | — | — | `/[locale]` 会让 Mix Space 既有的所有链接失效，明确不采用 |
 | 语言 | 站点身份翻译 | 未实现 | — | — | — | 代码审阅 | 实测 `/aggregate` 在 `?lang=en` 下 `seo.title` 仍为原文，后端也没有 UI 文案接口 |
@@ -293,8 +296,8 @@
 
 | 项 | 状态 | 依据 |
 | --- | --- | --- |
-| 评论（列表 / 发布 / 审核） | 定义未启用 | `featureFlags.comments = false`；只有 `contracts/v2/comment.ts` |
-| 点赞 / 阅读上报 / 任何写操作 | 定义未启用 | `featureFlags.interactions = false`；站点只读 |
+| 评论（列表 / 发布 / 审核） | 定义未启用 | `featureFlags.comments = false`；只有 `contracts/v2/comment.ts`。Core 侧已支持，详见 `docs/audits/PHASE-5C-C-COMMENTS-AUDIT.md` |
+| 阅读上报 | 未实现 | Core v2 无对应接口；点赞与邮件订阅已在 `interactions` 下启用 |
 | 友链申请表单 | 未实现 | `/friends` 只读展示 |
 | 搜索面板 ↑/↓ 选择结果 | 未实现 | 只有 `Escape` 关闭，没有结果间键盘移动 |
 | `iconify` 图标运行时加载 | 未实现 | 类型保留，渲染降级为 builtin 兜底 |
@@ -368,7 +371,7 @@
 | 文章实时更新 | `src/features/articles/live/{controller.ts,live-updater.tsx,refresh.ts}`、`src/app/api/articles/live/route.ts` |
 | 状态与通知 | `src/lib/status/store.ts`、`src/lib/notifications/store.ts`、`src/components/ui/{status-capsule,toaster}.tsx` |
 | SEO | `src/app/{sitemap,robots}.ts`、`src/app/feed.xml/route.ts`、`src/lib/seo.ts`、`src/lib/site.ts` |
-| 设计系统 | `docs/design/DESIGN-SYSTEM.md`、`src/design-system/tokens/tokens.css` |
+| 设计系统 | `docs/DESIGN-SYSTEM.md`、`src/design-system/tokens/tokens.css` |
 | 工程约束 | `AGENTS.md`、`README.md`、`.env.example` |
 | 阶段报告（未跟踪） | `docs/reports/PHASE-5C-A-REPORT.md` |
 

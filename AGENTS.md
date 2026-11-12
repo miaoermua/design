@@ -4,13 +4,13 @@ Folio 仓库对所有 Coding Agent 的长期工程约束。**本文件优先级�
 
 文档分工：
 
-| 文档                           | 地位                                                      |
-| ------------------------------ | --------------------------------------------------------- |
-| `AGENTS.md`（本文件）          | 工程约束与行为边界，长期有效                              |
-| `docs/design/DESIGN-SYSTEM.md` | 视觉规范权威（颜色、排版、材质、组件状态）                |
-| `docs/FEATURE.md`              | 功能实现矩阵：**事实快照，不是任务清单**（维护规则见 §9） |
-| `docs/audits/PHASE-*.md`       | 阶段事实与验收证据，**进度以这些报告为准**                |
-| `README.md` / `.env.example`   | 运行方式与配置项                                          |
+| 文档                         | 地位                                                      |
+| ---------------------------- | --------------------------------------------------------- |
+| `AGENTS.md`（本文件）        | 工程约束与行为边界，长期有效                              |
+| `docs/DESIGN-SYSTEM.md`      | 视觉规范权威（颜色、排版、材质、组件状态）                |
+| `docs/FEATURE.md`            | 功能实现矩阵：**事实快照，不是任务清单**（维护规则见 §9） |
+| `docs/audits/PHASE-*.md`     | 阶段事实与验收证据，**进度以这些报告为准**                |
+| `README.md` / `.env.example` | 运行方式与配置项                                          |
 
 ---
 
@@ -74,7 +74,7 @@ Folio 仓库对所有 Coding Agent 的长期工程约束。**本文件优先级�
 
 ## 5. Design System
 
-**唯一权威**：`docs/design/DESIGN-SYSTEM.md`。**唯一 Token 来源**：`src/design-system/tokens/tokens.css`。
+**唯一权威**：`docs/DESIGN-SYSTEM.md`。**唯一 Token 来源**：`src/design-system/tokens/tokens.css`。
 
 分层（自上而下，组件只能碰第二层）：
 
