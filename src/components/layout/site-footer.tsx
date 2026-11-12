@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
-import { SocialIcon, socialLabel } from '@/components/ui/social-icon'
+import { SocialIcon } from '@/components/ui/social-icon'
 import { footerYearRange } from '@/core/config/theme'
 import { getThemeConfig } from '@/core/config/theme'
 import { getFooterNav } from '@/core/navigation'
@@ -8,7 +8,7 @@ import type { SiteIdentity } from '@/lib/api'
 import { t } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { siteDescription, siteTitle } from '@/lib/site'
-import { toSocialLinks } from '@/lib/social'
+import { toSocialItems } from '@/lib/social'
 
 /**
  * 站点级固定信息
@@ -33,9 +33,9 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
   const title = siteTitle(identity)
   const description = siteDescription(identity)
 
-  // 社交：账号来自 /aggregate，显示控制/顺序/图标来自 Theme Snippet
+  // 社交：账号来自 /aggregate，自定义项目与显示控制来自 Theme Snippet
   const socials = theme.social.enabled
-    ? toSocialLinks(identity?.owner.socialIds, { theme: theme.social })
+    ? toSocialItems(identity?.owner.socialIds, { theme: theme.social })
     : []
 
   const authorName = identity?.owner.name ?? title
@@ -86,17 +86,18 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
 
               {socials.length > 0 ? (
                 <ul className="mt-4 flex flex-wrap items-center gap-1">
-                  {socials.map((link) => (
-                    <li key={`${link.label}-${link.href}`}>
+                  {socials.map((item) => (
+                    <li key={item.id}>
                       <a
-                        href={link.href}
+                        href={item.url}
                         rel="me noopener noreferrer"
-                        target={link.href.startsWith('mailto:') ? undefined : '_blank'}
-                        title={socialLabel(link)}
-                        aria-label={socialLabel(link)}
+                        target={item.url.startsWith('mailto:') ? undefined : '_blank'}
+                        title={item.title}
+                        aria-label={item.title}
+                        style={item.color ? { color: item.color } : undefined}
                         className="flex size-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-tertiary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
                       >
-                        <SocialIcon name={link.icon ?? link.label} className="size-4" />
+                        <SocialIcon icon={item.icon} className="size-4" />
                       </a>
                     </li>
                   ))}
