@@ -17,9 +17,8 @@ import { useHeaderScroll } from './use-header-scroll'
 interface SiteHeaderClientProps {
   /** 目录型入口：Blog 分类 / Note 专栏 / Pages */
   groups: NavGroup[]
-  /** 普通链接入口：探索 / 关于 */
+  /** 普通链接入口：探索 / 友链 */
   links: NavItem[]
-  title: string
   locale: Locale
   messages: Record<MessageKey, string>
   /** 是否有搜索模块；关闭时不渲染搜索按钮 */
@@ -44,7 +43,6 @@ interface SiteHeaderClientProps {
 export function SiteHeaderClient({
   groups,
   links,
-  title,
   locale,
   messages,
   searchEnabled,
@@ -95,7 +93,7 @@ export function SiteHeaderClient({
         <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
           <div
             className={cn(
-              'glass-bar flex h-14 items-center gap-3 rounded-[var(--radius-md)] border px-2.5 sm:h-[3.75rem] sm:px-3',
+              'glass-bar mx-auto flex h-14 w-fit max-w-full items-center gap-3 rounded-[var(--radius-pill)] border px-2 sm:h-[3.75rem] sm:px-3',
               // 脱离页首后才显示投影：在顶部时它与纸面是一体的
               detached
                 ? 'border-[var(--edge)] shadow-[var(--shadow-pop)]'
@@ -104,14 +102,20 @@ export function SiteHeaderClient({
           >
             <Link
               href="/"
-              className="shrink-0 rounded-[var(--radius-sm)] px-2 font-serif text-[1.0625rem] tracking-[0.005em] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]"
+              aria-current={pathname === '/' ? 'page' : undefined}
+              className={cn(
+                'text-small shrink-0 rounded-full px-3 py-2 font-medium transition-colors duration-[var(--duration-fast)]',
+                pathname === '/'
+                  ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
+              )}
             >
-              {title}
+              {messages['nav.home']}
             </Link>
 
             {/* 桌面导航：与工具组用一条细分隔线分开，避免两者被读成一列。
                 三个目录型入口收进选择器，避免把分类 / 专栏全铺在顶栏。 */}
-            <nav aria-label="主导航" className="hidden min-w-0 flex-1 md:block">
+            <nav aria-label="主导航" className="hidden min-w-0 md:block">
               <ul className="flex items-center gap-1">
                 {groups.map((group) => (
                   <li key={group.key}>
@@ -141,49 +145,51 @@ export function SiteHeaderClient({
               </ul>
             </nav>
 
-            <div className="ml-auto flex items-center gap-1 sm:ml-0">
-              {/* 无 JS 时的搜索出口：搜索面板是客户端组件，脚本不可用时按钮点不开，
-                  这里退回普通链接。注意必须用 dangerouslySetInnerHTML —— React 会把
-                  <noscript> 的子节点转义成文本，否则无 JS 时展示的是一段源码。
-                  内容是本地写死的静态字符串，没有注入面。 */}
-              <noscript
-                dangerouslySetInnerHTML={{
-                  __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
-                }}
-              />
-
-              <ToolbarGroup>
-                {searchEnabled ? (
-                  <ToolbarButton
-                    label={messages['action.search']}
-                    onClick={() => setSearchOpen(true)}
-                    active={searchOpen}
-                  >
-                    <SearchIcon />
-                  </ToolbarButton>
-                ) : null}
-
-                <ThemeToggle label={messages['action.mode']} />
-
-                <LanguageButton current={locale} label={messages['action.language']} />
-
-                <ToolbarButton
-                  label={messages['action.backToTop']}
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                >
-                  <ArrowUpIcon />
-                </ToolbarButton>
-              </ToolbarGroup>
-
-              {/* 移动端导航：工具组之后，保证「工具 → 菜单」的阅读顺序 */}
-              <MobileMenu groups={groups} links={links} messages={messages} className="md:hidden" />
-            </div>
+            <MobileMenu
+              groups={groups}
+              links={links}
+              messages={messages}
+              className="ml-auto md:hidden"
+            />
           </div>
         </div>
       </header>
 
       {/* 固定顶栏不占文档流：占位块保证正文不被浮条盖住 */}
       <div aria-hidden="true" className="h-[calc(3.5rem+0.75rem)] sm:h-[calc(3.75rem+1rem)]" />
+
+      <div className="fixed right-3 bottom-3 z-50 sm:right-6 sm:bottom-6">
+        <div className="glass-bar rounded-full border border-[var(--edge-frost)] p-1 shadow-[var(--shadow-raise)]">
+          {/* 无 JS 时的搜索出口：搜索面板不可用时仍保留普通链接。 */}
+          <noscript
+            dangerouslySetInnerHTML={{
+              __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
+            }}
+          />
+          <ToolbarGroup>
+            {searchEnabled ? (
+              <ToolbarButton
+                label={messages['action.search']}
+                onClick={() => setSearchOpen(true)}
+                active={searchOpen}
+              >
+                <SearchIcon />
+              </ToolbarButton>
+            ) : null}
+
+            <ThemeToggle label={messages['action.mode']} />
+
+            <LanguageButton current={locale} label={messages['action.language']} />
+
+            <ToolbarButton
+              label={messages['action.backToTop']}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <ArrowUpIcon />
+            </ToolbarButton>
+          </ToolbarGroup>
+        </div>
+      </div>
 
       {searchEnabled ? (
         <SearchPanel
@@ -237,7 +243,7 @@ function MobileMenu({
         aria-controls="site-mobile-nav"
         aria-label={messages['action.menu']}
         onClick={() => setOpen((value) => !value)}
-        className="flex size-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]"
+        className="flex size-10 items-center justify-center rounded-full border border-[var(--edge)] bg-[var(--surface-raised)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]"
       >
         {open ? <CloseIcon /> : <MenuIcon />}
       </button>
@@ -245,7 +251,7 @@ function MobileMenu({
       {open ? (
         <div
           id="site-mobile-nav"
-          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(70vh,32rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
+          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(60vh,24rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <ul className="flex flex-col p-1.5">
             {groups.map((group) => (

@@ -37,6 +37,7 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
   const searchParams = useSearchParams()
   const [open, setOpen] = useState(false)
   const pinned = useRef(false)
+  const closeTimerRef = useRef<number | null>(null)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLAnchorElement>(null)
@@ -44,20 +45,38 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
 
   const active = isGroupActive(group, pathname)
 
-  const close = useCallback((restoreFocus: boolean) => {
-    pinned.current = false
-    setOpen(false)
-    if (restoreFocus) triggerRef.current?.focus()
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
   }, [])
+
+  const scheduleMouseClose = useCallback(() => {
+    clearCloseTimer()
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null
+      if (!pinned.current) setOpen(false)
+    }, 180)
+  }, [clearCloseTimer])
+
+  useEffect(() => () => clearCloseTimer(), [clearCloseTimer])
+
+  const close = useCallback(
+    (restoreFocus: boolean) => {
+      clearCloseTimer()
+      pinned.current = false
+      setOpen(false)
+      if (restoreFocus) triggerRef.current?.focus()
+    },
+    [clearCloseTimer],
+  )
 
   useEffect(() => {
     if (!open) return
 
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        pinned.current = false
-        setOpen(false)
-      }
+      if (!rootRef.current?.contains(event.target as Node)) close(false)
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -115,17 +134,20 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
       ref={rootRef}
       className="relative"
       onPointerEnter={(event) => {
-        if (event.pointerType === 'mouse') setOpen(true)
+        if (event.pointerType === 'mouse') {
+          clearCloseTimer()
+          setOpen(true)
+        }
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === 'mouse' && !pinned.current) setOpen(false)
+        if (event.pointerType !== 'mouse' || pinned.current) return
+        const nextTarget = event.relatedTarget
+        if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+        scheduleMouseClose()
       }}
       onBlur={(event) => {
         // 焦点移出整棵子树（Tab 走开）时收起；面板内的移动不算
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          pinned.current = false
-          setOpen(false)
-        }
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close(false)
       }}
     >
       <a
@@ -181,58 +203,60 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
       </a>
 
       {open ? (
-        <div
-          id={panelId}
-          onKeyDown={handlePanelKeyDown}
-          className="absolute top-full left-0 z-50 mt-2 w-[min(17rem,calc(100vw-2rem))] overflow-hidden border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
-        >
-          <ul className="max-h-[min(60vh,22rem)] overflow-y-auto p-1.5">
-            <li>
-              <Link
-                href={group.href}
-                data-nav-item
-                aria-current={allActive ? 'page' : undefined}
-                onClick={() => close(false)}
-                className={cn(
-                  'text-small block rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
-                  allActive
-                    ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                    : 'text-[var(--text-heading)]',
-                )}
-              >
-                {messages[group.allLabel]}
-              </Link>
-            </li>
+        <div className="absolute top-full left-0 z-50 w-[min(17rem,calc(100vw-2rem))] pt-2">
+          <div
+            id={panelId}
+            onKeyDown={handlePanelKeyDown}
+            className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
+          >
+            <ul className="max-h-[min(45vh,16rem)] overflow-y-auto p-1.5">
+              <li>
+                <Link
+                  href={group.href}
+                  data-nav-item
+                  aria-current={allActive ? 'page' : undefined}
+                  onClick={() => close(false)}
+                  className={cn(
+                    'text-small block rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
+                    allActive
+                      ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                      : 'text-[var(--text-heading)]',
+                  )}
+                >
+                  {messages[group.allLabel]}
+                </Link>
+              </li>
 
-            {group.items.map((item) => {
-              const itemActive = isItemActive(item.href)
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    data-nav-item
-                    aria-current={itemActive ? 'page' : undefined}
-                    onClick={() => close(false)}
-                    title={item.label}
-                    className={cn(
-                      'text-small block truncate rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)]',
-                      itemActive
-                        ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+              {group.items.map((item) => {
+                const itemActive = isItemActive(item.href)
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      data-nav-item
+                      aria-current={itemActive ? 'page' : undefined}
+                      onClick={() => close(false)}
+                      title={item.label}
+                      className={cn(
+                        'text-small block truncate rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)]',
+                        itemActive
+                          ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]',
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
 
-          {group.status !== 'ok' ? (
-            <p className="text-meta border-t border-dashed border-[var(--edge)] px-3 py-2.5 text-[var(--text-tertiary)]">
-              {messages[group.status === 'error' ? group.errorLabel : group.emptyLabel]}
-            </p>
-          ) : null}
+            {group.status !== 'ok' ? (
+              <p className="text-meta border-t border-dashed border-[var(--edge)] px-3 py-2.5 text-[var(--text-tertiary)]">
+                {messages[group.status === 'error' ? group.errorLabel : group.emptyLabel]}
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

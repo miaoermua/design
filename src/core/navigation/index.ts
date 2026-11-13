@@ -23,9 +23,9 @@ export interface NavItem {
 /**
  * 主导航
  *
- * 结构上刻意保持扁平：文章 / 日记 / 探索 / 友链 / 页面 / 关于。
- * 其中文章、日记、页面在顶栏展开成目录型选择器（见 `NavGroup`），
- * 其余仍是普通链接。
+ * 配置仍保持扁平：文章 / 日记 / 探索 / 友链 / 页面；首页由顶栏单独提供，
+ * 页面组在界面中排在文章与日记之前。文章、日记、页面展开成目录型选择器，
+ * 其余仍是普通链接。关于页保留路由，但不作为独立顶栏入口。
  *
  * 「归档」与「标签」合并为「探索」：两者都是「按某个维度找到文章」，
  * 并列成两个顶栏入口会让导航退化成资源清单。合并只改入口，
@@ -49,7 +49,6 @@ const ALL_NAV: NavItem[] = [
   },
   { href: '/friends', label: 'nav.friends', feature: 'friends', matchPrefixes: ['/friends'] },
   { href: '/pages', label: 'nav.pages', feature: 'pages', matchPrefixes: ['/pages'] },
-  { href: '/about', label: 'nav.about', feature: 'about', matchPrefixes: ['/about'] },
 ]
 
 /** 只返回已启用模块的导航项 */

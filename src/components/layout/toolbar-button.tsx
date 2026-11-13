@@ -24,18 +24,24 @@ interface ToolbarButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * （focus-visible 时同样显示，否则纯键盘用户永远看不到提示）。
  * 移动端不显示 Tooltip——那里没有 hover 语义，`aria-label` 已经够了。
  */
-export function ToolbarButton({ label, children, active, className, ...props }: ToolbarButtonProps) {
+export function ToolbarButton({
+  label,
+  children,
+  active,
+  className,
+  ...props
+}: ToolbarButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       className={cn(
-        'group/tt relative flex size-9 items-center justify-center rounded-full',
+        'group/tt relative flex size-9 items-center justify-center rounded-full border border-[var(--edge)] bg-[var(--surface-raised)]',
         'transition-colors duration-[var(--duration-fast)]',
-        'outline-none focus-visible:outline focus-visible:outline-[var(--focus-ring-width)] focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)]',
+        'outline-none focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]',
         active
-          ? 'bg-[var(--accent-wash)] text-[var(--accent-strong)]'
+          ? 'border-[var(--accent-line)] bg-[var(--accent-wash)] text-[var(--accent-strong)]'
           : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
         // 移动端点击区域放大到 40px，桌面保持 36px 的克制尺寸
         'max-sm:size-10',
@@ -47,9 +53,9 @@ export function ToolbarButton({ label, children, active, className, ...props }: 
       <span
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute top-[calc(100%+0.5rem)] left-1/2 z-10 -translate-x-1/2',
-          'hidden whitespace-nowrap rounded-[var(--radius-xs)] border border-[var(--edge)]',
-          'bg-[var(--surface-raised)] px-2 py-1 text-meta text-[var(--text-secondary)]',
+          'pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-10 -translate-x-1/2',
+          'hidden rounded-[var(--radius-xs)] border border-[var(--edge)] whitespace-nowrap',
+          'text-meta bg-[var(--surface-raised)] px-2 py-1 text-[var(--text-secondary)]',
           'shadow-[var(--shadow-pop)]',
           // 只在桌面端显示：触屏没有 hover，且空间紧张
           'sm:group-hover/tt:block sm:group-focus-visible/tt:block',
@@ -64,11 +70,7 @@ export function ToolbarButton({ label, children, active, className, ...props }: 
 /** 工具组容器：间距与分隔只在这里定义，按钮本身不关心相邻元素 */
 export function ToolbarGroup({ children }: { children: ReactNode }) {
   return (
-    <div
-      className="flex items-center gap-0.5 sm:gap-1"
-      role="group"
-      aria-label="站点工具"
-    >
+    <div className="flex items-center gap-0.5 sm:gap-1" role="group" aria-label="站点工具">
       {children}
     </div>
   )
