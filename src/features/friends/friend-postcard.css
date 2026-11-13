@@ -1,0 +1,469 @@
+/**
+ * Folio — 友链明信片卡（Postcard & Stamp）
+ *
+ * 只服务 `/friends` 列表里的 `.friend-postcard`：一张暖纸明信片 + 右上角一枚
+ * 独立齿孔邮票 + 压在邮票左下角与纸面交界处的骑缝日戳。
+ *
+ * 归属：这是单页组件样式，不属于站点级设计系统，所以放在 feature 目录、
+ * 由 `src/app/globals.css` 顶部 `@import` 进来；不新增 Token，
+ * 只消费 `tokens.css` 的语义别名（`--surface-*` / `--text-*` / `--edge*` / `--shadow-*`）。
+ *
+ * 结构（DOM 见 `friend-card.tsx`）：
+ *   .friend-postcard              卡片盒子：两列栅格 + 固定高度 + overflow: hidden
+ *   ├── __paper                   纸面：暖纸底 + 自建纸纹 + 发丝边 + 投影
+ *   ├── __stamp                   右上角邮票：方形齿孔蒙版 + 轻投影
+ *   │   ├── __stamp-paper         纸边：齿孔 mask + 比卡面亮一档的纸色
+ *   │   └── __stamp-inner         画面区：模糊底 __glow + 清晰圆头像 __portrait
+ *   ├── __mark                    骑缝日戳：绝对定位，圆底压出卡边后被裁掉
+ *   └── __body                    左列文字：名称 __title + 简介 __desc
+ *
+ * 层级固定：纸面 0 < 文字 1 < 邮票 2 < 日戳 3。文字带 z-index 是必需的 ——
+ * 纸面是 absolute + z-index: 0 的装饰层，静态文字若不提层会被它整片盖住。
+ *
+ * 尺寸三件套全由 `.friend-postcard` 上的自定义属性驱动，改尺寸只动变量：
+ *   --pc-stamp   邮票边长      --pc-mark  日戳直径
+ *   --pc-mark-ox 日戳向左探出邮票的量，同时受「≤ --pc-gap 才不压文字」约束
+ *   --pc-mark-dy 日戳圆心相对邮票下沿的偏移（正数上移、负数下移）
+ * 这三项再加卡片高度共同决定日戳的落点，改任意一项都要复核三条硬约束：
+ * 圆左缘不越文字右缘、圆心与主头像圆心的距离 ≥ 两半径之和、圆顶仍咬住邮票下沿。
+ * 名称与简介各最多两行后省略，长英文 / 长 URL / 连续数字一律断行，不靠缩字号规避溢出。
+ */
+
+.friend-postcard {
+  /* 卡片宽度固定 312px。必须写成绝对值，不能靠 width:100% 让父级来决定 ——
+     父级 <li> 在 `justify-items-center` 下会收缩到内容宽，100% 于是变成
+     循环依赖：长站名的卡被撑到 19.5rem，短站名的卡只剩内容宽，
+     几张信封并排时宽窄不一。锁定后所有卡片同宽同高，栅格才是齐的。 */
+  --pc-w: 19.5rem;
+  /* 横向与上下的留白分开：上下压到 6px，邮票整体上移，把下方的纸面让给日戳 */
+  --pc-pad: 1rem;
+  --pc-pad-block: 0.375rem;
+  /* 邮票 96px；日戳 76px。邮票占 200–296 / 6–102，主头像 72px 居中于画面区、
+     圆心 (248, 54)、半径 36；日戳圆心由 --pc-mark-ox / --pc-mark-dy 钉在 (202, 118)，
+     两心相距 √(46² + 64²) ≈ 78.8px > 36 + 38 = 74，只压模糊底、不盖主图。 */
+  --pc-stamp: 6rem;
+  --pc-mark: 4.75rem;
+  /* 日戳左缘与文字区右缘相切（都在 x = 164）：36px 的探出量让圆真正跨在
+     邮票左缘与纸面之间，不是排在邮票下方 */
+  --pc-mark-ox: 2.25rem;
+  /* 负数 = 圆心沉到邮票下沿以下 16px：圆心 y = 118、圆底 156 越过卡底 144，
+     多出的 12px 墨迹被裁掉，像真的压出了纸边；圆顶 80 仍咬住票面 22px，骑缝成立 */
+  --pc-mark-dy: -16px;
+  /* 列间距：留出日戳左探的空间，同时不把文字挤成一条缝 */
+  --pc-gap: 2.25rem;
+  /* 纸纹的墨色：暖灰墨 × **暖纸底**（--surface，不是 --surface-lift）。
+     混的是 --surface-lift（纯白）时，颗粒会把纸的暖调冲淡 —— 满屏细砂盖在
+     米色纸上一平均，色温就往中性灰拉，眼睛读成「偏蓝」。换成同样带暖调的
+     --surface 之后，颗粒只压亮度、不改色温，纸是白的，灰不是发青的灰。
+     刻意避开带青蓝的 --text-heading（#344f58），那是标题色，铺满整张会成蓝雾。
+     亮色：以正文墨为主、掺暖纸；暗色在文件末尾覆盖成暖白。 */
+  --pc-grain-ink: color-mix(in oklab, var(--text-primary) 46%, var(--surface));
+  /* 纸纹：明信片自带，不复用全站的 --material-grain-image —— 那张图是 240px 的
+     细噪点、SVG 内 opacity 只有 0.05，贴到 312px 宽的小卡上被进一步压平，
+     完全读不出纸质。
+     试过三条错路，都记在这里免得再走一遍：
+       ① 单纯高频噪声（baseFrequency 0.7 以上）—— 1px 级的等大细点，
+          满屏均匀，眼睛读成「数字噪点」。
+       ② 两组斜线叠纤维 —— 交叉处形成菱形网格，读成「织物」。
+       ③ 低频大团块 + 大面积模糊 —— 出现一朵朵云，纸不像纸，像阴天。
+     现在的做法是**两层不同频率相乘**，这是纸与云的分界：
+       底噪 baseFrequency 0.62（约 1.6px）：真实纸张的颗粒，是「纸」的主要质感。
+       调制 baseFrequency 0.035（约 28px）：只用来让上面那层颗粒**疏密不均** ——
+         有的地方颗粒密、有的地方稀。读者不会看到「云」，只会觉得纸面不平整。
+     两层用 feComposite arithmetic k1=1 **相乘**（不是相加），
+     结果是一层有呼吸感的细砂，而不是均匀噪点、也不是云团。
+     输出只保留 alpha（RGB 恒为 0），颜色在 CSS 里另给 —— 见 __paper::after。 */
+  --pc-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='3' seed='4' stitchTiles='stitch' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.15 0 0 0 0.06' result='fA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='12' stitchTiles='stitch' result='coarse'/%3E%3CfeColorMatrix in='coarse' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0.45' result='cA'/%3E%3CfeComposite in='fA' in2='cA' operator='arithmetic' k1='1' k2='0' k3='0' k4='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* 小邮票的齿孔更细：齿距 6px、凹口 1.9px */
+  --perf-step: 6px;
+  --perf-hole: 1.9px;
+  --perf-shift: 0px;
+  /* 齿孔蒙版：四条边各一层 radial-gradient 取交集，得到完整等距的小半圆，
+     不是撕口、也不缺角；最后一层 linear-gradient 把中间填实。
+     它是 alpha 蒙版，颜色只取不透明与透明，不参与调色。 */
+  --stamp-mask:
+    radial-gradient(
+        circle at 50% 0,
+        transparent calc(var(--perf-hole) - 0.5px),
+        black var(--perf-hole)
+      )
+      var(--perf-shift) 0 / var(--perf-step) 100% repeat-x,
+    radial-gradient(
+        circle at 50% 100%,
+        transparent calc(var(--perf-hole) - 0.5px),
+        black var(--perf-hole)
+      )
+      calc(var(--perf-shift) + var(--perf-step) / 2) 0 / var(--perf-step) 100% repeat-x,
+    radial-gradient(
+        circle at 0 50%,
+        transparent calc(var(--perf-hole) - 0.5px),
+        black var(--perf-hole)
+      )
+      0 var(--perf-shift) / 100% var(--perf-step) repeat-y,
+    radial-gradient(
+        circle at 100% 50%,
+        transparent calc(var(--perf-hole) - 0.5px),
+        black var(--perf-hole)
+      )
+      0 calc(var(--perf-shift) + var(--perf-step) / 2) / 100% var(--perf-step) repeat-y,
+    linear-gradient(black, black);
+
+  position: relative;
+  display: grid;
+  /* 左列文字 / 右列邮票；邮票只占右上角，文字整列由自己垂直居中 */
+  grid-template-areas: 'body stamp';
+  grid-template-columns: minmax(0, 1fr) var(--pc-stamp);
+  grid-template-rows: 1fr;
+  gap: 0 var(--pc-gap);
+  /* 宽度锁死：所有卡片一律 --pc-w，不随站点名称长短变化。
+     之前写的是 width:100% + max-width，而父级 <li> 在 `justify-items-center`
+     下会收缩到内容宽 —— 100% 于是变成循环依赖，长标题的卡被撑宽、
+     短标题的卡只有内容宽，「信封宽度不一致」就是这么来的。
+     现在直接给绝对值，margin-inline:auto 负责在列内居中。
+     窄屏只在极窄视口（<360px）才让位给屏幕宽度，保证不溢出。 */
+  width: var(--pc-w);
+  margin-inline: auto;
+  max-width: 100%;
+  /* 横向明信片：312 × 144 ≈ 2.17:1。
+     高度写死，任何站点名称长度都不会改变单张卡片的比例。
+     邮戳的圆底比卡底低 12px，被 overflow: hidden 裁掉，形成压出纸边的墨迹。 */
+  height: 9rem;
+  padding: var(--pc-pad-block) var(--pc-pad);
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+/* 明信片纸面：暖白纸 + 极轻的顶部受光 + 发丝边，只有一层极轻的投影。
+   底色在 --surface-raised（米白）与 --surface-lift（纯白）之间取，
+   纯白占 45% —— 卡片本身要读成「白纸」，只剩一点点米调托住暖纸的气质；
+   再压就更接近页面底色，白与米并排时反而显出一层青灰。
+   **不掺 --surface-sunk**：那一级在暗色下是更冷的深墨（#101315），
+   掺进去会把整张卡往青色推，正是之前「纸偏蓝」的第二个来源。 */
+.friend-postcard__paper {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: color-mix(in oklab, var(--surface-raised) 55%, var(--surface-lift));
+  background-image: linear-gradient(
+    156deg,
+    color-mix(in oklab, var(--surface-lift) 30%, transparent) 0%,
+    transparent 52%
+  );
+  border: 1px solid color-mix(in srgb, var(--edge-strong) 60%, var(--edge));
+  box-shadow: var(--shadow-raise);
+}
+
+/* 纸纹颗粒：噪声只当遮罩，颜色由 --pc-grain-ink 给。
+   **不能用 --text-heading**：那是青蓝的标题色（#344f58），铺到整张纸上会把纸
+   染成蓝调，暗色模式下更明显。这里取 --text-primary（暖灰墨）+ --surface
+   的暖调混色 —— 落在暖灰上，不带色相，只压亮度。
+   opacity 0.26（原 0.32，减两成）：颗粒层的平均墨量从约一成半降到一成二，
+   近看仍是细砂，退到一个手臂的距离就只剩「纸不平」的感觉，不再是一层噪点壳。 */
+.friend-postcard__paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--pc-grain-ink);
+  -webkit-mask-image: var(--pc-grain);
+  mask-image: var(--pc-grain);
+  -webkit-mask-size: 400px;
+  mask-size: 400px;
+  opacity: 0.26;
+  pointer-events: none;
+}
+
+/* 独立小邮票：固定在右上角，明显小于明信片本身 */
+.friend-postcard__stamp {
+  position: relative;
+  z-index: 2;
+  grid-area: stamp;
+  display: block;
+  width: var(--pc-stamp);
+  height: var(--pc-stamp);
+  justify-self: end;
+  align-self: start;
+  /* drop-shadow 跟随齿孔后的 alpha 形状，凹口边缘也有纸的厚度 */
+  filter: drop-shadow(0 1px 2px rgb(var(--shadow-color) / 0.22));
+}
+
+/* 邮票纸边：齿孔蒙版 + 比明信片亮一档的纸色 + 纸纤维，
+   凹口处露出的是卡片的纸，读起来像「一张撕下来贴上去的纸」而不是描边虚线。
+   纸色取 --surface-lift（亮色下近白、暗色下比卡面亮一档），再压一圈墨线内缘，
+   两种主题下齿孔的轮廓都成立。 */
+.friend-postcard__stamp-paper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 1px;
+  /* 亮色下是比卡面略亮一档的暖白纸边；暗色在下面用 data-theme 覆盖，
+     两种主题都靠纸色差读出齿孔，组件层不出现色值字面量 */
+  background-color: color-mix(in oklab, var(--surface-lift) 88%, var(--surface-raised));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-heading) 22%, transparent);
+  -webkit-mask: var(--stamp-mask);
+  mask: var(--stamp-mask);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* 邮票内的画面区：从齿孔边缘再让出一圈纸边，画面满铺。
+   96px 的邮票让出 4px 纸边，画面区 88px。 */
+.friend-postcard__stamp-inner {
+  position: absolute;
+  inset: 0.25rem;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  background-color: var(--surface-sunk);
+}
+
+/* 模糊底：同一张头像只铺满画面区本身，不向外扩张；
+   缩放只留 1.05 盖住模糊后的软边，不让模糊色块漫到整枚邮票 */
+.friend-postcard__glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(7px) saturate(1.12);
+  opacity: 0.86;
+  transform: scale(1.05);
+}
+
+/* 没有头像时的兜底底色：一块从主题色渐隐到画面区的纸色，不是灰块 */
+.friend-postcard__glow-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(
+    150deg,
+    color-mix(in oklab, var(--accent-soft) 42%, var(--surface-sunk)) 0%,
+    var(--surface-sunk) 82%
+  );
+}
+
+/* 清晰主头像（圆）：压在模糊底中央，带纸边与主题色描边，是这枚邮票的主体。
+   72px 在 88px 的画面区里占八成，头像本身就是邮票的画面，模糊底只留一圈氛围。 */
+.friend-postcard__portrait {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  padding: 2px;
+  overflow: hidden;
+  border: 2px solid var(--accent-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-lift);
+  transform: translate(-50%, -50%);
+}
+
+.friend-postcard__face {
+  border-radius: var(--radius-pill);
+}
+
+/* 无头像时的首字：与圆头像同尺寸的圆形底，不出现方形色块 */
+.friend-postcard__initial {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-sunk);
+  color: var(--text-tertiary);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+}
+
+/* 骑缝日戳：圆心落在邮票左下角 —— --pc-mark-ox 让圆跨过邮票左缘，
+   --pc-mark-dy 取负值让圆心沉到邮票下沿以下。76px 的圆纵向有 18px 咬住票面，
+   横向另有 36px 探到票左的纸面上，读起来是「跨在交界处」，不是「排在邮票下方」。
+   圆底 158 比卡底 144 低 14px，多出的墨迹被根节点 overflow: hidden 裁掉，
+   像真的压出了纸边；左缘与文字区右缘相切，不侵入名称与简介；
+   圆心与主头像圆心相距 √(46² + 68²) ≈ 82.1px（> 36 + 38），只压模糊底、不盖 72px 主图。
+   z-index 高于邮票，像贴完票才盖上去。 */
+.friend-postcard__mark {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--pc-pad-block) + var(--pc-stamp) - var(--pc-mark-dy) - var(--pc-mark) / 2);
+  right: calc(var(--pc-pad) + var(--pc-stamp) + var(--pc-mark-ox) - var(--pc-mark));
+  width: var(--pc-mark);
+  height: var(--pc-mark);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.friend-postcard__mark svg {
+  width: 100%;
+  height: auto;
+}
+
+/* 左侧文字块：名称与简介紧挨着，整块在卡片高度内垂直居中；
+   不被右侧邮票挤到一列窄缝里，也不再一个贴顶、一个贴底。 */
+.friend-postcard__body {
+  position: relative;
+  z-index: 1;
+  grid-area: body;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+/* 站点名称：最多两行 */
+.friend-postcard__title {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-heading);
+}
+
+/* 简介：跟在名称下方，最多两行 */
+.friend-postcard__desc {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* 名称与简介：自然换行、最多两行省略；长英文 / 长 URL / 连续数字与无空格字符
+   一律允许断行，不撑破卡片，也不靠缩小字号来规避溢出。 */
+.friend-postcard__title,
+.friend-postcard__desc {
+  overflow-wrap: anywhere;
+}
+
+/* 邮戳是印在纸上的墨迹，不是第二个可点控件 */
+.friend-postmark {
+  --postmark-rotate: 0deg;
+  --postmark-opacity: 0.82;
+  opacity: var(--postmark-opacity);
+  transform: rotate(var(--postmark-rotate));
+  transform-origin: 50% 50%;
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+/* 弧形字用正文字体的小字号；字号是 SVG 内部单位，随邮戳尺寸等比缩放 */
+.friend-postmark text {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+}
+
+.friend-postcard--link:hover {
+  transform: translateY(-2px);
+}
+
+.friend-postcard--link:hover .friend-postcard__paper {
+  box-shadow: var(--shadow-pop);
+}
+
+.friend-postcard--link:focus-visible {
+  border-radius: var(--radius-xs);
+  outline-offset: 4px;
+}
+
+/* 暗色下 --surface-lift 只比卡面亮一档，齿孔的纸色差会糊掉；
+   把邮票纸边往正文墨色里掺一档提亮，暗色也能看出这是一张撕下来贴上去的纸 */
+[data-theme='dark'] .friend-postcard__stamp-paper {
+  background-color: color-mix(in oklab, var(--surface-lift) 78%, var(--text-primary));
+}
+
+/* 暗色下的纸纹墨色：必须换成正向的暖白提亮。
+   若继续沿用亮色那档暖灰墨，暗底上叠深色 = 看不见纹理；
+   若改用 --text-heading，纸面会被染成青蓝 —— 暗色的 --text-heading 是
+   #c6d7d9 的浅青，铺满整张卡就是一层蓝雾，这正是「深色模式看更蓝」的原因。
+   这里改用 --text-primary（暗色下是 #d9dad2 的暖白）× 一点纸色，
+   提亮颗粒、不带色相，暗色下的纸因此是「深色纸」而不是「蓝色纸」。 */
+[data-theme='dark'] .friend-postcard {
+  --pc-grain-ink: color-mix(in oklab, var(--text-primary) 76%, var(--surface-raised));
+}
+
+/* 暗色纸面：把冷调深墨抬成「深灰纸」。
+   暗色 Token 是有意偏冷的（--surface-raised 为 #1b1f21，B 比 R 高 6），
+   整卡铺开就是一层青灰，读不出纸的暖。这里掺一成 --text-primary
+   （#d9dad2，B 反而比 R 低），一边把底抬亮一档、一边把青味压回去 ——
+   卡片从「蓝黑」变成「深灰」，与页面底色 #15181a 也拉开了层次。
+   只掺一成：再多卡片就会跳出暗色主题，变成一块中等灰的浮层。 */
+[data-theme='dark'] .friend-postcard__paper {
+  background-color: color-mix(in oklab, var(--surface-raised) 90%, var(--text-primary));
+}
+
+/* 暗色的颗粒比亮色多留 2 个百分点：颗粒在这里是「提亮」不是「压暗」，
+   跟亮色一起减到 0.26 会把整张纸拉回去、重新显出冷灰。 */
+[data-theme='dark'] .friend-postcard__paper::after {
+  opacity: 0.28;
+}
+
+/* 窄屏改成一列一张（网格在 friends/page.tsx 里切换），卡片宽度回到 ~312px，
+   于是不必再为了「一行塞两张」把邮票与日戳压成 44/40px 的小图标：
+   这里只比桌面收一档（邮票 88px、日戳 68px、卡高 140px），版式与桌面同构。
+   纵向可分配空间：邮票下沿 94、卡底 140，日戳 68 —— 「咬票 + 出底」合计 22px，
+   这里对半分：圆心 y = 82，圆顶 48 咬住票面 12px（骑缝成立），
+   圆底 150 越过卡底 10px 被裁掉（桌面那套「压出纸边」在手机上保留）。
+   圆心 (212, 116) 与主头像圆心 (254, 48) 相距 √(42² + 68²) ≈ 79.9px，
+   大于 32 + 34 = 66，只压模糊底不盖主图。 */
+@media (max-width: 43.75rem) {
+  .friend-postcard {
+    --pc-pad: 0.875rem;
+    --pc-pad-block: 0.375rem;
+    --pc-stamp: 5.5rem;
+    --pc-mark: 4.25rem;
+    --pc-mark-ox: 2rem;
+    --pc-mark-dy: -22px;
+    --pc-gap: 2rem;
+    --perf-step: 5px;
+    --perf-hole: 1.7px;
+    height: 8.75rem;
+  }
+
+  .friend-postcard__stamp-inner {
+    inset: 0.21875rem;
+  }
+
+  .friend-postcard__portrait {
+    width: 4rem;
+    height: 4rem;
+    border-width: 1.5px;
+  }
+
+  .friend-postcard__initial {
+    font-size: 0.875rem;
+  }
+
+  .friend-postcard__body {
+    gap: 0.25rem;
+  }
+
+  .friend-postcard__title {
+    font-size: 0.9375rem;
+  }
+
+  .friend-postcard__desc {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friend-postcard,
+  .friend-postmark {
+    transition: none;
+  }
+
+  .friend-postcard--link:hover {
+    transform: none;
+  }
+}

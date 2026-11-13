@@ -6,20 +6,24 @@
 > **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
 >
 > **2026-11-13 视觉收敛**：导航入口标签成为唯一的菜单触发器（移除旁挂省略号按钮与装饰箭头，触屏改为「先展开、再导航」两段式），新增 `.glass-control` 让工具组四个圆按钮共用一套冰面参数，页脚收敛为两行并统一 `.footer-sep`。同步 §1、§5.2、§7、§9、§14.5。
+>
+> **2026-11-13 友链卡片改为明信片 + 独立邮票**：`.friend-postcard` 取代原来的整卡邮票，卡片是暖纸明信片（桌面 312 × 144 ≈ 2.17:1，窄屏 312 × 140 ≈ 2.23:1，高度写死；桌面一行两枚、手机一列一张），右上角贴一枚 96px（窄屏 88px）的方形齿孔邮票（齿距 6px / 凹口 1.9px，四层 radial-gradient 取交集），邮票里是「同源模糊底 + 72px（窄屏 64px）圆形清晰头像」；日戳 76px（窄屏 68px），圆心落在邮票左下角，圆跨过邮票左缘与下缘形成骑缝，圆底 156 越过卡底 144、多的 12px 由 `overflow: hidden` 裁掉形成压边效果，且与 72px 主头像圆心相距 78.8px 只压模糊底、不盖主图；纸面用**卡片自建纸纹**（`--pc-grain`：0.62 的细颗粒 × 0.035 的疏密调制，`feComposite k1=1` 相乘），不再复用全站 `--material-grain-image`；纹理色走 `--pc-grain-ink` 的中性暖灰 / 暖白，刻意避开带青蓝的 `--text-heading`，纸底也不掺暗色下偏冷的 `--surface-sunk`，因此两种主题都不发蓝，也不会出现「一朵朵云」或斜纹网格。**卡片不再使用 `.glass-control`**，冰面恢复为只服务导航与浮标的材质，§1 的例外条款随之失效。样式从 `globals.css` 抽到 `src/features/friends/friend-postcard.css`，由 `globals.css` 顶部 `@import` 汇总。同步 §1、§2、§7。
+>
+> **2026-11-14 明信片宽度锁定 + 纸色转白 + 纸纹减量**：① 宽度从 `width: 100%` + `max-width` 改为绝对值 `width: var(--pc-w)`（19.5rem = 312px）配 `margin-inline: auto`。原因是父级 `<li>` 在 `justify-items-center` 下会收缩到内容宽，百分比宽度成了循环依赖 —— 长站名的卡被撑到上限、短站名的卡只剩内容宽，几张信封并排宽度不一致；现在所有卡片一律同宽同高，`max-width: 100%` 只负责极窄视口不溢出。日戳左缘与文字右缘的相切关系也不受影响：两侧都以 `-pad - stamp - gap` 从各自方向对齐，与卡片宽度无关。② 纸色由「偏蓝」转「偏白」：纸底 `--surface-raised` 84% × `--surface-lift` 16% 改为 **55% × 45%**（读成白纸，只留一点米调托住暖纸气质）；纸纹墨色 `--pc-grain-ink` 从 `--text-primary` 58% × `--surface-lift`（纯白）改为 **46% × `--surface`**（暖纸底）—— 纯白会把颗粒的中性偏冷显出来，满屏细砂平均后整张纸发青；暗色下另给 `.friend-postcard__paper` 掺一成 `--text-primary`，把冷调深墨 `#1b1f21` 抬成深灰纸。合成后实测：亮色 `#f0f0eb`（B−R = −5，仍偏暖）、暗色 `#3b3f3f`（B−R = +4，从 +6 收窄）。③ 纸纹 `opacity` 由 0.32 降到 **0.26**（暗色 0.28，因为暗色下颗粒是提亮不是压暗），有效覆盖率由 15.2% 降到 12.4%，减量两成，颗粒仍可辨但不再像一层噪点壳。同步 §7。
 
 ---
 
 ## 1. 设计语言
 
-| 层次                       | 占比 | 承担什么                         | 材质                       |
-| -------------------------- | ---- | -------------------------------- | -------------------------- |
-| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光   |
-| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）               |
+| 层次                       | 占比 | 承担什么                         | 材质                        |
+| -------------------------- | ---- | -------------------------------- | --------------------------- |
+| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光    |
+| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）                |
 | 冰面 Frozen Glass          | 10%  | 导航条、工具浮标、浮层           | 半透明冰川色 + 14–24px 模糊 |
 
 三条不可越界：
 
-1. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。
+1. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。友链明信片卡是这条规则的验证案例：它曾经用 `.glass-control` 做邮票纸面，改成「明信片 + 独立邮票」后**已完全退出冰面**，纸面改由暖纸底色 + 纸纤维 + 发丝边构成。内容卡片不得再以任何理由引入玻璃。
 2. 主题色（Glacier）承担交互识别，**不做大面积填充**；正文永远是墨色。
 3. 装饰必须有理由：无统计卡片、无渐变按钮、无位移悬浮、无霓虹。
 
@@ -33,7 +37,11 @@ src/design-system/styles/fonts.css       ← 只声明 @font-face（自托管中
 src/design-system/styles/material.css    ← 材质实现（颗粒、环境光、纸面、冰面）
 src/design-system/styles/{motion,prose,media,footnotes,mentions,containers}.css
 src/app/globals.css                      ← base 层：元素默认样式 + 少量结构化类
+src/features/*/[component].css           ← 组件专属样式（当前：friends/friend-postcard.css），
+                                           由 globals.css 顶部 @import 汇总引入
 ```
+
+组件专属样式不进 `design-system/styles/`：那一层是站点级材质与排版，可整体关闭；单个页面/组件的规则留在自己的 feature 目录，一个组件一个文件，`globals.css` 只做入口汇总。
 
 三层结构：
 
@@ -75,7 +83,7 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | 主题洗 | `--color-accent-wash`   | `#e4ecec` | 选中底、标签底、`::selection`                                                                                                                                                                                                                                                   |
 | 主题线 | `--color-accent-line`   | `#b7cbcd` | kicker 前短横线、引线                                                                                                                                                                                                                                                           |
 | 危险   | `--color-danger`        | `#a4503f` | `.md-callout--error/danger`、`ErrorState` 左边线（`containers.css:39`、`error-state.tsx:17`）                                                                                                                                                                                   |
-| 警告   | `--color-warning`       | `#7d5f28` | `.md-callout--warning/caution`（`containers.css`）；比 4D 基线深一档，保证 8% 底纹上标题 ≥4.5:1                                                                                                                                                                                  |
+| 警告   | `--color-warning`       | `#7d5f28` | `.md-callout--warning/caution`（`containers.css`）；比 4D 基线深一档，保证 8% 底纹上标题 ≥4.5:1                                                                                                                                                                                 |
 | 成功   | `--color-success`       | `#4a6b52` | `.md-callout--success/tip`、`.md-details__summary` 下边线（`containers.css:26`、`containers.css:163`）                                                                                                                                                                          |
 | 信息   | `--color-info`          | `#4a6a7c` | `.md-callout--info/important`（`containers.css:20`）                                                                                                                                                                                                                            |
 
@@ -201,21 +209,21 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 
 ## 6. 版心 / 间距 / 圆角 / 阴影 / 动效
 
-| 项       | Token                                 | 值                                  | 说明                                                     |
-| -------- | ------------------------------------- | ----------------------------------- | -------------------------------------------------------- |
-| 正文版心 | `--container-prose`                   | 40rem                               | ≈36 汉字/行 @17px                                        |
-| 页面版心 | `--container-wide`                    | 68rem                               | 首页、列表页                                             |
-| 窄栏     | `--container-narrow`                  | 30rem                               | 搜索空态等                                               |
-| 页边距   | `--spacing-gutter` / `-lg`            | 1.25rem / 2rem                      | `<640` / `≥640`                                          |
-| 区块间距 | `--spacing-section`                   | 5rem                                | 首页各 section 上下                                      |
-| 区块内部 | `--spacing-stack`                     | 2rem                                | 标题与内容之间                                           |
-| 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md                                     |
-| 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                              |
-| 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                                  |
-| 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔              |
-| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | 页面 / 面板过渡与首页内容淡入                            |
-| 缓动     | `--ease-out-soft`                     | `cubic-bezier(0.22, 0.61, 0.36, 1)` | 默认，全部 `transition`/`animation` 用它                 |
-| 缓动     | `--ease-in-out-soft`                  | `cubic-bezier(0.4, 0, 0.2, 1)`      | **当前无消费者**，见 §14.8                               |
+| 项       | Token                                 | 值                                  | 说明                                       |
+| -------- | ------------------------------------- | ----------------------------------- | ------------------------------------------ |
+| 正文版心 | `--container-prose`                   | 40rem                               | ≈36 汉字/行 @17px                          |
+| 页面版心 | `--container-wide`                    | 68rem                               | 首页、列表页                               |
+| 窄栏     | `--container-narrow`                  | 30rem                               | 搜索空态等                                 |
+| 页边距   | `--spacing-gutter` / `-lg`            | 1.25rem / 2rem                      | `<640` / `≥640`                            |
+| 区块间距 | `--spacing-section`                   | 5rem                                | 首页各 section 上下                        |
+| 区块内部 | `--spacing-stack`                     | 2rem                                | 标题与内容之间                             |
+| 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md                       |
+| 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                |
+| 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                    |
+| 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔 |
+| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | 页面 / 面板过渡与首页内容淡入              |
+| 缓动     | `--ease-out-soft`                     | `cubic-bezier(0.22, 0.61, 0.36, 1)` | 默认，全部 `transition`/`animation` 用它   |
+| 缓动     | `--ease-in-out-soft`                  | `cubic-bezier(0.4, 0, 0.2, 1)`      | **当前无消费者**，见 §14.8                 |
 
 断点（实测口径）：
 
@@ -233,17 +241,19 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 
 ## 7. 材质层（可整体关闭）
 
-| 类               | 实现                                                                                                                                                                                                                                                                                    | 用量                    |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                                                                                | 全站 1 层，不随内容滚动 |
-| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                                                                         | 全站 1 层               |
-| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                                                                            | 文章/日记详情各 1 个    |
-| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | 仅 `SiteHeader` 胶囊    |
-| `.glass-control` | 同一套 tint/saturate + `--material-glass-alpha-control`（亮 0.88 / 暗 0.82）与 `--material-glass-blur-control`（14px），加发丝边与 `--shadow-raise`；悬停只把遮罩加实一档 | 工具组四个圆形按钮      |
-| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                                                                       | 导航下拉、移动菜单、搜索面板 |
+| 类               | 实现                                                                                                                                                                                                                            | 用量                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                        | 全站 1 层，不随内容滚动      |
+| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                 | 全站 1 层                    |
+| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                    | 文章/日记详情各 1 个         |
+| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | `SiteHeader` 胶囊            |
+| `.glass-control` | 同一套 tint/saturate + `--material-glass-alpha-control`（亮 0.88 / 暗 0.82）与 `--material-glass-blur-control`（14px），加发丝边与 `--shadow-raise`；悬停只把遮罩加实一档                                                       | 工具组四个圆形按钮           |
+| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                               | 导航下拉、移动菜单、搜索面板 |
 
 退化路径：`@supports not (backdrop-filter)` → 实色纸面（`.glass-bar` / `.glass-control`）；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
 `.glass-control` 的激活态（`data-active="true"`）用 `--accent-wash` 实色，是唯一覆盖冰面遮罩的状态色。
+友链明信片的邮戳不属于材质层：它是 SVG 墨迹（`currentColor` + 语义 Token 混色），不加模糊、不加投影，避免变成第二枚玻璃按钮。邮戳允许压过邮票左缘与下缘、也允许盖在模糊底上，圆底还会越过卡底 12px 由根节点 `overflow: hidden` 裁掉（`--pc-mark-ox` / `--pc-mark-dy` 把它定位到 164–240 / 80–156），但不覆盖 72px 主头像（圆心距 78.8px ≥ 36 + 38）—— 这里**没有**齿孔 alpha mask 参与（齿孔 mask 只作用于邮票的 `__stamp-paper`）。双层头像的底层是同一张头像的 `blur()` 副本（组件内 `filter` + 透明度），同样不算材质 Token；邮票纸边的 `drop-shadow` 是组件级细节，不得提升为材质参数。
+明信片的纸面与纸纹同样不进材质层：卡片自建 `--pc-grain`（两层频率相乘）、底色与墨色都在 `friend-postcard.css` 里用语义 Token 混色，**不消费 `--material-grain-*`**。全站材质关掉后这张卡仍是一张完整的暖纸明信片；反过来，改 `--material-grain-opacity` 也不会影响它 —— 两者的颗粒是刻意分开的（全站那张 240px / SVG 内 0.05 不透明度，贴到 312px 小卡上会被压平到看不出纸）。
 **关闭全部材质**：删掉 `globals.css` 顶部对 `material.css` 的 `@import`，站点仍是完整的纸色排版。
 
 ---
@@ -259,28 +269,28 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 
 ## 9. 组件与状态
 
-| 组件                        | 文件                             | 状态                                                                                                      |
-| --------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `SiteHeader`                | `layout/site-header.tsx`         | 悬浮玻璃胶囊；滚动累计隐藏，页首恒显                                                                      |
-| `SiteHeaderClient`          | `layout/site-header-client.tsx`  | 桌面直链 + 目录选择器；移动端首页选择器 + 抽屉；右下工具组挂载点                                          |
-| `NavSelector`               | `layout/nav-selector.tsx`        | 入口标签即菜单触发器（无旁挂按钮、无箭头）；hover 安全三角 180ms、触屏两段式点按、`ArrowDown`/`Escape`   |
-| `ToolbarGroup` / `ToolbarButton` | `layout/toolbar-button.tsx` | 40px 圆形 `.glass-control`；tooltip 仅 hover / focus-visible；激活态 `--accent-wash`                      |
-| `ThemeToggle`               | `layout/theme-toggle.tsx`        | 复用 `ToolbarButton` 的冰面与尺寸，只负责 `data-theme` 与图标                                             |
-| `SiteFooter`                | `layout/site-footer.tsx`         | 左对齐两行：年份 + 衬线名字 + 签名 / Powered by + ICP；`｜` 统一用 `.footer-sep`                          |
-| `Container`                 | `ui/container.tsx`               | `prose / wide / narrow` 三档                                                                              |
-| `PageHeader`                | `ui/page-header.tsx`             | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                       |
-| `ArticleRow`                | `features/articles/...`          | 标题 16→20px，hover 变 `--accent-strong`；日期/分类/阅读数 pill                                           |
-| `ArticleCard`               | 同上                             | 首页主推：图 + 标签 + 32px 衬线标题 + 摘要                                                                |
-| `ReadingProgress`           | `ui/reading-progress.tsx`        | 顶部 1px `--accent` 进度条，`motion-safe` 过渡                                                            |
-| `AISummaryCard`             | `features/ai-summary/...`        | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性 |
-| `Dialog` / `InsightsDialog` | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚 |
-| `Comments`                  | `features/comments/...`          | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件 |
-| `Toc` / `TocList`           | `ui/toc.tsx` / `ui/toc-list.tsx` | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动                             |
-| `ArticleNeighbors`          | `features/articles/...`          | 虚线分隔的上一篇/下一篇，标题 hover 变主题色                                                              |
-| `DiaryDayGroup`             | `features/diaries/...`           | 40px 衬线日号 + `2026.11` + 星期                                                                          |
-| `DiaryEntry`                | 同上                             | 左 60px 时间列；单图 26rem 给足版面，多图退成 3 列缩略                                                    |
-| `Pagination`                | `ui/pagination.tsx`              | 方形页码，当前页实底 `--text-heading`                                                                     |
-| `EmptyState` / `ErrorState` | `ui/*`                           | 虚线框 + 衬线标题 + 一句说明 + 一个出口                                                                   |
+| 组件                             | 文件                                        | 状态                                                                                                                |
+| -------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `SiteHeader`                     | `layout/site-header.tsx`                    | 悬浮玻璃胶囊；滚动累计隐藏，页首恒显                                                                                |
+| `SiteHeaderClient`               | `layout/site-header-client.tsx`             | 桌面直链 + 目录选择器；移动端首页选择器 + 抽屉；右下工具组挂载点                                                    |
+| `NavSelector`                    | `layout/nav-selector.tsx`                   | 入口标签即菜单触发器（无旁挂按钮、无箭头）；hover 安全三角 180ms、触屏两段式点按、`ArrowDown`/`Escape`              |
+| `ToolbarGroup` / `ToolbarButton` | `layout/toolbar-button.tsx`                 | 40px 圆形 `.glass-control`；tooltip 仅 hover / focus-visible；激活态 `--accent-wash`                                |
+| `ThemeToggle`                    | `layout/theme-toggle.tsx`                   | 复用 `ToolbarButton` 的冰面与尺寸，只负责 `data-theme` 与图标                                                       |
+| `SiteFooter`                     | `layout/site-footer.tsx`                    | 左对齐两行：年份 + 衬线名字 + 签名 / Powered by + ICP；`｜` 统一用 `.footer-sep`                                    |
+| `Container`                      | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                        |
+| `PageHeader`                     | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                 |
+| `ArticleRow`                     | `features/articles/...`                     | 标题 16→20px，hover 变 `--accent-strong`；日期/分类/阅读数 pill                                                     |
+| `ArticleCard`                    | 同上                                        | 首页主推：图 + 标签 + 32px 衬线标题 + 摘要                                                                          |
+| `ReadingProgress`                | `ui/reading-progress.tsx`                   | 顶部 1px `--accent` 进度条，`motion-safe` 过渡                                                                      |
+| `AISummaryCard`                  | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性 |
+| `Dialog` / `InsightsDialog`      | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                     |
+| `Comments`                       | `features/comments/...`                     | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件              |
+| `Toc` / `TocList`                | `ui/toc.tsx` / `ui/toc-list.tsx`            | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动                                       |
+| `ArticleNeighbors`               | `features/articles/...`                     | 虚线分隔的上一篇/下一篇，标题 hover 变主题色                                                                        |
+| `DiaryDayGroup`                  | `features/diaries/...`                      | 40px 衬线日号 + `2026.11` + 星期                                                                                    |
+| `DiaryEntry`                     | 同上                                        | 左 60px 时间列；单图 26rem 给足版面，多图退成 3 列缩略                                                              |
+| `Pagination`                     | `ui/pagination.tsx`                         | 方形页码，当前页实底 `--text-heading`                                                                               |
+| `EmptyState` / `ErrorState`      | `ui/*`                                      | 虚线框 + 衬线标题 + 一句说明 + 一个出口                                                                             |
 
 九态检查（任何交互元素都要过一遍）：default / hover / active / focus-visible / selected / disabled / loading / empty / error。焦点统一 `outline: var(--focus-ring); outline-offset: 2px`。
 
@@ -305,12 +315,12 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 
 Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必须与之对齐，不允许为不存在的 DOM 类名保留无意义规则。
 
-| 样式文件                         | 负责范围                                                                                |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
-| `prose.css`                      | `.prose` 正文排版：段落、标题、列表、引用、表格、代码、图片与图注、KaTeX、Mermaid 占位  |
-| `containers.css`                 | Callout / Banner / Details / Spoiler 等块级容器：外壳、图标区、类型配色、折叠与剧透状态 |
-| `media.css`                      | Gallery / Carousel、图片预览层（`.md-preview`）等媒体交互                               |
-| `footnotes.css` / `mentions.css` | 脚注、@提及                                                                             |
+| 样式文件                         | 负责范围                                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `prose.css`                      | `.prose` 正文排版：段落、标题、列表、引用、表格、代码、图片与图注、KaTeX、Mermaid 占位       |
+| `containers.css`                 | Callout / Banner / Details / Spoiler 等块级容器：外壳、图标区、类型配色、折叠与剧透状态      |
+| `media.css`                      | Gallery / Carousel、图片预览层（`.md-preview`）等媒体交互                                    |
+| `footnotes.css` / `mentions.css` | 脚注、@提及                                                                                  |
 | `reading.css`                    | AI 摘要卡、AI 精读窗口（含窗口内的 Markdown 排版）、评论区；只消费语义 Token，不新增全局材质 |
 
 - **Callout 类型配色只有一个实现**：`.md-callout--*` 的左边线与标题色在 `containers.css`；`prose.css` **不得**再出现同名规则，否则两个文件会争夺同一属性、调色时只改一处就静默失效。
@@ -450,13 +460,13 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 现状是 **A/已定案**：`material.css` 头注释（Phase 4B 修正）与实现一致 —— 材质层的 `backdrop-filter` 只出现在 `.glass-*`，另有两处**组件专属**模糊单独记录。
 
-| 材质                                    | 位置                  | 模糊                                              | 参数归属                            |
-| --------------------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------- |
-| `.glass-bar`（导航胶囊）                | `material.css:82-91`  | `--material-glass-blur`：亮 24px / 暗 24px        | 材质 Token                          |
-| `.glass-control`（工具组按钮）          | `material.css:93-112` | `--material-glass-blur-control`：亮暗均 14px      | 材质 Token                          |
-| `.glass-panel`（下拉 / 移动菜单 / 搜索） | `material.css:116-123` | **无模糊**（刻意实色，避免菜单与正文叠字）        | 材质 Token                          |
-| Gallery 翻页按钮               | `media.css:196`      | `blur(6px)` + `color-mix(--surface-raised 88%)` | **组件专属参数**（有意不 Token 化） |
-| 图片预览遮罩 `.md-preview`     | `media.css:233`      | `blur(8px)` + `color-mix(--color-ink 84%)`      | **组件专属参数**（有意不 Token 化） |
+| 材质                                     | 位置                   | 模糊                                            | 参数归属                            |
+| ---------------------------------------- | ---------------------- | ----------------------------------------------- | ----------------------------------- |
+| `.glass-bar`（导航胶囊）                 | `material.css:82-91`   | `--material-glass-blur`：亮 24px / 暗 24px      | 材质 Token                          |
+| `.glass-control`（工具组按钮）           | `material.css:93-112`  | `--material-glass-blur-control`：亮暗均 14px    | 材质 Token                          |
+| `.glass-panel`（下拉 / 移动菜单 / 搜索） | `material.css:116-123` | **无模糊**（刻意实色，避免菜单与正文叠字）      | 材质 Token                          |
+| Gallery 翻页按钮                         | `media.css:196`        | `blur(6px)` + `color-mix(--surface-raised 88%)` | **组件专属参数**（有意不 Token 化） |
+| 图片预览遮罩 `.md-preview`               | `media.css:233`        | `blur(8px)` + `color-mix(--color-ink 84%)`      | **组件专属参数**（有意不 Token 化） |
 
 边界判定（已定案，不再作为待办）：模糊只用于"必须压住滚动内容或图片"的薄层，正文卡片永不使用。
 
@@ -483,10 +493,10 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 当前命中（**A**：由 `tests/design-tokens.test.ts` 的死 Token 检查固定为白名单）：
 
-| Token                                 | 状态                                                                                          | 处理             |
-| ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
-| `--surface-glass`                     | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着                                     | 本轮只记录，不删 |
-| `--ease-in-out-soft`                  | 无 `var()`、无 `ease-*` 工具类使用                                                            | 同上             |
+| Token                | 状态                                                      | 处理             |
+| -------------------- | --------------------------------------------------------- | ---------------- |
+| `--surface-glass`    | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着 | 本轮只记录，不删 |
+| `--ease-in-out-soft` | 无 `var()`、无 `ease-*` 工具类使用                        | 同上             |
 
 **必须区分、不得误判为死 Token**：
 

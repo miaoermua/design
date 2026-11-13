@@ -91,7 +91,7 @@ Folio 仓库对所有 Coding Agent 的长期工程约束。**本文件优先级�
 - 不滥用卡片容器：能靠留白与分隔线解决的分组，不要套卡片。
 - 不破坏 Frozen Parchment 的**纸张 / 冰面材质关系**（暖底 + 冷界面），这是识别点，不是可调参数。
 - 字体使用项目自托管的 **Noto Sans SC / Noto Serif SC**；`fonts.css` **只声明 `@font-face`**，字体栈（`--font-sans` / `--font-serif` / `--font-mono`）只写在 `tokens.css` 的 `@theme` 里，**不得在 `fonts.css` 重复定义语义变量**。
-- **修改字体、颜色、圆角、间距等视觉参数，必须重新执行对应视觉基线测量**（见第 8 节），并把新的数字写回报告；旧基线数字随之作废，不得继续引用。
+- **修改字体、颜色、圆角、间距等视觉参数，必须重新执行对应视觉基线测量**（见第 8 节 B，默认在 Dev Server 上采集，**不等于执行生产构建**），并把新的数字写回报告；旧基线数字随之作废，不得继续引用。
 - 新增 Token 走 `DESIGN-SYSTEM.md` §12 的流程（语义命名 → 明暗两套值 → 文档同步 → 测试）。
 
 ---
@@ -122,7 +122,30 @@ Folio 仓库对所有 Coding Agent 的长期工程约束。**本文件优先级�
 
 ## 8. Testing and Validation
 
-按影响范围选择，**改了什么就跑什么**：
+验证分三层，**日常开发只走 A / B，不执行 `next build`**：
+
+| 层  | 场景         | 环境                                                             |
+| --- | ------------ | ---------------------------------------------------------------- |
+| A   | 日常开发验证 | Next.js Dev Server（3000）+ 按改动范围跑 typecheck / lint / test |
+| B   | 日常视觉采集 | 同一个 Dev Server，`FOLIO_BASE_URL` 指向 3000                    |
+| C   | 生产环境验收 | 生产构建 + `pnpm start`（3021），仅在明确需要时执行              |
+
+### A. 日常开发验证（默认）
+
+标准启动命令，默认使用 3000 端口：
+
+```bash
+MX_SERVER_URL=https://api.miaoer.net \
+MX_THEME_NAME=folio \
+./node_modules/.bin/next dev -p 3000
+```
+
+- 启动前先检查端口：`lsof -nP -iTCP:3000 -sTCP:LISTEN`，再用 `ps -p <pid> -o command=` 确认占用者是**本仓库的 `next dev`**。已有可用进程时**优先复用，不要重复启动**。
+- 修改代码后用 HMR 实时预览，不重启、不重新构建。
+- **不得为了普通页面预览执行 `next build`**；**不得把 `next start` 当作日常开发预览命令**。
+- 只有 Dev Server 无法满足具体验证需求（构建期行为、生产专属问题等）时，才考虑生产构建，并**说明原因**后按 C 执行。
+
+根据改动范围选择，**改了什么就跑什么**：
 
 | 改动                     | 必跑                                                                  |
 | ------------------------ | --------------------------------------------------------------------- |
@@ -131,20 +154,42 @@ Folio 仓库对所有 Coding Agent 的长期工程约束。**本文件优先级�
 | Markdown 渲染 / CSS 契约 | `pnpm test tests/markdown*.test.ts tests/containers.test.ts`          |
 | 字体（新增/替换/改加载） | `pnpm test tests/self-hosted-fonts.test.ts`                           |
 | Token / 设计文档         | `pnpm test tests/design-tokens.test.ts tests/design-doc-sync.test.ts` |
-| 颜色、字号、圆角、间距   | `scripts/visual/` 对应脚本（见下）                                    |
-| 发布前                   | `pnpm verify`（typecheck + lint + test + build）                      |
+| 颜色、字号、圆角、间距   | `scripts/visual/` 对应脚本（见 B）                                    |
 
-视觉采集（**只测量，不优化**）：
+视觉修改优先在 Dev Server 上检查。上表不含 `pnpm build`；完整验证命令见 C。
+
+### B. 日常视觉采集（Dev Server，不要求构建）
+
+保留现有 `scripts/visual/*.mjs`，通过环境变量指向开发服务器即可，**不要求先执行 build**：
 
 ```bash
-# 复用生产构建：先构建，再以 mock 数据启动
-MX_MOCK=1 PORT=3021 pnpm start
+export FOLIO_BASE_URL=http://127.0.0.1:3000
 node scripts/visual/capture.mjs    # 视口矩阵 + 组件特写 → docs/audits/assets/phase-4d/
 node scripts/visual/contrast.mjs   # WCAG 对比度 → contrast.json
 node scripts/visual/spoiler.mjs    # 无 JS / 键盘 / 鼠标
 node scripts/visual/fonts.mjs      # 冷热缓存字体请求
 node scripts/visual/media.mjs      # Mermaid / 相册 / 预览
 ```
+
+五个脚本都读 `process.env.FOLIO_BASE_URL`（未设置时才回落到 `http://127.0.0.1:3021`），因此上面的变量对全部脚本生效。**不改变现有 CDP、Chrome、截图和测量逻辑**，也不修改 `scripts/visual/` 下的任何文件。
+
+### C. 生产环境验收（非日常）
+
+保留原有生产视觉验收流程，**仅在明确需要生产环境验证、发布前验收或排查生产专属问题时执行**：
+
+```bash
+# 复用生产构建：先构建，再以 mock 数据启动（占用当前终端）
+pnpm build && MX_MOCK=1 PORT=3021 pnpm start
+node scripts/visual/capture.mjs    # 视口矩阵 + 组件特写 → docs/audits/assets/phase-4d/
+node scripts/visual/contrast.mjs   # WCAG 对比度 → contrast.json
+node scripts/visual/spoiler.mjs    # 无 JS / 键盘 / 鼠标
+node scripts/visual/fonts.mjs      # 冷热缓存字体请求
+node scripts/visual/media.mjs      # Mermaid / 相册 / 预览
+```
+
+`pnpm verify`（typecheck + lint + test + **build**）仍然保留为完整验证命令，仅在用户明确要求生产构建验证或发布前验收时执行；日常开发不得因为它包含 build 就顺手跑。
+
+通用注意（**视觉采集只测量，不优化**；测试状态与格式要求贯穿本节）：
 
 - 脚本依赖系统 Chrome（可用 `FOLIO_CHROME` 覆盖路径），**不要为此引入 Playwright**。
 - **截图不入库**：`docs/audits/assets/phase-4d/screenshots/*.png` 是本地产物，`manifest.json` 里的路径仅作追溯。仓库只保留采集脚本、测试页、固定素材与测量 JSON。
@@ -172,6 +217,13 @@ node scripts/visual/media.mjs      # Mermaid / 相册 / 预览
 - **多 Agent 并行时先分配不重叠的文件范围**，禁止两个 Agent 同时改同一文件或同一目录。
 - 如需要提交工作区请符合满足提交信息规范，按照历史记录中推演提交信息，不要提交除文档以外的编码或审查报告
 - 遇到无法解释的冲突、失败或数据不一致：**保留现场并报告**，不要为了"跑通"去改无关代码。
+
+**开发环境与验证优先级**：
+
+- **默认开发环境是 Next.js Dev Server**（§8 A，3000 端口）。页面修改完成后，优先复用已有开发服务器 + HMR 验证，不另起构建。
+- **不得把生产构建验证与日常开发预览混为一谈**。§8 C 与 `scripts/visual/` 脚本注释里的生产采集命令都不是日常步骤；不得因为 AGENTS.md 中存在这些命令，就在每次代码修改后执行 build。
+- **只有用户明确要求生产构建验证**时，才执行 §8 C 的流程（含 `pnpm verify`）；其余情况默认停在 A / B。
+- **不得为了追求测试全绿而擅自扩大验证范围**：按 §8 A 的影响范围表执行，不主动补跑与本次改动无关的全量套件或生产构建。
 
 ### 功能矩阵维护（`docs/FEATURE.md`）
 
