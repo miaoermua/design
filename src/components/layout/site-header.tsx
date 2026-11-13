@@ -1,11 +1,9 @@
-import type { SiteIdentity } from '@/lib/api'
 import { listCategories, listPages, listTopics } from '@/lib/api'
 import { getPrimaryNav, type NavGroup } from '@/core/navigation'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { dictionary } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { categoryPath, pagePath } from '@/lib/routes'
-import { siteTitle } from '@/lib/site'
 import { SiteHeaderClient } from './site-header-client'
 
 /** 由选择器承载的三个入口；其余导航项仍是普通链接 */
@@ -22,7 +20,7 @@ const GROUPED_HREFS = new Set(['/articles', '/diaries', '/pages'])
  * 失败不阻断页面——`status` 会如实变成 `error`，选择器显示「暂时取不到」，
  * 而不是假装「没有内容」。
  */
-export async function SiteHeader({ identity }: { identity: SiteIdentity | null }) {
+export async function SiteHeader() {
   const locale = await getLocale()
   const messages = dictionary(locale)
 
@@ -99,13 +97,15 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
     })
   }
 
+  const groupOrder: Record<NavGroup['key'], number> = { pages: 0, articles: 1, diaries: 2 }
+  groups.sort((left, right) => groupOrder[left.key] - groupOrder[right.key])
+
   const links = getPrimaryNav().filter((item) => !GROUPED_HREFS.has(item.href))
 
   return (
     <SiteHeaderClient
       groups={groups}
       links={links}
-      title={siteTitle(identity)}
       locale={locale}
       messages={messages}
       searchEnabled={isFeatureEnabled('search')}

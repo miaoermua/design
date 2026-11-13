@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NavGroup } from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
@@ -68,7 +68,10 @@ beforeEach(() => {
   state.search = ''
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 describe('NavSelector 展开与收起', () => {
   it('默认收起：不渲染条目，只暴露 aria-expanded=false', () => {
@@ -112,6 +115,39 @@ describe('NavSelector 展开与收起', () => {
     fireEvent.click(screen.getByRole('link', { name: '技术' }))
 
     expect(screen.queryByRole('link', { name: '技术' })).toBeNull()
+  })
+})
+
+describe('NavSelector 安全悬停区', () => {
+  it('指针移向导航面板时保持展开', () => {
+    const { container } = renderSelector()
+    const root = container.firstElementChild as HTMLDivElement
+
+    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+    const panelId = trigger().getAttribute('aria-controls')
+    const panel = panelId ? document.getElementById(panelId) : null
+    expect(panel).toBeTruthy()
+
+    fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: panel })
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('离开后延迟收起，重新进入会取消关闭', () => {
+    vi.useFakeTimers()
+    const { container } = renderSelector()
+    const root = container.firstElementChild as HTMLDivElement
+
+    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+    fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: document.body })
+    act(() => vi.advanceTimersByTime(100))
+    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+    act(() => vi.advanceTimersByTime(180))
+    expect(trigger().getAttribute('aria-expanded')).toBe('true')
+
+    fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: document.body })
+    act(() => vi.advanceTimersByTime(180))
+    expect(trigger().getAttribute('aria-expanded')).toBe('false')
   })
 })
 
@@ -208,9 +244,7 @@ describe('NavSelector 选中态与状态', () => {
     renderSelector()
     fireEvent.click(trigger())
 
-    expect(
-      screen.getByRole('link', { name: '全部文章' }).getAttribute('aria-current'),
-    ).toBe('page')
+    expect(screen.getByRole('link', { name: '全部文章' }).getAttribute('aria-current')).toBe('page')
   })
 
   it('分页子页仍算在「全部」下，但条目本身不再冒充当前页', () => {
@@ -219,9 +253,7 @@ describe('NavSelector 选中态与状态', () => {
     renderSelector()
     fireEvent.click(trigger())
 
-    expect(
-      screen.getByRole('link', { name: '全部文章' }).getAttribute('aria-current'),
-    ).toBe('page')
+    expect(screen.getByRole('link', { name: '全部文章' }).getAttribute('aria-current')).toBe('page')
   })
 
   it('空数据时给出空态文案，仍保留「全部」入口', () => {

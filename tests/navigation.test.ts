@@ -19,15 +19,18 @@ const item = (href: string): NavItem => {
 }
 
 describe('getPrimaryNav', () => {
-  it('顶栏入口顺序固定：文章 / 日记 / 探索 / 友链 / 页面 / 关于', () => {
+  it('顶栏普通链接顺序固定：文章 / 日记 / 探索 / 友链 / 页面', () => {
     expect(getPrimaryNav().map((entry) => entry.href)).toEqual([
       '/articles',
       '/diaries',
       '/explore',
       '/friends',
       '/pages',
-      '/about',
     ])
+  })
+
+  it('关于页保留路由，但不作为独立顶栏入口', () => {
+    expect(getPrimaryNav().some((entry) => entry.href === '/about')).toBe(false)
   })
 
   it('只返回已启用模块的入口', () => {

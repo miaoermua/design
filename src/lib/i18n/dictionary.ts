@@ -13,11 +13,11 @@
 import type { Locale } from './config'
 
 const zh = {
+  'nav.home': '首页',
   'nav.articles': '文章',
   'nav.diaries': '日记',
   'nav.explore': '探索',
   'nav.pages': '页面',
-  'nav.about': '关于',
   'nav.friends': '友链',
   'nav.allArticles': '全部文章',
   'nav.allDiaries': '全部日记',
@@ -78,11 +78,11 @@ const zh = {
 export type MessageKey = keyof typeof zh
 
 const en: Record<MessageKey, string> = {
+  'nav.home': 'Home',
   'nav.articles': 'Articles',
   'nav.diaries': 'Notes',
   'nav.explore': 'Explore',
   'nav.pages': 'Pages',
-  'nav.about': 'About',
   'nav.friends': 'Links',
   'nav.allArticles': 'All articles',
   'nav.allDiaries': 'All notes',

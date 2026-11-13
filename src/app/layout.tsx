@@ -76,7 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <a
           href="#main"
-          className="fixed top-3 left-4 z-50 -translate-y-24 rounded-[var(--radius-sm)] border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 text-small transition-transform duration-[var(--duration-fast)] focus:translate-y-0"
+          className="text-small fixed top-3 left-4 z-50 -translate-y-24 rounded-[var(--radius-sm)] border border-[var(--edge)] bg-[var(--surface-raised)] px-3 py-2 transition-transform duration-[var(--duration-fast)] focus:translate-y-0"
         >
           跳到正文
         </a>
@@ -93,17 +93,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SocialIconStylesheets social={theme.social} />
 
         <div className="site-shell flex min-h-dvh flex-col">
-          <SiteHeader identity={identity} />
+          <SiteHeader />
 
           {identity ? null : (
-            <div
-              role="status"
-              className="border-b border-[var(--edge)] bg-[var(--surface-sunk)]"
-            >
+            <div role="status" className="border-b border-[var(--edge)] bg-[var(--surface-sunk)]">
               <div className="mx-auto max-w-[var(--container-wide)] px-5 py-2.5 sm:px-8">
-                <p className="font-mono text-meta break-all text-[var(--text-secondary)]">
-                  未连接到 Mix Space 后端：{describeError(error)}（设置 MX_SERVER_URL，或
-                  MX_MOCK=1 离线预览）
+                <p className="text-meta font-mono break-all text-[var(--text-secondary)]">
+                  未连接到 Mix Space 后端：{describeError(error)}（设置 MX_SERVER_URL，或 MX_MOCK=1
+                  离线预览）
                 </p>
               </div>
             </div>
