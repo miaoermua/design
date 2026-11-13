@@ -41,7 +41,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^15.5.29",
+    "eslint-config-next": "^16.4.6",
     "jsdom": "^31.0.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.8.1",
