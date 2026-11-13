@@ -3,7 +3,7 @@
 > 冰霜纸笺：**Warm Parchment 70% · Vintage Editorial 20% · Frozen Glass 10%**
 > 这份文档是「改之前先读、改之后要同步」的唯一设计口径。任何视觉决定若与本文冲突，以本文为准；本文没写的，先补文档再写代码。
 >
-> **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。**未改任何视觉参数**（色值、字号、字距、圆角、间距、字重、blur 数值全部保持原值）。
+> **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
 
 ---
 
@@ -13,7 +13,7 @@
 | -------------------------- | ---- | -------------------------------- | -------------------------- |
 | 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光   |
 | 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）               |
-| 冰面 Frozen Glass          | 10%  | 导航条、移动端浮层、少量状态     | 半透明冰川色 + 8–16px 模糊 |
+| 冰面 Frozen Glass          | 10%  | 导航条、移动端浮层、少量状态     | 半透明冰川色 + 24px 模糊 |
 
 三条不可越界：
 
@@ -29,7 +29,7 @@
 src/design-system/tokens/tokens.css      ← 唯一色值/字号/间距/圆角/阴影/动效/材质/字体栈来源
 src/design-system/styles/fonts.css       ← 只声明 @font-face（自托管中文 Web Font），不含语义变量
 src/design-system/styles/material.css    ← 材质实现（颗粒、环境光、纸面、冰面）
-src/design-system/styles/{prose,media,footnotes,mentions,containers}.css
+src/design-system/styles/{motion,prose,media,footnotes,mentions,containers}.css
 src/app/globals.css                      ← base 层：元素默认样式 + 少量结构化类
 ```
 
@@ -208,8 +208,8 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md                                     |
 | 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                              |
 | 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                                  |
-| 动效     | `--duration-fast`                     | 140ms                               | **唯一有消费者的时长**：导航、链接下划线、代码底、预览层 |
-| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | **当前无消费者**，见 §14.8                               |
+| 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔              |
+| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | 页面 / 面板过渡与首页内容淡入                            |
 | 缓动     | `--ease-out-soft`                     | `cubic-bezier(0.22, 0.61, 0.36, 1)` | 默认，全部 `transition`/`animation` 用它                 |
 | 缓动     | `--ease-in-out-soft`                  | `cubic-bezier(0.4, 0, 0.2, 1)`      | **当前无消费者**，见 §14.8                               |
 
@@ -234,7 +234,7 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                                                                                | 全站 1 层，不随内容滚动 |
 | `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                                                                         | 全站 1 层               |
 | `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                                                                            | 文章/日记详情各 1 个    |
-| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))` + 内缘高光 `--material-glass-rim`（亮色解析为 `rgb(220 229 229 / 0.9)`、14px 模糊；暗色 tint 换成 `24 30 32`、16px） | 仅 `SiteHeader`         |
+| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | 仅 `SiteHeader`         |
 | `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                                                                       | 移动端导航面板          |
 
 退化路径：`@supports not (backdrop-filter)` → 实色纸面；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
@@ -368,6 +368,7 @@ src/design-system/styles/fonts.css                    ← 自托管字体 @font-
 src/assets/fonts/                                     ← WOFF2 分片 + OFL 许可 + manifest
 scripts/fetch-noto-fonts.mjs                          ← 字体抓取/生成脚本
 src/design-system/styles/material.css                 ← 材质实现
+src/design-system/styles/motion.css                   ← 可复用动效 primitive 与减弱动效策略
 src/design-system/styles/prose.css                    ← 正文排版
 src/design-system/styles/media.css                    ← 图片 / Gallery / 预览层
 src/design-system/styles/containers.css               ← 提示块 / 横幅 / 折叠 / 剧透
@@ -443,7 +444,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 | 材质                           | 位置                 | 模糊                                            | 参数归属                            |
 | ------------------------------ | -------------------- | ----------------------------------------------- | ----------------------------------- |
-| `.glass-bar`（导航条）         | `material.css:77-82` | `--material-glass-blur`：亮 14px / 暗 16px      | 材质 Token                          |
+| `.glass-bar`（导航条）         | `material.css:77-80` | `--material-glass-blur`：亮 24px / 暗 24px      | 材质 Token                          |
 | `.glass-panel`（移动导航面板） | `material.css:88-93` | **无模糊**（刻意实色，避免菜单与正文叠字）      | 材质 Token                          |
 | Gallery 翻页按钮               | `media.css:196`      | `blur(6px)` + `color-mix(--surface-raised 88%)` | **组件专属参数**（有意不 Token 化） |
 | 图片预览遮罩 `.md-preview`     | `media.css:233`      | `blur(8px)` + `color-mix(--color-ink 84%)`      | **组件专属参数**（有意不 Token 化） |
@@ -451,14 +452,14 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 边界判定（已定案，不再作为待办）：模糊只用于"必须压住滚动内容或图片"的薄层，正文卡片永不使用。
 
 - `.glass-*` 必须使用 `--material-glass-*` 材质 Token。
-- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成 `--material-glass-blur`（14/16px 会把翻页按钮和预览遮罩糊成一片，属于实质视觉变更）。
+- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成 `--material-glass-blur`（24px 会把翻页按钮和预览遮罩糊成一片，属于实质视觉变更）。
 
 关闭路径（**A**，可人工验证）：删掉 `globals.css:3` 对 `material.css` 的 `@import`，站点仍是完整的纸色排版 —— 这是材质层与排版层解耦的真实边界。
 
 ### 14.6 动效语义与 reduced-motion
 
-- 语义：动效**只解释状态变化**，不做装饰性位移。140ms 全站唯一实际使用的时长（导航、下划线、代码底、预览入场）；240/420ms 与 `--ease-in-out-soft` 无消费者（§14.8）。**A**：Token 存在性由测试守护；使用情况见 §14.9 盲区。
-- 降级：**A** 有实现、**B** 无测试。`globals.css:27-38` 在 `prefers-reduced-motion: reduce` 下把 `scroll-behavior` 改 auto 并对所有元素施加 `animation-duration/transition-duration: 0.01ms !important`；另有 5 处局部 reduced-motion 覆盖（`prose.css`、`media.css`、`containers.css` 等）。组件层只有 2 处 `motion-safe:` 用法（含 `ui/reading-progress.tsx:44`）。
+- 语义：动效**只解释状态变化**，不做装饰性位移。`motion.css` 提供可复用的淡入、上移、面板入场与错峰类；页面过渡使用 240ms，首页区块使用 420ms 淡入并以 140/280ms 错峰。各值均来自 duration / ease Token，不做额外戏剧化效果。**A**：实现与路径已核对；Reduced Motion 浏览器行为未单独实测。
+- 降级：**A** 有实现、**B** 无测试。`globals.css:30-41` 在 `prefers-reduced-motion: reduce` 下把 `scroll-behavior` 改 auto 并统一缩短 animation / transition；`motion.css` 对页面、面板与首页入场动画显式关闭；另有局部 reduced-motion 覆盖（`prose.css`、`media.css`、`containers.css` 等）。
 - 注意：全局 `!important` 兜底已经覆盖了绝大多数情况，`motion-safe:` 属于"额外保守"的写法，不是缺失。不要为了统一风格而新增无意义检测。
 
 ### 14.7 最小字号护栏
@@ -476,7 +477,6 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 | Token                                 | 状态                                                                                          | 处理             |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
 | `--surface-glass`                     | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着                                     | 本轮只记录，不删 |
-| `--duration-base` / `--duration-slow` | 无 `var()`、无 `duration-*` 工具类使用                                                        | 同上             |
 | `--ease-in-out-soft`                  | 无 `var()`、无 `ease-*` 工具类使用                                                            | 同上             |
 
 **必须区分、不得误判为死 Token**：

@@ -195,8 +195,13 @@ describe('Design Token：死 Token 登记', () => {
     for (const name of KNOWN_UNUSED_MOTION_TOKENS) {
       expect(consumedOutsideTokens(name), `${name} 已被使用，请移出登记名单`).toBe(false)
     }
-    // 反向哨兵：扫描器一旦失效，这两个确实在用的 Token 会先报错
-    for (const name of ['--duration-fast', '--ease-out-soft']) {
+    // 反向哨兵：扫描器一旦失效，这些确实在用的 Token 会先报错
+    for (const name of [
+      '--duration-fast',
+      '--duration-base',
+      '--duration-slow',
+      '--ease-out-soft',
+    ]) {
       expect(consumedOutsideTokens(name), `${name} 理应仍有消费者`).toBe(true)
     }
   })

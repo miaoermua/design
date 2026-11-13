@@ -39,7 +39,7 @@ export function Toaster({ locale = 'zh' }: ToasterProps) {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-4 bottom-4 z-[70] flex flex-col items-stretch gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-88"
+      className="pointer-events-none relative flex w-full flex-col items-stretch gap-2"
       role="region"
       aria-label={locale === 'en' ? 'Notifications' : '通知'}
     >

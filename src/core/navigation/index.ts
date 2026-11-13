@@ -23,8 +23,8 @@ export interface NavItem {
 /**
  * 主导航
  *
- * 配置仍保持扁平：文章 / 日记 / 探索 / 友链 / 页面；首页由顶栏单独提供，
- * 页面组在界面中排在文章与日记之前。文章、日记、页面展开成目录型选择器，
+ * 配置仍保持扁平：文章 / 日记 / 探索 / 友链 / 页面；首页是单独的路由入口，
+ * UI 将首页与 Pages 目录组合为一个选择器。文章、日记也展开为目录型选择器，
  * 其余仍是普通链接。关于页保留路由，但不作为独立顶栏入口。
  *
  * 「归档」与「标签」合并为「探索」：两者都是「按某个维度找到文章」，
@@ -75,7 +75,6 @@ export interface NavGroup {
   label: MessageKey
   href: string
   matchPrefixes: string[]
-  allLabel: MessageKey
   emptyLabel: MessageKey
   errorLabel: MessageKey
   status: 'ok' | 'empty' | 'error'

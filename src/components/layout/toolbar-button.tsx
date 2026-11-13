@@ -37,11 +37,11 @@ export function ToolbarButton({
       aria-label={label}
       title={label}
       className={cn(
-        'group/tt relative flex size-9 items-center justify-center rounded-full border border-[var(--edge)] bg-[var(--surface-raised)]',
+        'group/tt relative flex size-9 items-center justify-center rounded-full bg-transparent',
         'transition-colors duration-[var(--duration-fast)]',
         'outline-none focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]',
         active
-          ? 'border-[var(--accent-line)] bg-[var(--accent-wash)] text-[var(--accent-strong)]'
+          ? 'bg-[var(--accent-wash)] text-[var(--accent-strong)]'
           : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
         // 移动端点击区域放大到 40px，桌面保持 36px 的克制尺寸
         'max-sm:size-10',
@@ -53,7 +53,7 @@ export function ToolbarButton({
       <span
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-10 -translate-x-1/2',
+          'pointer-events-none absolute top-1/2 right-[calc(100%+0.5rem)] z-10 -translate-y-1/2',
           'hidden rounded-[var(--radius-xs)] border border-[var(--edge)] whitespace-nowrap',
           'text-meta bg-[var(--surface-raised)] px-2 py-1 text-[var(--text-secondary)]',
           'shadow-[var(--shadow-pop)]',
@@ -67,10 +67,10 @@ export function ToolbarButton({
   )
 }
 
-/** 工具组容器：间距与分隔只在这里定义，按钮本身不关心相邻元素 */
+/** 工具组容器：间距与竖向排列在这里定义，按钮本身不关心相邻元素 */
 export function ToolbarGroup({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-0.5 sm:gap-1" role="group" aria-label="站点工具">
+    <div className="flex flex-col items-center gap-1.5" role="group" aria-label="站点工具">
       {children}
     </div>
   )

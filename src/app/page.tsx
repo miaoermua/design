@@ -102,7 +102,7 @@ export default async function HomePage() {
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
       {showProfile ? (
-        <section className="pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
+        <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
         <div className="flex items-start gap-5 sm:gap-6">
           {owner?.avatar ? (
             <CoverImage
@@ -178,7 +178,8 @@ export default async function HomePage() {
       {articles ? (
         <section
           className={cn(
-            'pt-10',
+            'motion-fade-in pt-10',
+            showProfile && 'motion-delay-1',
             // profile 关闭时这一块是首页第一段，不需要额外的虚线分隔与上边距
             showProfile && 'border-t border-dashed border-[var(--edge-strong)]',
           )}
@@ -213,7 +214,10 @@ export default async function HomePage() {
       {diaries ? (
         <section
           className={cn(
-            'mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10',
+            'motion-fade-in mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10',
+            showProfile && articles
+              ? 'motion-delay-2'
+              : (showProfile || articles) && 'motion-delay-1',
             // 文章区关闭时，日记区紧跟品牌区，不需要再叠一层大间距
             !articles && 'mt-0',
           )}
