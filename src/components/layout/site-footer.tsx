@@ -52,13 +52,15 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
   return (
     <footer className="mt-[var(--spacing-section)] border-t border-[var(--edge)]">
       <Container width="wide">
-        <div className="flex flex-col gap-2 py-10">
-          <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className="meta tabular-nums">© {yearRange}</span>
-            <span className="text-body font-serif text-[var(--text-heading)]">{authorName}</span>
+        <div className="flex flex-col gap-1.5 py-10">
+          <p>
+            <span className="meta">© {yearRange}</span>{' '}
+            <span className="text-body font-serif font-medium text-[var(--text-heading)]">
+              {authorName}
+            </span>
             {authorSign ? (
               <>
-                <span aria-hidden="true" className="text-[var(--text-tertiary)]">
+                <span aria-hidden="true" className="footer-sep">
                   ｜
                 </span>
                 <span className="text-small text-[var(--text-secondary)]">{authorSign}</span>
@@ -88,7 +90,7 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
             .
             {icp.enabled && icp.label ? (
               <>
-                <span aria-hidden="true" className="mx-2 text-[var(--text-tertiary)]">
+                <span aria-hidden="true" className="footer-sep">
                   ｜
                 </span>
                 <a

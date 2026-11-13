@@ -12,16 +12,6 @@ interface NavSelectorProps {
   messages: Record<MessageKey, string>
 }
 
-function MoreIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor">
-      <circle cx="5" cy="12" r="1.4" />
-      <circle cx="12" cy="12" r="1.4" />
-      <circle cx="19" cy="12" r="1.4" />
-    </svg>
-  )
-}
-
 function isGroupActive(group: NavGroup, pathname: string): boolean {
   return group.matchPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -31,9 +21,12 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
 /**
  * 顶栏的目录型入口（首页 Pages / Blog 分类 / Note 专栏）。
  *
- * 主入口保留真实链接，旁边的更多按钮负责钉住子菜单；鼠标悬停仍可预览，
+ * 入口标签本身就是菜单触发器：不再挂一个可见的「更多」圆点按钮，
+ * 菜单与标签是同一个交互面。标签仍是真实链接——
+ *   - 鼠标：悬停预览，点击直接导航；
+ *   - 键盘：ArrowDown 打开并聚焦首项，方向键 / Home / End 移动；
+ *   - 触屏没有 hover：第一次点按展开菜单，再点一次才导航。
  * 离开后通过短暂延迟与根节点包含判断保留安全三角过渡区。
- * 键盘可用 ArrowDown 打开、方向键 / Home / End 移动，Escape 关闭并还焦点。
  * 不用 ARIA menu：面板内容是普通链接，不需要 roving tabindex 契约。
  */
 export function NavSelector({ group, messages }: NavSelectorProps) {
@@ -45,6 +38,8 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
 
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLAnchorElement>(null)
+  /** 记录本次点击来自哪种指针：触屏需要「先开菜单、再导航」两段式 */
+  const lastPointerType = useRef<string | null>(null)
   const panelId = useId()
 
   const active = isGroupActive(group, pathname)
@@ -76,15 +71,6 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
     },
     [clearCloseTimer],
   )
-
-  const togglePinned = () => {
-    if (open && pinned.current) {
-      close(false)
-      return
-    }
-    pinned.current = true
-    setOpen(true)
-  }
 
   useEffect(() => {
     if (!open) return
@@ -163,63 +149,64 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close(false)
       }}
     >
-      <div className="flex items-center gap-0.5">
-        <a
-          ref={triggerRef}
-          href={group.href}
-          aria-current={isHomeMenu ? (pathname === '/' ? 'page' : undefined) : active ? 'page' : undefined}
-          onClick={() => close(false)}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowDown') {
-              event.preventDefault()
-              setOpen(true)
-              window.requestAnimationFrame(focusFirstItem)
+      <a
+        ref={triggerRef}
+        href={group.href}
+        aria-current={
+          isHomeMenu ? (pathname === '/' ? 'page' : undefined) : active ? 'page' : undefined
+        }
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onPointerDown={(event) => {
+          lastPointerType.current = event.pointerType
+        }}
+        onClick={(event) => {
+          const pointerType = lastPointerType.current
+          lastPointerType.current = null
+
+          // 触屏没有 hover：第一次点按展开菜单，再点一次才导航（与原生
+          // hover 菜单在触屏上的行为一致）。鼠标与键盘保持直达链接。
+          if (pointerType && pointerType !== 'mouse') {
+            if (open) {
+              close(false)
+              return
             }
-            if (event.key === 'Escape' && open) {
-              event.preventDefault()
-              close(true)
-            }
-          }}
-          className={cn(
-            'text-small flex items-center rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
-            active
-              ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
-          )}
-        >
-          {triggerLabel}
-        </a>
-        <button
-            type="button"
-            aria-expanded={open}
-            aria-controls={open ? panelId : undefined}
-            aria-label={`${open ? messages['action.close'] : messages['nav.directory']}: ${triggerLabel}`}
-            title={`${open ? messages['action.close'] : messages['nav.directory']}: ${triggerLabel}`}
-            onClick={togglePinned}
-            onKeyDown={(event) => {
-              if (event.key === 'ArrowDown') {
-                event.preventDefault()
-                setOpen(true)
-                window.requestAnimationFrame(focusFirstItem)
-              }
-            }}
-            className={cn(
-              'flex size-7 items-center justify-center rounded-full transition-colors duration-[var(--duration-fast)]',
-              open
-                ? 'bg-[var(--accent-wash)] text-[var(--accent-strong)]'
-                : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
-            )}
-          >
-            <MoreIcon />
-        </button>
-      </div>
+            event.preventDefault()
+            clearCloseTimer()
+            pinned.current = true
+            setOpen(true)
+            return
+          }
+
+          close(false)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            setOpen(true)
+            window.requestAnimationFrame(focusFirstItem)
+          }
+          if (event.key === 'Escape' && open) {
+            event.preventDefault()
+            close(true)
+          }
+        }}
+        className={cn(
+          'nav-label flex items-center rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
+          active
+            ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+            : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+        )}
+      >
+        {triggerLabel}
+      </a>
 
       {open ? (
         <div className="absolute top-full left-0 z-50 w-[min(18rem,calc(100vw-2rem))] pt-2">
           <div
             id={panelId}
             onKeyDown={handlePanelKeyDown}
-            className="motion-panel-in overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
+            className="motion-panel-in glass-panel overflow-hidden"
           >
             <ul className="max-h-[min(70dvh,32rem)] overflow-y-auto p-1.5">
               {group.items.map((item) => {
@@ -233,7 +220,7 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
                       onClick={() => close(false)}
                       title={item.label}
                       className={cn(
-                        'text-small block truncate rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)]',
+                        'nav-panel-link block truncate rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)]',
                         itemActive
                           ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]',

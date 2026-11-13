@@ -198,6 +198,10 @@
   --material-glass-blur: 24px;
   --material-glass-saturate: 1.4;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
+  /* 小型浮标控件（工具按钮）：面积小，遮罩略实、模糊略轻，避免糊成一团 */
+  --material-glass-alpha-control: 0.88;
+  --material-glass-alpha-control-hover: 0.94;
+  --material-glass-blur-control: 14px;
 
   color-scheme: light;
 }
@@ -258,6 +262,8 @@
   --material-glass-blur: 24px;
   --material-glass-saturate: 1.25;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 22%, transparent);
+  --material-glass-alpha-control: 0.82;
+  --material-glass-alpha-control-hover: 0.9;
 
   color-scheme: dark;
 }

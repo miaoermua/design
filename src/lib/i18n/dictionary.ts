@@ -25,7 +25,6 @@ const zh = {
   'nav.categoriesUnavailable': '分类暂时取不到',
   'nav.topicsUnavailable': '专栏暂时取不到',
   'nav.pagesUnavailable': '页面暂时取不到',
-  'nav.directory': '展开更多',
 
   'home.kicker': '文章 · 日记 · 归档',
   'home.latestBlogs': '最近写的',
@@ -87,7 +86,6 @@ const en: Record<MessageKey, string> = {
   'nav.categoriesUnavailable': 'Categories unavailable',
   'nav.topicsUnavailable': 'Topics unavailable',
   'nav.pagesUnavailable': 'Pages unavailable',
-  'nav.directory': 'Show more',
 
   'home.kicker': 'Articles · Notes · Archive',
   'home.latestBlogs': 'Latest writing',

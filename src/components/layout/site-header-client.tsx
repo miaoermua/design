@@ -116,7 +116,7 @@ export function SiteHeaderClient({
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                          'text-small rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
+                          'nav-label rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
                           active
                             ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
@@ -137,7 +137,7 @@ export function SiteHeaderClient({
                 <Link
                   href="/"
                   aria-current={pathname === '/' ? 'page' : undefined}
-                  className="text-small rounded-full px-3 py-1.5 text-[var(--text-secondary)]"
+                  className="nav-label rounded-full px-3 py-1.5 text-[var(--text-secondary)]"
                 >
                   {messages['nav.home']}
                 </Link>
@@ -155,7 +155,7 @@ export function SiteHeaderClient({
       {/* 固定顶栏不占文档流：占位块保证正文不被浮条盖住 */}
       <div aria-hidden="true" className="h-[calc(3.5rem+0.75rem)] sm:h-[calc(3.75rem+1rem)]" />
 
-      <div className="fixed right-4 bottom-28 z-50 sm:right-6 sm:bottom-32">
+      <div className="toolbar-dock">
         {/* 无 JS 时的搜索出口：搜索面板不可用时仍保留普通链接。 */}
         <noscript
           dangerouslySetInnerHTML={{
@@ -179,7 +179,10 @@ export function SiteHeaderClient({
 
           <ToolbarButton
             label={messages['action.backToTop']}
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => {
+              const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+              window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+            }}
           >
             <ArrowUpIcon />
           </ToolbarButton>
@@ -259,7 +262,7 @@ function MobileMenu({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="text-meta block truncate rounded-[var(--radius-sm)] py-1.5 pr-3 pl-6 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]"
+                    className="nav-panel-link block truncate rounded-[var(--radius-sm)] py-1.5 pr-3 pl-6 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]"
                   >
                     {item.label}
                   </Link>
@@ -281,7 +284,7 @@ function MobileMenu({
                     aria-current={active ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      'text-small mt-1 block rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-[var(--duration-fast)]',
+                      'nav-label mt-1 block rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-[var(--duration-fast)]',
                       active
                         ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',

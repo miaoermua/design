@@ -15,8 +15,8 @@ interface ToolbarButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * 顶栏工具按钮
  *
  * 「气泡」的落地方式不是四个独立风格的按钮，而是同一枚尺寸的圆形按钮：
- * 统一 34px（移动端 40px 保证点击区域）、统一圆角、统一 hover 底色。
- * 尺寸与间距只在这里定义一次——工具组未来要换位置或换组合，
+ * 统一 40px 点击区域、统一圆角、统一冰面材质。材质来自 `.glass-control`
+ * （material.css），组件只负责尺寸与状态——工具组未来要换位置或换组合，
  * 改的是工具组的排布，不是四个按钮各自的样式。
  *
  * Tooltip 用 CSS 实现（group-hover / group-focus-visible），
@@ -36,15 +36,15 @@ export function ToolbarButton({
       type="button"
       aria-label={label}
       title={label}
+      data-active={active ? 'true' : undefined}
       className={cn(
-        'group/tt relative flex size-9 items-center justify-center rounded-full bg-transparent',
+        'group/tt glass-control relative flex size-10 items-center justify-center rounded-full',
         'transition-colors duration-[var(--duration-fast)]',
         'outline-none focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]',
         active
-          ? 'bg-[var(--accent-wash)] text-[var(--accent-strong)]'
-          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
-        // 移动端点击区域放大到 40px，桌面保持 36px 的克制尺寸
-        'max-sm:size-10',
+          ? 'text-[var(--accent-strong)]'
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+        'disabled:cursor-not-allowed disabled:opacity-55',
         className,
       )}
       {...props}
@@ -70,7 +70,7 @@ export function ToolbarButton({
 /** 工具组容器：间距与竖向排列在这里定义，按钮本身不关心相邻元素 */
 export function ToolbarGroup({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-1.5" role="group" aria-label="站点工具">
+    <div className="flex flex-col items-center gap-2" role="group" aria-label="站点工具">
       {children}
     </div>
   )

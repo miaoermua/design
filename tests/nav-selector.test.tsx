@@ -31,13 +31,15 @@ import { NavSelector } from '@/components/layout/nav-selector'
 /**
  * 顶栏目录选择器
  *
- * 覆盖五种输入路径：鼠标悬停、点击钉住、点外部关闭、Escape 关闭并还焦点、
+ * 覆盖五种输入路径：鼠标悬停、触屏点按、点外部关闭、Escape 关闭并还焦点、
  * 方向键在条目间移动。空态与错误态各自有独立断言——它们不是同一条文案。
+ *
+ * 入口标签本身就是触发器：不存在第二个可见按钮，所以所有断言都落在同一个
+ * 链接的 aria-expanded / aria-controls 上。
  */
 
 const messages = {
   'nav.home': '首页',
-  'nav.directory': '展开更多',
   'nav.articles': '文章',
   'nav.noCategories': '暂无分类',
   'nav.categoriesUnavailable': '分类加载失败',
@@ -83,7 +85,17 @@ function renderHomeSelector() {
 }
 
 const trigger = () => screen.getByRole('link', { name: '文章' })
-const menuButton = () => screen.getByRole('button', { name: /^(展开更多|关闭): 文章$/ })
+
+/** 触屏点按：先 pointerdown（触屏）再 click，与真实浏览器的顺序一致 */
+function touchTap(element: HTMLElement) {
+  fireEvent.pointerDown(element, { pointerType: 'touch' })
+  fireEvent.click(element)
+}
+
+/** 面板由根节点的 pointerenter 打开（鼠标悬停路径） */
+function hover(root: HTMLElement) {
+  fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+}
 
 beforeEach(() => {
   state.pathname = '/articles'
@@ -96,7 +108,7 @@ afterEach(() => {
 })
 
 describe('首页导航入口', () => {
-  it('首页文本保留真实首页链接，菜单由相邻更多按钮打开', () => {
+  it('首页文本保留真实首页链接，菜单由同一个标签点按打开', () => {
     state.pathname = '/'
     renderHomeSelector()
     const homeLink = screen.getByRole('link', { name: '首页' })
@@ -106,7 +118,11 @@ describe('首页导航入口', () => {
 
     expect(homeLink.getAttribute('href')).toBe('/')
     expect(click.defaultPrevented).toBe(false)
-    fireEvent.click(screen.getByRole('button', { name: '展开更多: 首页' }))
+    expect(homeLink.getAttribute('aria-expanded')).toBe('false')
+
+    touchTap(homeLink)
+
+    expect(homeLink.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getAllByRole('link', { name: '首页' })).toHaveLength(1)
     expect(screen.getByRole('link', { name: '页面' }).getAttribute('href')).toBe('/pages')
     expect(screen.getByRole('link', { name: '站点' })).toBeTruthy()
@@ -122,7 +138,7 @@ describe('首页导航入口', () => {
     currentLink.dispatchEvent(click)
     expect(click.defaultPrevented).toBe(false)
 
-    fireEvent.click(screen.getByRole('button', { name: '展开更多: 页面' }))
+    touchTap(currentLink)
     const pagesItem = screen
       .getAllByRole('link', { name: '页面' })
       .find((link) => link.getAttribute('href') === '/pages')
@@ -131,14 +147,17 @@ describe('首页导航入口', () => {
 })
 
 describe('NavSelector 展开与收起', () => {
-  it('默认收起：保留真实列表链接，并在独立按钮上暴露 aria-expanded=false', () => {
+  it('默认收起：入口标签自身暴露 aria-expanded=false', () => {
     renderSelector()
     expect(trigger().getAttribute('href')).toBe('/articles')
-    expect(menuButton().getAttribute('aria-expanded')).toBe('false')
+    expect(trigger().getAttribute('aria-expanded')).toBe('false')
+    expect(trigger().getAttribute('aria-controls')).toBeNull()
     expect(screen.queryByRole('link', { name: '技术' })).toBeNull()
+    // 不再渲染相邻的省略号按钮
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
-  it('主入口链接点击保留默认导航，更多按钮独立展开子菜单', () => {
+  it('鼠标点击主入口保留默认导航，不把菜单挂在第二个控件上', () => {
     renderSelector()
     const event = new MouseEvent('click', { bubbles: true, cancelable: true })
 
@@ -146,14 +165,16 @@ describe('NavSelector 展开与收起', () => {
 
     expect(event.defaultPrevented).toBe(false)
     expect(trigger().getAttribute('href')).toBe('/articles')
+    expect(trigger().getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('link', { name: '技术' })).toBeNull()
   })
 
-  it('点击展开后只列出分组子项并按视口限制高度', () => {
+  it('触屏点按展开后只列出分组子项并按视口限制高度', () => {
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
-    expect(menuButton().getAttribute('aria-expanded')).toBe('true')
+    expect(trigger().getAttribute('aria-expanded')).toBe('true')
+    expect(trigger().getAttribute('aria-controls')).toBeTruthy()
     expect(screen.queryByRole('link', { name: '全部文章' })).toBeNull()
     expect(screen.getByRole('link', { name: '技术' }).getAttribute('href')).toBe('/articles/tech')
     expect(screen.getByRole('link', { name: '技术' }).closest('ul')?.className).toContain(
@@ -162,9 +183,9 @@ describe('NavSelector 展开与收起', () => {
     expect(trigger().querySelector('svg')).toBeNull()
   })
 
-  it('Escape 关闭并把焦点还给触发按钮', () => {
+  it('Escape 关闭并把焦点还给入口标签', () => {
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
     expect(screen.getByRole('link', { name: '技术' })).toBeTruthy()
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -175,7 +196,7 @@ describe('NavSelector 展开与收起', () => {
 
   it('点击面板外部关闭', () => {
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     fireEvent.pointerDown(document.body)
 
@@ -184,7 +205,7 @@ describe('NavSelector 展开与收起', () => {
 
   it('点击条目后收起', () => {
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
     fireEvent.click(screen.getByRole('link', { name: '技术' }))
 
     expect(screen.queryByRole('link', { name: '技术' })).toBeNull()
@@ -196,14 +217,14 @@ describe('NavSelector 安全悬停区', () => {
     const { container } = renderSelector()
     const root = container.firstElementChild as HTMLDivElement
 
-    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
-    const panelId = menuButton().getAttribute('aria-controls')
+    hover(root)
+    const panelId = trigger().getAttribute('aria-controls')
     const panel = panelId ? document.getElementById(panelId) : null
     expect(panel).toBeTruthy()
 
     fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: panel })
 
-    expect(menuButton().getAttribute('aria-expanded')).toBe('true')
+    expect(trigger().getAttribute('aria-expanded')).toBe('true')
   })
 
   it('离开后延迟收起，重新进入会取消关闭', () => {
@@ -211,16 +232,16 @@ describe('NavSelector 安全悬停区', () => {
     const { container } = renderSelector()
     const root = container.firstElementChild as HTMLDivElement
 
-    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+    hover(root)
     fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: document.body })
     act(() => vi.advanceTimersByTime(100))
-    fireEvent.pointerEnter(root, { pointerType: 'mouse' })
+    hover(root)
     act(() => vi.advanceTimersByTime(180))
-    expect(menuButton().getAttribute('aria-expanded')).toBe('true')
+    expect(trigger().getAttribute('aria-expanded')).toBe('true')
 
     fireEvent.pointerLeave(root, { pointerType: 'mouse', relatedTarget: document.body })
     act(() => vi.advanceTimersByTime(180))
-    expect(menuButton().getAttribute('aria-expanded')).toBe('false')
+    expect(trigger().getAttribute('aria-expanded')).toBe('false')
   })
 })
 
@@ -229,13 +250,18 @@ describe('NavSelector 键盘', () => {
     renderSelector()
     fireEvent.keyDown(trigger(), { key: 'ArrowDown' })
 
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('link', { name: '技术' })))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: '技术' })),
+    )
   })
 
   it('ArrowDown / ArrowUp 在条目间移动并循环', async () => {
     renderSelector()
-    fireEvent.click(menuButton())
-    const items = [screen.getByRole('link', { name: '技术' }), screen.getByRole('link', { name: '随笔' })]
+    touchTap(trigger())
+    const items = [
+      screen.getByRole('link', { name: '技术' }),
+      screen.getByRole('link', { name: '随笔' }),
+    ]
 
     items[0]?.focus()
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowDown' })
@@ -252,7 +278,7 @@ describe('NavSelector 键盘', () => {
 
   it('Home / End 跳到首尾', () => {
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
     const first = screen.getByRole('link', { name: '技术' })
     const last = screen.getByRole('link', { name: '随笔' })
 
@@ -266,8 +292,9 @@ describe('NavSelector 键盘', () => {
 })
 
 describe('NavSelector 选中态与状态', () => {
-  it('当前路径命中分组时触发按钮带激活底色', () => {
+  it('当前路径命中分组时入口标签带激活底色', () => {
     renderSelector()
+    expect(trigger().className).toContain('nav-label')
     expect(trigger().className).toContain('bg-[var(--accent-wash)]')
   })
 
@@ -281,7 +308,7 @@ describe('NavSelector 选中态与状态', () => {
     state.pathname = '/articles/tech'
     renderSelector()
 
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(screen.getByRole('link', { name: '技术' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('link', { name: '随笔' }).getAttribute('aria-current')).toBeNull()
@@ -297,7 +324,7 @@ describe('NavSelector 选中态与状态', () => {
       ],
     })
 
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(screen.getByRole('link', { name: '第二页' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('link', { name: '第一页' }).getAttribute('aria-current')).toBeNull()
@@ -306,7 +333,7 @@ describe('NavSelector 选中态与状态', () => {
   it('位于分组根路径时主链接就是当前页，菜单不重复出现全部入口', () => {
     state.pathname = '/articles'
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(trigger().getAttribute('aria-current')).toBe('page')
     expect(screen.queryByRole('link', { name: '全部文章' })).toBeNull()
@@ -316,7 +343,7 @@ describe('NavSelector 选中态与状态', () => {
     state.pathname = '/articles'
     state.search = 'page=3'
     renderSelector()
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(trigger().getAttribute('aria-current')).toBe('page')
     expect(screen.queryByRole('link', { name: '全部文章' })).toBeNull()
@@ -324,7 +351,7 @@ describe('NavSelector 选中态与状态', () => {
 
   it('空数据时给出空态文案，不在子菜单重复主入口', () => {
     renderSelector({ status: 'empty', items: [] })
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(screen.getByText('暂无分类')).toBeTruthy()
     expect(trigger().getAttribute('href')).toBe('/articles')
@@ -333,7 +360,7 @@ describe('NavSelector 选中态与状态', () => {
 
   it('加载失败时给出错误态文案', () => {
     renderSelector({ status: 'error', items: [] })
-    fireEvent.click(menuButton())
+    touchTap(trigger())
 
     expect(screen.getByText('分类加载失败')).toBeTruthy()
   })

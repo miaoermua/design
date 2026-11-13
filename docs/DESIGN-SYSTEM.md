@@ -4,6 +4,8 @@
 > 这份文档是「改之前先读、改之后要同步」的唯一设计口径。任何视觉决定若与本文冲突，以本文为准；本文没写的，先补文档再写代码。
 >
 > **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
+>
+> **2026-11-13 视觉收敛**：导航入口标签成为唯一的菜单触发器（移除旁挂省略号按钮与装饰箭头，触屏改为「先展开、再导航」两段式），新增 `.glass-control` 让工具组四个圆按钮共用一套冰面参数，页脚收敛为两行并统一 `.footer-sep`。同步 §1、§5.2、§7、§9、§14.5。
 
 ---
 
@@ -13,7 +15,7 @@
 | -------------------------- | ---- | -------------------------------- | -------------------------- |
 | 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光   |
 | 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）               |
-| 冰面 Frozen Glass          | 10%  | 导航条、移动端浮层、少量状态     | 半透明冰川色 + 24px 模糊 |
+| 冰面 Frozen Glass          | 10%  | 导航条、工具浮标、浮层           | 半透明冰川色 + 14–24px 模糊 |
 
 三条不可越界：
 
@@ -192,6 +194,8 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 - 「正文用衬线」目前**已实现两处**：`.prose blockquote` 显式 `font-family: var(--font-serif)` + `font-style: normal`（`prose.css:158-167`），文章页导语带 `font-serif`（`articles/[category]/[slug]/page.tsx:159`）。首页导语用 `text-lead` 但**不带** `font-serif`（`page.tsx:66`），所以同一个 `--text-lead` 字号在两处的字体族不同 —— 这是**已实现但未统一**的状态，见 §14.2。
 - 中文标题不额外加字距；英文大标题靠 `--text-display--letter-spacing` / `--text-title--letter-spacing` 提供负字距，组件里另有少量 `tracking-*` 局部微调（如 `page.tsx:154` 的 `tracking-[-0.022em]`）。
 - `.meta` = `--text-meta` + `--text-secondary` + `letter-spacing: 0.04em` + `tabular-nums`（`globals.css:147-152`）；分隔点用 `.meta-sep`（`·` 前后 0.5em，颜色 `--text-tertiary`，`globals.css:155-159`）。
+- **导航层级靠字重，不靠新字号**：`.nav-label`（顶栏与移动菜单的一级入口）用 `--text-small` + 字重 500 + lh 1.4 + 0.01em 字距；`.nav-panel-link`（下拉与菜单子项）同字号但字重 400、lh 回到 1.7。两者共用 `--text-small`，不新增平行字号 Token（见 §5.1）。
+- **页脚两行分工**：第一行 `© 年份区间`（`.meta`）+ 衬线名字（`--text-body`/500/`--text-heading`）+ 签名（`--text-small`/次级色）；第二行 `--text-meta`/次级色。分隔符统一用 `.footer-sep`（`｜`，前后 0.55em，`--text-tertiary`）。
 
 ---
 
@@ -234,10 +238,12 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                                                                                | 全站 1 层，不随内容滚动 |
 | `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                                                                         | 全站 1 层               |
 | `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                                                                            | 文章/日记详情各 1 个    |
-| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | 仅 `SiteHeader`         |
-| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                                                                       | 移动端导航面板          |
+| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | 仅 `SiteHeader` 胶囊    |
+| `.glass-control` | 同一套 tint/saturate + `--material-glass-alpha-control`（亮 0.88 / 暗 0.82）与 `--material-glass-blur-control`（14px），加发丝边与 `--shadow-raise`；悬停只把遮罩加实一档 | 工具组四个圆形按钮      |
+| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                                                                       | 导航下拉、移动菜单、搜索面板 |
 
-退化路径：`@supports not (backdrop-filter)` → 实色纸面；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
+退化路径：`@supports not (backdrop-filter)` → 实色纸面（`.glass-bar` / `.glass-control`）；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
+`.glass-control` 的激活态（`data-active="true"`）用 `--accent-wash` 实色，是唯一覆盖冰面遮罩的状态色。
 **关闭全部材质**：删掉 `globals.css` 顶部对 `material.css` 的 `@import`，站点仍是完整的纸色排版。
 
 ---
@@ -255,10 +261,12 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 
 | 组件                        | 文件                             | 状态                                                                                                      |
 | --------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `SiteHeader`                | `layout/site-header.tsx`         | sticky 玻璃条；滚动时下边线始终可见                                                                       |
-| `NavLinks`                  | `layout/nav-links.tsx`           | inline：hover 变 `--accent-strong` + 1px 下划线生长；active：`--accent` 实线；stacked：`--accent-wash` 底 |
-| `ThemeToggle`               | `layout/theme-toggle.tsx`        | 32×32 方形按钮，hover 变 `--surface-sunk`                                                                 |
-| `SiteFooter`                | `layout/site-footer.tsx`         | 品牌 + 两组导航 + 版权，虚线分隔                                                                          |
+| `SiteHeader`                | `layout/site-header.tsx`         | 悬浮玻璃胶囊；滚动累计隐藏，页首恒显                                                                      |
+| `SiteHeaderClient`          | `layout/site-header-client.tsx`  | 桌面直链 + 目录选择器；移动端首页选择器 + 抽屉；右下工具组挂载点                                          |
+| `NavSelector`               | `layout/nav-selector.tsx`        | 入口标签即菜单触发器（无旁挂按钮、无箭头）；hover 安全三角 180ms、触屏两段式点按、`ArrowDown`/`Escape`   |
+| `ToolbarGroup` / `ToolbarButton` | `layout/toolbar-button.tsx` | 40px 圆形 `.glass-control`；tooltip 仅 hover / focus-visible；激活态 `--accent-wash`                      |
+| `ThemeToggle`               | `layout/theme-toggle.tsx`        | 复用 `ToolbarButton` 的冰面与尺寸，只负责 `data-theme` 与图标                                             |
+| `SiteFooter`                | `layout/site-footer.tsx`         | 左对齐两行：年份 + 衬线名字 + 签名 / Powered by + ICP；`｜` 统一用 `.footer-sep`                          |
 | `Container`                 | `ui/container.tsx`               | `prose / wide / narrow` 三档                                                                              |
 | `PageHeader`                | `ui/page-header.tsx`             | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                       |
 | `ArticleRow`                | `features/articles/...`          | 标题 16→20px，hover 变 `--accent-strong`；日期/分类/阅读数 pill                                           |
@@ -442,10 +450,11 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 现状是 **A/已定案**：`material.css` 头注释（Phase 4B 修正）与实现一致 —— 材质层的 `backdrop-filter` 只出现在 `.glass-*`，另有两处**组件专属**模糊单独记录。
 
-| 材质                           | 位置                 | 模糊                                            | 参数归属                            |
-| ------------------------------ | -------------------- | ----------------------------------------------- | ----------------------------------- |
-| `.glass-bar`（导航条）         | `material.css:77-80` | `--material-glass-blur`：亮 24px / 暗 24px      | 材质 Token                          |
-| `.glass-panel`（移动导航面板） | `material.css:88-93` | **无模糊**（刻意实色，避免菜单与正文叠字）      | 材质 Token                          |
+| 材质                                    | 位置                  | 模糊                                              | 参数归属                            |
+| --------------------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------- |
+| `.glass-bar`（导航胶囊）                | `material.css:82-91`  | `--material-glass-blur`：亮 24px / 暗 24px        | 材质 Token                          |
+| `.glass-control`（工具组按钮）          | `material.css:93-112` | `--material-glass-blur-control`：亮暗均 14px      | 材质 Token                          |
+| `.glass-panel`（下拉 / 移动菜单 / 搜索） | `material.css:116-123` | **无模糊**（刻意实色，避免菜单与正文叠字）        | 材质 Token                          |
 | Gallery 翻页按钮               | `media.css:196`      | `blur(6px)` + `color-mix(--surface-raised 88%)` | **组件专属参数**（有意不 Token 化） |
 | 图片预览遮罩 `.md-preview`     | `media.css:233`      | `blur(8px)` + `color-mix(--color-ink 84%)`      | **组件专属参数**（有意不 Token 化） |
 

@@ -4,7 +4,12 @@
  * 三种材质，全部由 --material-* 驱动，参数集中在 tokens.css：
  *   1. 纸张颗粒  .paper-grain     —— 单一全局噪点层，固定不随内容滚动
  *   2. 环境光    .paper-ambient   —— 顶部受光 + 右下阴影，极低对比度
- *   3. 冰面      .glass-bar / .glass-panel —— 导航与浮层专用
+ *   3. 冰面      .glass-bar / .glass-control / .glass-panel —— 浮标与浮层专用
+ *
+ * 冰面的分工：
+ *   - .glass-bar      顶栏胶囊，一块大面积薄片（24px 模糊）；
+ *   - .glass-control  工具组小圆按钮（14px 模糊、遮罩更实）；
+ *   - .glass-panel    下拉/菜单面板，刻意做实色（半透明会让两层文字叠加）。
  *
  * 关闭方式：不 @import 本文件即可，页面仍完整（纸色与排版都在 typography/base 层）。
  * 约束：全站只有一层颗粒、一层环境光；材质层的 backdrop-filter 只出现在 .glass-* 上，
@@ -81,6 +86,30 @@
 }
 
 /*
+ * 小型浮标控件（工具组四个圆按钮共用的冰面）。
+ * 参数与 .glass-bar 同源，但遮罩更实、模糊半径更小：
+ * 小面积上 24px 模糊会把图标边缘一起糊掉，且四个按钮各拖一层大半径模糊。
+ */
+.glass-control {
+  background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-control));
+  -webkit-backdrop-filter: saturate(var(--material-glass-saturate))
+    blur(var(--material-glass-blur-control));
+  backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur-control));
+  border: var(--border-hairline) solid color-mix(in srgb, var(--edge-frost) 72%, transparent);
+  box-shadow: var(--shadow-raise);
+}
+
+/* 悬停只把遮罩加实一档，不换成实色，避免四个按钮在鼠标经过时「失焦」 */
+.glass-control:hover {
+  background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-control-hover));
+}
+
+/* 激活态只用一次性语义底色；选择器权重高于 .glass-control 与降级规则 */
+.glass-control[data-active='true'] {
+  background-color: var(--accent-wash);
+}
+
+/*
  * 浮层不做玻璃：菜单底下压的是正文，半透明会让两层文字叠在一起。
  * 用比纸面亮一级的实色 + 投影，保留「浮在纸上」的层次，也不牺牲可读性。
  */
@@ -88,14 +117,15 @@
   background-color: var(--surface-raised);
   border: var(--border-hairline) solid var(--edge-frost);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-pop), inset 0 1px 0 var(--material-glass-rim);
+  box-shadow:
+    var(--shadow-pop),
+    inset 0 1px 0 var(--material-glass-rim);
 }
 
 /* 不支持 backdrop-filter 时退化为不透明纸面，保持可读性 */
-@supports not (
-  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
-) {
-  .glass-bar {
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bar,
+  .glass-control {
     background-color: var(--surface-raised);
     box-shadow: none;
   }
@@ -103,7 +133,8 @@
 
 /* 用户要求降低透明度/减少动态时，玻璃退化为实色 */
 @media (prefers-reduced-transparency: reduce) {
-  .glass-bar {
+  .glass-bar,
+  .glass-control {
     background-color: var(--surface-raised);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

@@ -183,6 +183,39 @@
   color: var(--text-tertiary);
 }
 
+/* 主导航标签：与工具按钮同一档字号，靠 500 字重与收紧的行高从正文里立起来。
+   导航与下拉条目共用 --text-small，层级差在字重与行高，不新增平行字号 Token。 */
+.nav-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* 下拉菜单条目：常规字重、行高回到 Small 的 1.7，比导航标签轻一档 */
+.nav-panel-link {
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+  font-weight: 400;
+}
+
+/* 右下工具浮标：贴边但避让圆角屏/刘海的安全区 */
+.toolbar-dock {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+}
+
+@media (min-width: 40rem) {
+  .toolbar-dock {
+    right: max(1.5rem, env(safe-area-inset-right, 0px));
+    bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* 折叠目录：去掉原生三角，用右侧细箭头表示开合 */
 .toc-summary {
   list-style: none;
@@ -211,6 +244,15 @@ details[open] > .toc-summary .toc-chevron {
 
 .link-quiet:hover {
   text-decoration-color: var(--accent);
+}
+
+/* 页脚分隔符：两行共用同一套字号、间距与颜色，避免各写一份 mx-*。
+   固定 meta 字号，否则第一行会继承 17px 正文字号，两条分隔线一大一小。 */
+.footer-sep {
+  margin-inline: 0.55em;
+  color: var(--text-tertiary);
+  font-size: var(--text-meta);
+  font-weight: 300;
 }
 
 /* 阅读操作栏按钮
@@ -255,7 +297,7 @@ details[open] > .toc-summary .toc-chevron {
   }
 }
 
-/* 冰面玻璃由 material.css 提供（.glass-bar / .glass-panel） */
+/* 冰面玻璃由 material.css 提供（.glass-bar / .glass-control / .glass-panel） */
 
 /* 屏幕阅读器专用 */
 .sr-only {
