@@ -48,6 +48,7 @@ export function SiteHeaderClient({
   searchEnabled,
 }: SiteHeaderClientProps) {
   const pathname = usePathname()
+  const homeGroup = groups.find((group) => group.href === '/')
   const [searchOpen, setSearchOpen] = useState(false)
 
   // 搜索面板打开时锁定顶栏（不允许隐藏）
@@ -93,28 +94,12 @@ export function SiteHeaderClient({
         <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
           <div
             className={cn(
-              'glass-bar mx-auto flex h-14 w-full max-w-full items-center gap-3 rounded-[var(--radius-pill)] border px-2 sm:h-[3.75rem] sm:px-3 md:w-fit',
+              'glass-bar mx-auto flex h-14 w-full max-w-full items-center gap-3 rounded-[var(--radius-pill)] px-2 sm:h-[3.75rem] sm:px-3 md:w-fit',
               // 脱离页首后才显示投影：在顶部时它与纸面是一体的
-              detached
-                ? 'border-[var(--edge)] shadow-[var(--shadow-pop)]'
-                : 'border-[var(--edge-frost)]',
+              detached ? 'shadow-[var(--shadow-pop)]' : undefined,
             )}
           >
-            <Link
-              href="/"
-              aria-current={pathname === '/' ? 'page' : undefined}
-              className={cn(
-                'text-small shrink-0 rounded-full px-3 py-2 font-medium transition-colors duration-[var(--duration-fast)]',
-                pathname === '/'
-                  ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
-              )}
-            >
-              {messages['nav.home']}
-            </Link>
-
-            {/* 桌面导航：与工具组用一条细分隔线分开，避免两者被读成一列。
-                三个目录型入口收进选择器，避免把分类 / 专栏全铺在顶栏。 */}
+            {/* 目录型入口收进选择器，避免把 Pages / 分类 / 专栏条目铺满顶栏。 */}
             <nav aria-label="主导航" className="hidden min-w-0 md:block">
               <ul className="flex items-center gap-1">
                 {groups.map((group) => (
@@ -145,12 +130,24 @@ export function SiteHeaderClient({
               </ul>
             </nav>
 
-            <MobileMenu
-              groups={groups}
-              links={links}
-              messages={messages}
-              className="ml-auto md:hidden"
-            />
+            <div className="ml-auto flex flex-1 items-center justify-between md:hidden">
+              {homeGroup ? (
+                <NavSelector group={homeGroup} messages={messages} />
+              ) : (
+                <Link
+                  href="/"
+                  aria-current={pathname === '/' ? 'page' : undefined}
+                  className="text-small rounded-full px-3 py-1.5 text-[var(--text-secondary)]"
+                >
+                  {messages['nav.home']}
+                </Link>
+              )}
+              <MobileMenu
+                groups={groups.filter((group) => group.href !== '/')}
+                links={links}
+                messages={messages}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -158,37 +155,35 @@ export function SiteHeaderClient({
       {/* 固定顶栏不占文档流：占位块保证正文不被浮条盖住 */}
       <div aria-hidden="true" className="h-[calc(3.5rem+0.75rem)] sm:h-[calc(3.75rem+1rem)]" />
 
-      <div className="fixed right-3 bottom-3 z-50 sm:right-6 sm:bottom-6">
-        <div className="glass-bar rounded-full border border-[var(--edge-frost)] p-1 shadow-[var(--shadow-raise)]">
-          {/* 无 JS 时的搜索出口：搜索面板不可用时仍保留普通链接。 */}
-          <noscript
-            dangerouslySetInnerHTML={{
-              __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
-            }}
-          />
-          <ToolbarGroup>
-            {searchEnabled ? (
-              <ToolbarButton
-                label={messages['action.search']}
-                onClick={() => setSearchOpen(true)}
-                active={searchOpen}
-              >
-                <SearchIcon />
-              </ToolbarButton>
-            ) : null}
-
-            <ThemeToggle label={messages['action.mode']} />
-
-            <LanguageButton current={locale} label={messages['action.language']} />
-
+      <div className="fixed right-4 bottom-28 z-50 sm:right-6 sm:bottom-32">
+        {/* 无 JS 时的搜索出口：搜索面板不可用时仍保留普通链接。 */}
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
+          }}
+        />
+        <ToolbarGroup>
+          {searchEnabled ? (
             <ToolbarButton
-              label={messages['action.backToTop']}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              label={messages['action.search']}
+              onClick={() => setSearchOpen(true)}
+              active={searchOpen}
             >
-              <ArrowUpIcon />
+              <SearchIcon />
             </ToolbarButton>
-          </ToolbarGroup>
-        </div>
+          ) : null}
+
+          <ThemeToggle label={messages['action.mode']} />
+
+          <LanguageButton current={locale} label={messages['action.language']} />
+
+          <ToolbarButton
+            label={messages['action.backToTop']}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <ArrowUpIcon />
+          </ToolbarButton>
+        </ToolbarGroup>
       </div>
 
       {searchEnabled ? (
@@ -256,9 +251,11 @@ function MobileMenu({
           <ul className="flex flex-col p-1.5">
             {groups.map((group) => (
               <li key={group.key}>
-                <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
-                  {messages[group.label]}
-                </p>
+                {group.href === '/' ? null : (
+                  <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
+                    {messages[group.label]}
+                  </p>
+                )}
                 <Link
                   href={group.href}
                   aria-current={pathname === group.href ? 'page' : undefined}

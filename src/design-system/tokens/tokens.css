@@ -193,10 +193,10 @@
     );
 
   --material-glass-tint: 220 229 229;
-  /* 导航条压住的是滚动中的图片，需要够实才读得清 */
-  --material-glass-alpha-bar: 0.9;
-  --material-glass-blur: 14px;
-  --material-glass-saturate: 1.25;
+  /* 更低的冰色遮罩与更强模糊共同保留玻璃感，同时维持导航文字对比 */
+  --material-glass-alpha-bar: 0.82;
+  --material-glass-blur: 24px;
+  --material-glass-saturate: 1.4;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
 
   color-scheme: light;
@@ -253,10 +253,10 @@
       transparent 74%
     );
 
-  --material-glass-tint: 24 30 32;
+  --material-glass-tint: 36 44 47;
 
-  --material-glass-blur: 16px;
-  --material-glass-saturate: 1.1;
+  --material-glass-blur: 24px;
+  --material-glass-saturate: 1.25;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 22%, transparent);
 
   color-scheme: dark;

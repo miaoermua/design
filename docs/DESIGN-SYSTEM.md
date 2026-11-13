@@ -3,7 +3,7 @@
 > 冰霜纸笺：**Warm Parchment 70% · Vintage Editorial 20% · Frozen Glass 10%**
 > 这份文档是「改之前先读、改之后要同步」的唯一设计口径。任何视觉决定若与本文冲突，以本文为准；本文没写的，先补文档再写代码。
 >
-> **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。**未改任何视觉参数**（色值、字号、字距、圆角、间距、字重、blur 数值全部保持原值）。
+> **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
 
 ---
 
@@ -13,7 +13,7 @@
 | -------------------------- | ---- | -------------------------------- | -------------------------- |
 | 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光   |
 | 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）               |
-| 冰面 Frozen Glass          | 10%  | 导航条、移动端浮层、少量状态     | 半透明冰川色 + 8–16px 模糊 |
+| 冰面 Frozen Glass          | 10%  | 导航条、移动端浮层、少量状态     | 半透明冰川色 + 24px 模糊 |
 
 三条不可越界：
 
@@ -234,7 +234,7 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                                                                                | 全站 1 层，不随内容滚动 |
 | `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                                                                         | 全站 1 层               |
 | `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                                                                            | 文章/日记详情各 1 个    |
-| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))` + 内缘高光 `--material-glass-rim`（亮色解析为 `rgb(220 229 229 / 0.9)`、14px 模糊；暗色 tint 换成 `24 30 32`、16px） | 仅 `SiteHeader`         |
+| `.glass-bar`     | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮色 alpha 0.82、24px 模糊；暗色 tint 为 `36 44 47`、24px） | 仅 `SiteHeader`         |
 | `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                                                                       | 移动端导航面板          |
 
 退化路径：`@supports not (backdrop-filter)` → 实色纸面；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
@@ -443,7 +443,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 | 材质                           | 位置                 | 模糊                                            | 参数归属                            |
 | ------------------------------ | -------------------- | ----------------------------------------------- | ----------------------------------- |
-| `.glass-bar`（导航条）         | `material.css:77-82` | `--material-glass-blur`：亮 14px / 暗 16px      | 材质 Token                          |
+| `.glass-bar`（导航条）         | `material.css:77-80` | `--material-glass-blur`：亮 24px / 暗 24px      | 材质 Token                          |
 | `.glass-panel`（移动导航面板） | `material.css:88-93` | **无模糊**（刻意实色，避免菜单与正文叠字）      | 材质 Token                          |
 | Gallery 翻页按钮               | `media.css:196`      | `blur(6px)` + `color-mix(--surface-raised 88%)` | **组件专属参数**（有意不 Token 化） |
 | 图片预览遮罩 `.md-preview`     | `media.css:233`      | `blur(8px)` + `color-mix(--color-ink 84%)`      | **组件专属参数**（有意不 Token 化） |
@@ -451,7 +451,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 边界判定（已定案，不再作为待办）：模糊只用于"必须压住滚动内容或图片"的薄层，正文卡片永不使用。
 
 - `.glass-*` 必须使用 `--material-glass-*` 材质 Token。
-- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成 `--material-glass-blur`（14/16px 会把翻页按钮和预览遮罩糊成一片，属于实质视觉变更）。
+- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成 `--material-glass-blur`（24px 会把翻页按钮和预览遮罩糊成一片，属于实质视觉变更）。
 
 关闭路径（**A**，可人工验证）：删掉 `globals.css:3` 对 `material.css` 的 `@import`，站点仍是完整的纸色排版 —— 这是材质层与排版层解耦的真实边界。
 

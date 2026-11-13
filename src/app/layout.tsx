@@ -119,9 +119,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* 全站唯一的实时连接宿主：不渲染可见内容，只维护连接与事件总线 */}
         <RealtimeRuntime url={realtime.url} lang={realtime.lang} />
 
-        {/* 通知与状态胶囊互相独立：通知承载内容事件，胶囊承载连接/请求状态 */}
-        <Toaster locale={locale} />
-        <StatusCapsule locale={locale} />
+        {/* 通知与状态独立产生，在同一右下区域堆叠显示，避免互相覆盖 */}
+        <div className="pointer-events-none fixed right-4 bottom-4 z-[70] flex max-h-[min(70vh,36rem)] w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2 overflow-y-auto sm:right-6 sm:bottom-6">
+          <Toaster locale={locale} />
+          <StatusCapsule locale={locale} />
+        </div>
 
         {/* 仅在 Theme Snippet 显式开启时挂载；默认不输出任何客户端 JS */}
         {theme.bandevtool.enabled ? <DevtoolNotice /> : null}

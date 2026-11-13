@@ -78,24 +78,31 @@ export async function SiteHeader() {
     })
   }
 
-  if (isFeatureEnabled('pages')) {
-    const items =
-      pages.status === 'fulfilled'
-        ? pages.value.items.map((page) => ({ href: pagePath(page.slug), label: page.title }))
-        : []
+  const pagesEnabled = isFeatureEnabled('pages')
+  const pageItems =
+    pagesEnabled && pages.status === 'fulfilled'
+      ? pages.value.items.map((page) => ({ href: pagePath(page.slug), label: page.title }))
+      : []
 
-    groups.push({
-      key: 'pages',
-      label: 'nav.pages',
-      href: '/pages',
-      matchPrefixes: ['/pages', '/about'],
-      allLabel: 'nav.allPages',
-      emptyLabel: 'nav.noPages',
-      errorLabel: 'nav.pagesUnavailable',
-      status: pages.status === 'rejected' ? 'error' : items.length > 0 ? 'ok' : 'empty',
-      items,
-    })
-  }
+  groups.push({
+    key: 'pages',
+    label: 'nav.home',
+    href: '/',
+    matchPrefixes: ['/', '/pages', '/about'],
+    allLabel: 'nav.home',
+    emptyLabel: 'nav.noPages',
+    errorLabel: 'nav.pagesUnavailable',
+    status: !pagesEnabled
+      ? 'ok'
+      : pages.status === 'rejected'
+        ? 'error'
+        : pageItems.length > 0
+          ? 'ok'
+          : 'empty',
+    items: pagesEnabled
+      ? [{ href: '/pages', label: messages['nav.pages'] }, ...pageItems]
+      : [],
+  })
 
   const groupOrder: Record<NavGroup['key'], number> = { pages: 0, articles: 1, diaries: 2 }
   groups.sort((left, right) => groupOrder[left.key] - groupOrder[right.key])

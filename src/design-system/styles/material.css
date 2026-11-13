@@ -71,14 +71,13 @@
 }
 
 /*
- * 冰面：半透明冰川色 + 轻微模糊 + 内缘高光。
+ * 冰面：半透明冰川色 + 强化背景模糊，不在顶栏胶囊上叠加白色内缘高光。
  * 只覆盖“需要压住下层内容”的局部，不做全屏玻璃。
  */
 .glass-bar {
   background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-bar));
   -webkit-backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur));
   backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur));
-  box-shadow: inset 0 1px 0 var(--material-glass-rim);
 }
 
 /*
