@@ -209,7 +209,7 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
             onKeyDown={handlePanelKeyDown}
             className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
           >
-            <ul className="max-h-[min(45vh,16rem)] overflow-y-auto p-1.5">
+            <ul className="max-h-[min(40vh,14rem)] overflow-y-auto p-1.5">
               <li>
                 <Link
                   href={group.href}

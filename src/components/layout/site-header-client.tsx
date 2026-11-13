@@ -93,7 +93,7 @@ export function SiteHeaderClient({
         <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
           <div
             className={cn(
-              'glass-bar mx-auto flex h-14 w-fit max-w-full items-center gap-3 rounded-[var(--radius-pill)] border px-2 sm:h-[3.75rem] sm:px-3',
+              'glass-bar mx-auto flex h-14 w-full max-w-full items-center gap-3 rounded-[var(--radius-pill)] border px-2 sm:h-[3.75rem] sm:px-3 md:w-fit',
               // 脱离页首后才显示投影：在顶部时它与纸面是一体的
               detached
                 ? 'border-[var(--edge)] shadow-[var(--shadow-pop)]'
@@ -251,7 +251,7 @@ function MobileMenu({
       {open ? (
         <div
           id="site-mobile-nav"
-          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(60vh,24rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
+          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(45vh,20rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <ul className="flex flex-col p-1.5">
             {groups.map((group) => (
