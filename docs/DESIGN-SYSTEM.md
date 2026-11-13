@@ -29,7 +29,7 @@
 src/design-system/tokens/tokens.css      ← 唯一色值/字号/间距/圆角/阴影/动效/材质/字体栈来源
 src/design-system/styles/fonts.css       ← 只声明 @font-face（自托管中文 Web Font），不含语义变量
 src/design-system/styles/material.css    ← 材质实现（颗粒、环境光、纸面、冰面）
-src/design-system/styles/{prose,media,footnotes,mentions,containers}.css
+src/design-system/styles/{motion,prose,media,footnotes,mentions,containers}.css
 src/app/globals.css                      ← base 层：元素默认样式 + 少量结构化类
 ```
 
@@ -208,8 +208,8 @@ src/app/globals.css                      ← base 层：元素默认样式 + 少
 | 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md                                     |
 | 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                              |
 | 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                                  |
-| 动效     | `--duration-fast`                     | 140ms                               | **唯一有消费者的时长**：导航、链接下划线、代码底、预览层 |
-| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | **当前无消费者**，见 §14.8                               |
+| 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔              |
+| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | 页面 / 面板过渡与首页内容淡入                            |
 | 缓动     | `--ease-out-soft`                     | `cubic-bezier(0.22, 0.61, 0.36, 1)` | 默认，全部 `transition`/`animation` 用它                 |
 | 缓动     | `--ease-in-out-soft`                  | `cubic-bezier(0.4, 0, 0.2, 1)`      | **当前无消费者**，见 §14.8                               |
 
@@ -368,6 +368,7 @@ src/design-system/styles/fonts.css                    ← 自托管字体 @font-
 src/assets/fonts/                                     ← WOFF2 分片 + OFL 许可 + manifest
 scripts/fetch-noto-fonts.mjs                          ← 字体抓取/生成脚本
 src/design-system/styles/material.css                 ← 材质实现
+src/design-system/styles/motion.css                   ← 可复用动效 primitive 与减弱动效策略
 src/design-system/styles/prose.css                    ← 正文排版
 src/design-system/styles/media.css                    ← 图片 / Gallery / 预览层
 src/design-system/styles/containers.css               ← 提示块 / 横幅 / 折叠 / 剧透
@@ -457,8 +458,8 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 ### 14.6 动效语义与 reduced-motion
 
-- 语义：动效**只解释状态变化**，不做装饰性位移。140ms 全站唯一实际使用的时长（导航、下划线、代码底、预览入场）；240/420ms 与 `--ease-in-out-soft` 无消费者（§14.8）。**A**：Token 存在性由测试守护；使用情况见 §14.9 盲区。
-- 降级：**A** 有实现、**B** 无测试。`globals.css:27-38` 在 `prefers-reduced-motion: reduce` 下把 `scroll-behavior` 改 auto 并对所有元素施加 `animation-duration/transition-duration: 0.01ms !important`；另有 5 处局部 reduced-motion 覆盖（`prose.css`、`media.css`、`containers.css` 等）。组件层只有 2 处 `motion-safe:` 用法（含 `ui/reading-progress.tsx:44`）。
+- 语义：动效**只解释状态变化**，不做装饰性位移。`motion.css` 提供可复用的淡入、上移、面板入场与错峰类；页面过渡使用 240ms，首页区块使用 420ms 淡入并以 140/280ms 错峰。各值均来自 duration / ease Token，不做额外戏剧化效果。**A**：实现与路径已核对；Reduced Motion 浏览器行为未单独实测。
+- 降级：**A** 有实现、**B** 无测试。`globals.css:30-41` 在 `prefers-reduced-motion: reduce` 下把 `scroll-behavior` 改 auto 并统一缩短 animation / transition；`motion.css` 对页面、面板与首页入场动画显式关闭；另有局部 reduced-motion 覆盖（`prose.css`、`media.css`、`containers.css` 等）。
 - 注意：全局 `!important` 兜底已经覆盖了绝大多数情况，`motion-safe:` 属于"额外保守"的写法，不是缺失。不要为了统一风格而新增无意义检测。
 
 ### 14.7 最小字号护栏
@@ -476,7 +477,6 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 | Token                                 | 状态                                                                                          | 处理             |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
 | `--surface-glass`                     | 别名无消费者；底层 `--color-frost` 经 `--edge-frost` 活着                                     | 本轮只记录，不删 |
-| `--duration-base` / `--duration-slow` | 无 `var()`、无 `duration-*` 工具类使用                                                        | 同上             |
 | `--ease-in-out-soft`                  | 无 `var()`、无 `ease-*` 工具类使用                                                            | 同上             |
 
 **必须区分、不得误判为死 Token**：

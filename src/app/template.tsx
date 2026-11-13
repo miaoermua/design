@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
  *     把页面降级成 Client Component。
  *   - `layout` 不会随导航重挂载，把动画写在那里只会播一次。
  *
- * 动画本身只有「淡入 + 8px 上移」（见 globals.css 的 .page-enter），
+ * 动画本身只有「淡入 + 8px 上移」（见 motion.css 的 .page-enter），
  * 时长走 --duration-base。`prefers-reduced-motion` 下整段动画被移除，
  * 页面直接出现——不做「缩短版动画」是因为位移在减弱动效时仍会让人不适。
  *

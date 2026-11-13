@@ -47,7 +47,6 @@ export async function SiteHeader() {
       href: '/articles',
       // 分类详情仍属于「文章」这条线，高亮跟着走
       matchPrefixes: ['/articles', '/categories'],
-      allLabel: 'nav.allArticles',
       emptyLabel: 'nav.noCategories',
       errorLabel: 'nav.categoriesUnavailable',
       status: categories.status === 'rejected' ? 'error' : items.length > 0 ? 'ok' : 'empty',
@@ -70,7 +69,6 @@ export async function SiteHeader() {
       label: 'nav.diaries',
       href: '/diaries',
       matchPrefixes: ['/diaries'],
-      allLabel: 'nav.allDiaries',
       emptyLabel: 'nav.noTopics',
       errorLabel: 'nav.topicsUnavailable',
       status: topics.status === 'rejected' ? 'error' : items.length > 0 ? 'ok' : 'empty',
@@ -89,7 +87,6 @@ export async function SiteHeader() {
     label: 'nav.home',
     href: '/',
     matchPrefixes: ['/', '/pages', '/about'],
-    allLabel: 'nav.home',
     emptyLabel: 'nav.noPages',
     errorLabel: 'nav.pagesUnavailable',
     status: !pagesEnabled

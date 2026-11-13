@@ -32,7 +32,7 @@ export const EXTERNAL_PREFIXES = ['--tw-', '--shiki', '--katex', '--mermaid', '-
 export const KNOWN_DEAD_ALIASES = ['--surface-glass'] as const
 
 /** 由 @theme 生成、当前源码里既无 var() 也无同名工具类的动效 Token */
-export const KNOWN_UNUSED_MOTION_TOKENS = ['--duration-slow', '--ease-in-out-soft'] as const
+export const KNOWN_UNUSED_MOTION_TOKENS = ['--ease-in-out-soft'] as const
 
 export function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {

@@ -246,29 +246,14 @@ function MobileMenu({
       {open ? (
         <div
           id="site-mobile-nav"
-          className="glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(45vh,20rem)] w-[min(17rem,calc(100vw-2rem))] overflow-y-auto"
+          className="motion-panel-in glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(70dvh,32rem)] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <ul className="flex flex-col p-1.5">
             {groups.map((group) => (
               <li key={group.key}>
-                {group.href === '/' ? null : (
-                  <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
-                    {messages[group.label]}
-                  </p>
-                )}
-                <Link
-                  href={group.href}
-                  aria-current={pathname === group.href ? 'page' : undefined}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    'text-small block rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
-                    pathname === group.href
-                      ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                      : 'text-[var(--text-heading)]',
-                  )}
-                >
-                  {messages[group.allLabel]}
-                </Link>
+                <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
+                  {messages[group.label]}
+                </p>
                 {group.items.map((item) => (
                   <Link
                     key={item.href}

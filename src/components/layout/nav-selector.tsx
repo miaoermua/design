@@ -12,6 +12,16 @@ interface NavSelectorProps {
   messages: Record<MessageKey, string>
 }
 
+function MoreIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor">
+      <circle cx="5" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="19" cy="12" r="1.4" />
+    </svg>
+  )
+}
+
 function isGroupActive(group: NavGroup, pathname: string): boolean {
   return group.matchPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -19,18 +29,12 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
 }
 
 /**
- * 顶栏的目录型入口（Blog 分类 / Note 专栏 / Pages）。
+ * 顶栏的目录型入口（首页 Pages / Blog 分类 / Note 专栏）。
  *
- * 交互按「鼠标 + 键盘 + 触屏」三套输入统一设计：
- *   - 鼠标：悬停展开，移出收起；点击可把面板钉住，便于在长列表里慢慢选。
- *   - 触屏：点击展开；点面板外或按 Esc 关闭。
- *   - 键盘：Enter/Space 展开，↑↓/Home/End 在条目间移动，Esc 关闭并把焦点还给按钮。
- *
- * 不用 ARIA menu：menu 角色要求一整套 roving tabindex 与首字母跳转契约，
- * 而这里的内容是普通链接。用「触发器 + aria-expanded + 链接列表」是更诚实的语义。
- *
- * 触发器是 `<a href={group.href}>` 而不是 button：无 JS 时它就是普通链接
- * （/articles、/diaries、/pages 仍然可达），有 JS 时点击才被拦下来展开面板。
+ * 主入口保留真实链接，旁边的更多按钮负责钉住子菜单；鼠标悬停仍可预览，
+ * 离开后通过短暂延迟与根节点包含判断保留安全三角过渡区。
+ * 键盘可用 ArrowDown 打开、方向键 / Home / End 移动，Escape 关闭并还焦点。
+ * 不用 ARIA menu：面板内容是普通链接，不需要 roving tabindex 契约。
  */
 export function NavSelector({ group, messages }: NavSelectorProps) {
   const pathname = usePathname()
@@ -44,6 +48,7 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
   const panelId = useId()
 
   const active = isGroupActive(group, pathname)
+  const isHomeMenu = group.href === '/'
 
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current !== null) {
@@ -71,6 +76,15 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
     },
     [clearCloseTimer],
   )
+
+  const togglePinned = () => {
+    if (open && pinned.current) {
+      close(false)
+      return
+    }
+    pinned.current = true
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -126,9 +140,8 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
   const currentQuery = searchParams.toString()
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname
   const isItemActive = (href: string) => href === currentUrl
-  // 「全部 X」代表的就是分组根路径：带分页参数时仍然算在它下面
-  const allActive = pathname === group.href
-
+  const selectedHomeItem = isHomeMenu ? group.items.find((item) => isItemActive(item.href)) : null
+  const triggerLabel = selectedHomeItem?.label ?? messages[group.label]
   return (
     <div
       ref={rootRef}
@@ -150,83 +163,65 @@ export function NavSelector({ group, messages }: NavSelectorProps) {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close(false)
       }}
     >
-      <a
-        ref={triggerRef}
-        href={group.href}
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        onClick={(event) => {
-          // 有 JS 时只展开，不导航；无 JS 时这段不会执行，链接照常跳转
-          event.preventDefault()
-          if (open && pinned.current) {
-            close(false)
-            return
-          }
-          pinned.current = true
-          setOpen(true)
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown') {
-            event.preventDefault()
-            setOpen(true)
-            // 等面板挂载后再移动焦点
-            window.requestAnimationFrame(focusFirstItem)
-          }
-          if (event.key === 'Escape' && open) {
-            event.preventDefault()
-            close(true)
-          }
-        }}
-        className={cn(
-          'text-small flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
-          active
-            ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-            : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
-        )}
-      >
-        {messages[group.label]}
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
+      <div className="flex items-center gap-0.5">
+        <a
+          ref={triggerRef}
+          href={group.href}
+          aria-current={isHomeMenu ? (pathname === '/' ? 'page' : undefined) : active ? 'page' : undefined}
+          onClick={() => close(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault()
+              setOpen(true)
+              window.requestAnimationFrame(focusFirstItem)
+            }
+            if (event.key === 'Escape' && open) {
+              event.preventDefault()
+              close(true)
+            }
+          }}
           className={cn(
-            'size-3 text-[var(--text-tertiary)] transition-transform duration-[var(--duration-fast)]',
-            open ? 'rotate-180' : undefined,
+            'text-small flex items-center rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
+            active
+              ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
           )}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </a>
+          {triggerLabel}
+        </a>
+        <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={open ? panelId : undefined}
+            aria-label={`${open ? messages['action.close'] : messages['nav.directory']}: ${triggerLabel}`}
+            title={`${open ? messages['action.close'] : messages['nav.directory']}: ${triggerLabel}`}
+            onClick={togglePinned}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown') {
+                event.preventDefault()
+                setOpen(true)
+                window.requestAnimationFrame(focusFirstItem)
+              }
+            }}
+            className={cn(
+              'flex size-7 items-center justify-center rounded-full transition-colors duration-[var(--duration-fast)]',
+              open
+                ? 'bg-[var(--accent-wash)] text-[var(--accent-strong)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]',
+            )}
+          >
+            <MoreIcon />
+        </button>
+      </div>
 
       {open ? (
-        <div className="absolute top-full left-0 z-50 w-[min(17rem,calc(100vw-2rem))] pt-2">
+        <div className="absolute top-full left-0 z-50 w-[min(18rem,calc(100vw-2rem))] pt-2">
           <div
             id={panelId}
             onKeyDown={handlePanelKeyDown}
-            className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
+            className="motion-panel-in overflow-hidden rounded-[var(--radius-md)] border border-[var(--edge)] bg-[var(--surface-raised)] shadow-[var(--shadow-pop)]"
           >
-            <ul className="max-h-[min(40vh,14rem)] overflow-y-auto p-1.5">
-              <li>
-                <Link
-                  href={group.href}
-                  data-nav-item
-                  aria-current={allActive ? 'page' : undefined}
-                  onClick={() => close(false)}
-                  className={cn(
-                    'text-small block rounded-[var(--radius-sm)] px-3 py-2 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]',
-                    allActive
-                      ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                      : 'text-[var(--text-heading)]',
-                  )}
-                >
-                  {messages[group.allLabel]}
-                </Link>
-              </li>
-
+            <ul className="max-h-[min(70dvh,32rem)] overflow-y-auto p-1.5">
               {group.items.map((item) => {
                 const itemActive = isItemActive(item.href)
                 return (
