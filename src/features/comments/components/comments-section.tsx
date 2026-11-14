@@ -43,17 +43,12 @@ export async function CommentsSection({ refId, timeZone }: CommentsSectionProps)
     )
   }
 
-  try {
-    const initial = await listComments(refId, { page: 1, size: 20 })
-    return (
-      <CommentsThread
-        refId={refId}
-        timeZone={zone}
-        allowGuest={options.allowGuest}
-        initial={initial}
-      />
-    )
-  } catch {
+  // 先把取数做完，再决定渲染哪个分支：
+  // 在 try/catch 里构造 JSX 会把异常边界变成「可能吞掉渲染期错误」的形态，
+  // react-hooks/error-boundaries 也会直接报错。这里的降级只针对取数失败。
+  const initial = await listComments(refId, { page: 1, size: 20 }).catch(() => null)
+
+  if (!initial) {
     return (
       <section aria-labelledby="comments-heading" className="comments">
         <header className="comments__head">
@@ -65,4 +60,13 @@ export async function CommentsSection({ refId, timeZone }: CommentsSectionProps)
       </section>
     )
   }
+
+  return (
+    <CommentsThread
+      refId={refId}
+      timeZone={zone}
+      allowGuest={options.allowGuest}
+      initial={initial}
+    />
+  )
 }

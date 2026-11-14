@@ -226,12 +226,11 @@ function MobileMenu({
   messages: Record<MessageKey, string>
   className?: string
 }) {
-  const [open, setOpen] = useState(false)
   const pathname = usePathname()
-
-  useEffect(() => {
-    setOpen(false)
-  }, [pathname])
+  // 记录「菜单是在哪个路由上打开的」：路由一变 open 自然变 false，
+  // 不需要再用 effect 去 setState（react-hooks/set-state-in-effect）。
+  const [openAt, setOpenAt] = useState<string | null>(null)
+  const open = openAt === pathname
 
   return (
     <div className={cn('relative', className)}>
@@ -240,7 +239,7 @@ function MobileMenu({
         aria-expanded={open}
         aria-controls="site-mobile-nav"
         aria-label={messages['action.menu']}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpenAt((value) => (value === pathname ? null : pathname))}
         className="flex size-10 items-center justify-center rounded-full border border-[var(--edge)] bg-[var(--surface-raised)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]"
       >
         {open ? <CloseIcon /> : <MenuIcon />}
@@ -261,7 +260,7 @@ function MobileMenu({
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setOpen(false)}
+                    onClick={() => setOpenAt(null)}
                     className="nav-panel-link block truncate rounded-[var(--radius-sm)] py-1.5 pr-3 pl-6 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]"
                   >
                     {item.label}
@@ -282,7 +281,7 @@ function MobileMenu({
                   <Link
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => setOpen(false)}
+                    onClick={() => setOpenAt(null)}
                     className={cn(
                       'nav-label mt-1 block rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-[var(--duration-fast)]',
                       active
