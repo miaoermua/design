@@ -65,7 +65,7 @@ describe('POST /api/articles/live', () => {
     const result = await post(BASE)
 
     expect(result).toEqual({ status: 200, body: { status: 'updated' } })
-    expect(revalidateTag).toHaveBeenCalledWith('posts')
+    expect(revalidateTag).toHaveBeenCalledWith('posts', { expire: 0 })
     // 必须绕开 300s 缓存；默认语言不传 lang（与正式渲染管线一致）
     expect(getArticle).toHaveBeenCalledWith('tech', 'hello', { lang: undefined, fresh: true })
   })
@@ -90,7 +90,7 @@ describe('POST /api/articles/live', () => {
 
     expect(result.body).toEqual({ status: 'moved', path: '/articles/life/new-slug' })
     expect(getArticle).toHaveBeenCalledTimes(1)
-    expect(revalidateTag).toHaveBeenCalledWith('posts')
+    expect(revalidateTag).toHaveBeenCalledWith('posts', { expire: 0 })
   })
 
   it('新地址上是另一篇文章：不跳转，继续核对原地址', async () => {
@@ -108,7 +108,7 @@ describe('POST /api/articles/live', () => {
     const result = await post(BASE)
 
     expect(result.body).toEqual({ status: 'gone' })
-    expect(revalidateTag).toHaveBeenCalledWith('posts')
+    expect(revalidateTag).toHaveBeenCalledWith('posts', { expire: 0 })
   })
 
   it('地址被另一篇文章占用：gone，不展示旧内容', async () => {
