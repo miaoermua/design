@@ -11,13 +11,9 @@
  * 且不会把旧响应应用到新状态上（token 校验）。
  */
 
-import {
-  isSafeSlug,
-  readModifiedAt,
-  readPostIdFromPayload,
-  RealtimeEvents,
-  type RealtimeEnvelope,
-} from '@/lib/realtime/protocol'
+import type { ArticleLocation, RealtimeEvent } from '@/lib/realtime/protocol'
+
+export type { ArticleLocation }
 
 export interface ArticleIdentity {
   id: string
@@ -25,12 +21,6 @@ export interface ArticleIdentity {
   slug: string
   /** 当前页面这次渲染拿到的修改时间；用于丢弃过期事件 */
   modifiedAt: string | null
-}
-
-/** 事件里可能给出的新位置；只作为「去哪里找」的线索，必须回查校验 */
-export interface ArticleLocation {
-  category: string
-  slug: string
 }
 
 export type ArticleSignal =
@@ -87,46 +77,22 @@ export function isNewerThan(candidate: string | null, current: string | null): b
   return next > base
 }
 
-function readLocation(payload: unknown): ArticleLocation | null {
-  if (typeof payload !== 'object' || payload === null) return null
-  const record = payload as Record<string, unknown>
-  const slug = record.slug
-  const categoryRecord =
-    typeof record.category === 'object' && record.category !== null
-      ? (record.category as Record<string, unknown>)
-      : null
-  const category =
-    (categoryRecord?.slug as unknown) ??
-    (typeof record.categorySlug === 'string' ? record.categorySlug : undefined) ??
-    (typeof record.category === 'string' ? record.category : undefined)
-
-  if (!isSafeSlug(slug) || !isSafeSlug(category)) return null
-  return { category, slug }
-}
-
 /**
- * 把协议信封翻译成业务信号。
- * 不处理的 event 返回 null —— 主题只关心文章增删改，不假装支持评论区实时。
+ * 把类型化的实时事件翻译成文章业务信号。
+ * 分发与数据校验已经在 `protocol.dispatchMessage()` 完成，这里只关心
+ * 「这是不是我正在读的这篇文章」。其余事件一律返回 null。
  */
-export function toArticleSignal(envelope: RealtimeEnvelope): ArticleSignal | null {
-  switch (envelope.event) {
-    case RealtimeEvents.postUpdate:
-    case RealtimeEvents.postRepublish: {
-      const id = readPostIdFromPayload(envelope.payload)
-      if (!id) return null
+export function toArticleSignal(event: RealtimeEvent): ArticleSignal | null {
+  switch (event.kind) {
+    case 'article-update':
       return {
         kind: 'update',
-        id,
-        modifiedAt: readModifiedAt(envelope.payload),
-        next: readLocation(envelope.payload),
+        id: event.id,
+        modifiedAt: event.modifiedAt,
+        next: event.next,
       }
-    }
-    case RealtimeEvents.postDelete:
-    case RealtimeEvents.postUnpublish: {
-      const id = readPostIdFromPayload(envelope.payload)
-      if (!id) return null
-      return { kind: 'removed', id }
-    }
+    case 'article-removed':
+      return { kind: 'removed', id: event.id }
     default:
       return null
   }
@@ -211,7 +177,11 @@ export function createLiveArticleController(
         return
       }
       // 同一版本或更旧的版本：重复投递/乱序投递，不产生请求
-      if (signal.modifiedAt && identity.modifiedAt && !isNewerThan(signal.modifiedAt, identity.modifiedAt)) {
+      if (
+        signal.modifiedAt &&
+        identity.modifiedAt &&
+        !isNewerThan(signal.modifiedAt, identity.modifiedAt)
+      ) {
         return
       }
       request(signal.next)

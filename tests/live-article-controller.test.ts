@@ -6,7 +6,7 @@ import {
   type RefreshOutcome,
   type RefreshRequest,
 } from '@/features/articles/live/controller'
-import type { RealtimeEnvelope } from '@/lib/realtime/protocol'
+import { dispatchMessage, type RealtimeEvent } from '@/lib/realtime/protocol'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -27,9 +27,10 @@ const IDENTITY = {
 
 function setup(overrides: { refresh?: (request: RefreshRequest) => Promise<RefreshOutcome> } = {}) {
   const refresh = vi.fn(
-    overrides.refresh ?? (async (_request: RefreshRequest): Promise<RefreshOutcome> => {
-      return { status: 'updated' }
-    }),
+    overrides.refresh ??
+      (async (_request: RefreshRequest): Promise<RefreshOutcome> => {
+        return { status: 'updated' }
+      }),
   )
   const onUpdated = vi.fn()
   const onMoved = vi.fn()
@@ -66,18 +67,17 @@ describe('isNewerThan', () => {
 })
 
 describe('toArticleSignal', () => {
-  const envelope = (event: string, payload: unknown): RealtimeEnvelope => ({ v: 1, event, payload })
-
-  it('post.update 提取 id、时间与位置线索', () => {
-    const signal = toArticleSignal(
-      envelope('post.update', {
+  it('POST_UPDATE 分发出的 article-update 保留 id、时间与位置线索', () => {
+    const event = dispatchMessage({
+      type: 'POST_UPDATE',
+      data: {
         id: 'post-1',
         modifiedAt: '2024-03-01T00:00:00.000Z',
         slug: 'new-slug',
         category: { slug: 'life' },
-      }),
-    )
-    expect(signal).toEqual({
+      },
+    })!
+    expect(toArticleSignal(event)).toEqual({
       kind: 'update',
       id: 'post-1',
       modifiedAt: '2024-03-01T00:00:00.000Z',
@@ -85,38 +85,43 @@ describe('toArticleSignal', () => {
     })
   })
 
-  it('post.republish 与 post.update 同构', () => {
-    expect(toArticleSignal(envelope('post.republish', { id: 'p2' }))).toMatchObject({
-      kind: 'update',
-      id: 'p2',
-    })
+  it('POST_DELETE 分发出的 article-removed 映射为 removed', () => {
+    const event = dispatchMessage({ type: 'POST_DELETE', data: 'p3' })!
+    expect(toArticleSignal(event)).toEqual({ kind: 'removed', id: 'p3' })
   })
 
-  it('post.delete / post.unpublish 的 payload 是 id', () => {
-    expect(toArticleSignal(envelope('post.delete', 'p3'))).toEqual({ kind: 'removed', id: 'p3' })
-    expect(toArticleSignal(envelope('post.unpublish', 'p3'))).toEqual({
+  it('其他类型化事件一律忽略', () => {
+    expect(toArticleSignal({ kind: 'gateway-connect', greeting: null })).toBeNull()
+    expect(toArticleSignal({ kind: 'visitor-online', online: 3, timestamp: null })).toBeNull()
+    expect(
+      toArticleSignal({ kind: 'read-count-update', articleType: 'post', id: 'p1', count: 9 }),
+    ).toBeNull()
+    expect(toArticleSignal({ kind: 'article-removed', id: 'other' })).toEqual({
       kind: 'removed',
-      id: 'p3',
+      id: 'other',
     })
   })
 
-  it('其他事件一律忽略', () => {
-    expect(toArticleSignal(envelope('comment.create', { id: 'p1' }))).toBeNull()
-    expect(toArticleSignal(envelope('gateway.connect', {}))).toBeNull()
-    expect(toArticleSignal(envelope('ack', {}))).toBeNull()
+  it('未经协议层校验的脏帧不会进入 controller', () => {
+    expect(dispatchMessage({ type: 'POST_UPDATE', data: {} })).toBeNull()
+    expect(dispatchMessage({ type: 'POST_DELETE', data: '../etc' })).toBeNull()
+    expect(dispatchMessage({ v: 1, event: 'post.update' })).toBeNull()
   })
 
-  it('payload 缺少合法 id 时忽略', () => {
-    expect(toArticleSignal(envelope('post.update', {}))).toBeNull()
-    expect(toArticleSignal(envelope('post.update', null))).toBeNull()
-    expect(toArticleSignal(envelope('post.delete', '../etc'))).toBeNull()
-  })
-
-  it('位置线索里的非法 slug 被丢弃，只保留 null', () => {
-    const signal = toArticleSignal(
-      envelope('post.update', { id: 'p1', slug: '../escape', category: { slug: 'tech' } }),
-    )
-    expect(signal).toMatchObject({ kind: 'update', id: 'p1', next: null })
+  it('位置线索里的非法 slug 在分发阶段就被丢弃', () => {
+    const event: RealtimeEvent = {
+      kind: 'article-update',
+      id: 'p1',
+      modifiedAt: null,
+      next: null,
+    }
+    expect(
+      dispatchMessage({
+        type: 'POST_UPDATE',
+        data: { id: 'p1', slug: '../escape', category: { slug: 'tech' } },
+      }),
+    ).toEqual(event)
+    expect(toArticleSignal(event)).toMatchObject({ kind: 'update', id: 'p1', next: null })
   })
 })
 
@@ -164,9 +169,24 @@ describe('live article controller', () => {
     const refresh = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
     const { controller, onUpdated } = setup({ refresh })
 
-    controller.handleSignal({ kind: 'update', id: 'post-1', modifiedAt: '2024-03-01T00:00:00.000Z', next: null })
-    controller.handleSignal({ kind: 'update', id: 'post-1', modifiedAt: '2024-03-02T00:00:00.000Z', next: null })
-    controller.handleSignal({ kind: 'update', id: 'post-1', modifiedAt: '2024-03-03T00:00:00.000Z', next: null })
+    controller.handleSignal({
+      kind: 'update',
+      id: 'post-1',
+      modifiedAt: '2024-03-01T00:00:00.000Z',
+      next: null,
+    })
+    controller.handleSignal({
+      kind: 'update',
+      id: 'post-1',
+      modifiedAt: '2024-03-02T00:00:00.000Z',
+      next: null,
+    })
+    controller.handleSignal({
+      kind: 'update',
+      id: 'post-1',
+      modifiedAt: '2024-03-03T00:00:00.000Z',
+      next: null,
+    })
 
     expect(refresh).toHaveBeenCalledTimes(1)
 
@@ -186,8 +206,18 @@ describe('live article controller', () => {
     const refresh = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
     const { controller, onUpdated, onGone } = setup({ refresh })
 
-    controller.handleSignal({ kind: 'update', id: 'post-1', modifiedAt: '2024-03-01T00:00:00.000Z', next: null })
-    controller.handleSignal({ kind: 'update', id: 'post-1', modifiedAt: '2024-03-02T00:00:00.000Z', next: null })
+    controller.handleSignal({
+      kind: 'update',
+      id: 'post-1',
+      modifiedAt: '2024-03-01T00:00:00.000Z',
+      next: null,
+    })
+    controller.handleSignal({
+      kind: 'update',
+      id: 'post-1',
+      modifiedAt: '2024-03-02T00:00:00.000Z',
+      next: null,
+    })
 
     first.resolve({ status: 'updated' })
     await flush()
