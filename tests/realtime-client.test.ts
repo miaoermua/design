@@ -181,10 +181,48 @@ describe('realtime client 连接管理', () => {
     h.last().fireConnect()
     h.last().fireDisconnect()
     h.last().fireReconnect()
+    h.last().fireConnect()
 
     expect(h.last().bindCalls).toBe(1)
     expect(h.last().sent.filter((m) => m.type === 'join')).toHaveLength(2)
     expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0 })
+  })
+
+  it('真实重连顺序（Manager reconnect 先于 namespace connect）每个房间只 join 一次', () => {
+    const h = createHarness()
+    const joinCount = () => h.last().sent.filter((m) => m.type === 'join').length
+
+    h.client.start()
+    h.client.joinArticle('post-1')
+    h.last().fireConnect()
+    expect(joinCount()).toBe(1)
+
+    h.last().fireDisconnect('transport close')
+    h.last().fireReconnectAttempt(1)
+    // Socket.IO 的实际顺序：Manager 先发 reconnect，namespace 随后才发 connect
+    h.last().fireReconnect()
+    h.last().fireConnect()
+
+    expect(joinCount()).toBe(2)
+    expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0 })
+  })
+
+  it('多个房间在每次重连成功后各补一次 join', () => {
+    const h = createHarness()
+    const joinsOf = (room: string) =>
+      h.last().sent.filter((m) => m.type === 'join' && m.payload.roomName === room).length
+
+    h.client.start()
+    h.client.joinArticle('post-1')
+    h.client.joinArticle('post-2')
+    h.last().fireConnect()
+
+    h.last().fireDisconnect('ping timeout')
+    h.last().fireReconnect()
+    h.last().fireConnect()
+
+    expect(joinsOf('article-post-1')).toBe(2)
+    expect(joinsOf('article-post-2')).toBe(2)
   })
 
   it('断线 → reconnecting；客户端主动 disconnect 不改变状态', () => {
@@ -198,13 +236,16 @@ describe('realtime client 连接管理', () => {
     expect(h.client.getState()).toMatchObject({ status: 'reconnecting', reason: 'network' })
   })
 
-  it('reconnect_attempt 递增次数，reconnect 成功后归零', () => {
+  it('reconnect_attempt 递增次数；Manager reconnect 只清计数，online 由 namespace connect 收口', () => {
     const h = createHarness()
     h.client.start()
     h.last().fireReconnectAttempt(1)
     h.last().fireReconnectAttempt(3)
     expect(h.client.getState()).toMatchObject({ status: 'reconnecting', attempts: 3 })
     h.last().fireReconnect()
+    // 传输层已恢复，但 /web 会话还没建立：不提前宣布 online
+    expect(h.client.getState()).toMatchObject({ status: 'reconnecting', attempts: 0 })
+    h.last().fireConnect()
     expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0 })
   })
 
@@ -248,6 +289,18 @@ describe('realtime client 连接管理', () => {
     expect(h.last().connectCalls).toBe(1)
   })
 
+  it('销毁后的 joinArticle 是空操作，不再写连接', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
+    h.client.stop()
+    const sent = h.last().sent.length
+
+    const release = h.client.joinArticle('post-1')
+    release()
+    expect(h.last().sent).toHaveLength(sent)
+  })
+
   it('setLang 更新握手 query 并新建会话，不新建实例也不重复绑定', () => {
     const h = createHarness()
     h.client.start()
@@ -263,6 +316,79 @@ describe('realtime client 连接管理', () => {
 
     h.client.setLang('en')
     expect(h.last().connectCalls).toBe(2)
+  })
+})
+
+describe('realtime client 断开原因', () => {
+  const joining = (h: Harness) => h.last().sent.filter((m) => m.type === 'join').length
+
+  it.each(['ping timeout', 'transport close', 'transport error', 'parse error'])(
+    '%s 由 Manager 自动重连，状态为 reconnecting',
+    (reason) => {
+      const h = createHarness()
+      h.client.start()
+      h.last().fireConnect()
+      h.last().fireDisconnect(reason)
+      expect(h.client.getState()).toMatchObject({ status: 'reconnecting', reason: 'network' })
+    },
+  )
+
+  it('io server disconnect：不谎称正在重试，只有显式 resume 才重建会话', () => {
+    const h = createHarness()
+    h.client.start()
+    h.client.joinArticle('post-1')
+    h.last().fireConnect()
+    expect(joining(h)).toBe(1)
+
+    h.last().fireDisconnect('io server disconnect')
+    expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'server-closed' })
+    // 没有进入重连流程，就不该补发 join
+    expect(joining(h)).toBe(1)
+
+    // 服务端主动断开后 Manager 不会自动重连，恢复只能靠显式 resume
+    h.client.resume()
+    expect(h.last().connectCalls).toBe(2)
+    expect(h.client.getState().status).toBe('connecting')
+
+    // 重复 resume 不会多连一次
+    h.client.resume()
+    expect(h.last().connectCalls).toBe(2)
+
+    h.last().fireConnect()
+    expect(joining(h)).toBe(2)
+  })
+
+  it('forced close 与未知原因按「会话已关闭」处理，不显示不会发生的重试', () => {
+    for (const reason of ['forced close', 'some unknown reason']) {
+      const h = createHarness()
+      h.client.start()
+      h.last().fireConnect()
+      h.last().fireDisconnect(reason)
+      expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'server-closed' })
+    }
+  })
+
+  it('server-closed 之后仍可 pause / resume，且不会被当成网络重连', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
+    h.last().fireDisconnect('io server disconnect')
+
+    h.client.pause()
+    expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'paused' })
+    h.client.resume()
+    expect(h.last().connectCalls).toBe(2)
+    expect(h.client.getState().status).toBe('connecting')
+  })
+
+  it('客户端主动断开不改变状态，也不触发重连状态', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
+    const before = h.states.length
+    h.last().fireDisconnect('io client disconnect')
+    expect(h.states).toHaveLength(before)
+    expect(h.client.getState().status).toBe('online')
   })
 })
 
@@ -310,6 +436,51 @@ describe('realtime client 错误分类', () => {
     expect(classifyConnectionError(new Error('some middleware failure')).kind).toBe('handshake')
     expect(classifyConnectionError(new Error('')).kind).toBe('unknown')
     expect(classifyConnectionError(null).kind).toBe('unknown')
+  })
+
+  it('优先用 Engine.IO 的结构化 type，而不是只靠文本', () => {
+    const transportError = Object.assign(new Error('websocket error'), { type: 'TransportError' })
+    expect(classifyConnectionError(transportError).kind).toBe('transport')
+    // 结构化信息与文本冲突时以结构为准：不会被当成服务端不兼容
+    const misleading = Object.assign(new Error('something odd'), { type: 'TransportError' })
+    expect(classifyConnectionError(misleading).kind).toBe('transport')
+  })
+
+  it('普通网络错误不会被误判成服务端不兼容', () => {
+    const samples = [
+      'Failed to fetch',
+      'NetworkError when attempting to fetch resource.',
+      "WebSocket connection to 'wss://api.example.com/socket.io/' failed",
+      'connect ECONNREFUSED 127.0.0.1:3000',
+      'getaddrinfo ENOTFOUND api.example.com',
+    ]
+    for (const message of samples) {
+      expect(classifyConnectionError(new Error(message)).kind).toBe('transport')
+    }
+  })
+
+  it('只有已核实的文案才升级成 unsupported-server', () => {
+    // 宽泛的 "not compatible" 不足以判定服务端不具备能力
+    expect(classifyConnectionError(new Error('this browser is not compatible')).kind).toBe(
+      'handshake',
+    )
+    expect(classifyConnectionError(new Error('namespace is not found in config')).kind).toBe(
+      'handshake',
+    )
+  })
+
+  it('服务端把信息放在 data 上时仍能分类并保留原文', () => {
+    const error = Object.assign(new Error(''), { data: 'Invalid namespace' })
+    expect(classifyConnectionError(error)).toMatchObject({
+      kind: 'unsupported-server',
+      message: 'Invalid namespace',
+    })
+  })
+
+  it('无法归因的错误保持 handshake / unknown，不猜测', () => {
+    expect(classifyConnectionError(new Error('unauthorized')).kind).toBe('handshake')
+    expect(classifyConnectionError(undefined).kind).toBe('unknown')
+    expect(classifyConnectionError(42).kind).toBe('handshake')
   })
 })
 
@@ -404,7 +575,11 @@ describe('全站单例 acquireRealtimeClient', () => {
     expect(transports[0]!.destroyed).toBe(true)
     expect(a.client.getState().status).toBe('idle')
     expect(b.client.getState().status).toBe('idle')
-    b.release()
-    a.release()
+
+    // 旧实例已被替换并停止：它的 release() 不能报告「已停掉当前共享连接」，
+    // 否则宿主会误把新会话的 room 订阅摘掉
+    expect(a.release()).toBe(false)
+    expect(b.release()).toBe(true)
+    expect(transports[1]!.destroyed).toBe(true)
   })
 })

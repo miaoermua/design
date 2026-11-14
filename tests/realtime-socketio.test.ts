@@ -117,4 +117,45 @@ describe('默认 Socket.IO transport', () => {
     expect(socketMock.connect).toHaveBeenCalledTimes(2)
     client.stop()
   })
+
+  it('服务端主动断开后不自行重连，也不盲目补发 join', () => {
+    const client = create()
+    client.start()
+    const handlers = Object.fromEntries(socketMock.on.mock.calls) as Record<
+      string,
+      (arg?: string) => void
+    >
+    handlers.connect?.()
+    const release = client.joinArticle('p9')
+    expect(socketMock.emit).toHaveBeenCalledTimes(1)
+
+    socketMock.emit.mockClear()
+    socketMock.connect.mockClear()
+    handlers.disconnect?.('io server disconnect')
+
+    // 客户端没有主动再 connect（官方行为：需要手动 connect）
+    expect(socketMock.connect).not.toHaveBeenCalled()
+    expect(socketMock.emit).not.toHaveBeenCalled()
+
+    // 房间订阅仍记在本地，下一次连接成功时补发
+    handlers.connect?.()
+    expect(socketMock.emit).toHaveBeenCalledWith('message', {
+      type: 'join',
+      payload: { roomName: 'article-p9' },
+    })
+
+    release()
+    client.stop()
+  })
+
+  it('销毁后 joinArticle 不再写入 socket', () => {
+    const client = create()
+    client.start()
+    client.stop()
+    socketMock.emit.mockClear()
+
+    const release = client.joinArticle('p9')
+    release()
+    expect(socketMock.emit).not.toHaveBeenCalled()
+  })
 })

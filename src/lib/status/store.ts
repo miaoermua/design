@@ -136,10 +136,14 @@ export function createStatusStore(options: StatusStoreOptions = {}): StatusStore
     },
 
     syncRealtime(state) {
+      // 'paused'（主动暂停 / 浏览器离线）与 'server-closed'（服务端关掉会话，
+      // Manager 不会自动重连）都不在「正在重试」，所以不该弹「正在重试」的胶囊；
+      // 这两种情况下页面仍有 HTTP 刷新兜底。
+      const retrying = state.reason !== 'paused' && state.reason !== 'server-closed'
       const down =
         state.status === 'reconnecting' ||
         state.status === 'error' ||
-        (state.status === 'offline' && state.reason !== 'paused')
+        (state.status === 'offline' && retrying)
       realtimeAttempt = state.attempts
       // 服务端能力不满足是终态，立即提示；普通重连仍有宽限次数
       realtimeDown =

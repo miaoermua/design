@@ -64,6 +64,12 @@ describe('status store（错误胶囊）', () => {
     expect(store.getSnapshot().kind).toBeNull()
   })
 
+  it('服务端关掉会话（不会再自动重连）不显示「正在重试」', () => {
+    const store = createStatusStore({ realtimeGraceAttempts: 1 })
+    store.syncRealtime({ status: 'offline', attempts: 3, reason: 'server-closed', error: null })
+    expect(store.getSnapshot().kind).toBeNull()
+  })
+
   it('服务端能力不满足是终态，立即提示不等宽限次数', () => {
     const store = createStatusStore({ realtimeGraceAttempts: 5 })
     store.syncRealtime({
