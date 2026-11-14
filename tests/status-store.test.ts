@@ -27,7 +27,7 @@ function manualTimers() {
 }
 
 function realtimeState(patch: Partial<RealtimeState> = {}): RealtimeState {
-  return { status: 'reconnecting', attempts: 1, retryInMs: 1_000, reason: 'network', ...patch }
+  return { status: 'reconnecting', attempts: 1, reason: 'network', error: null, ...patch }
 }
 
 describe('status store（错误胶囊）', () => {
@@ -60,8 +60,19 @@ describe('status store（错误胶囊）', () => {
 
   it('主动暂停不算故障', () => {
     const store = createStatusStore({ realtimeGraceAttempts: 1 })
-    store.syncRealtime({ status: 'offline', attempts: 4, retryInMs: null, reason: 'paused' })
+    store.syncRealtime({ status: 'offline', attempts: 4, reason: 'paused', error: null })
     expect(store.getSnapshot().kind).toBeNull()
+  })
+
+  it('服务端能力不满足是终态，立即提示不等宽限次数', () => {
+    const store = createStatusStore({ realtimeGraceAttempts: 5 })
+    store.syncRealtime({
+      status: 'error',
+      attempts: 0,
+      reason: null,
+      error: { kind: 'unsupported-server', message: 'Invalid namespace' },
+    })
+    expect(store.getSnapshot().kind).toBe('realtime')
   })
 
   it('请求失败提示，成功后短暂显示已恢复', () => {

@@ -61,7 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     getLocale(),
     getThemeConfig(),
   ])
-  // 网关地址只在服务端解析：浏览器拿到的是完整 URL，拿不到任何后端配置
+  // 实时连接的 origin 只在服务端解析：浏览器只拿到 origin，拿不到任何后端配置
   const realtime = resolveRealtimeConfig(locale)
 
   return (
@@ -117,7 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ImageViewer />
 
         {/* 全站唯一的实时连接宿主：不渲染可见内容，只维护连接与事件总线 */}
-        <RealtimeRuntime url={realtime.url} lang={realtime.lang} />
+        <RealtimeRuntime origin={realtime.origin} lang={realtime.lang} />
 
         {/* 通知与状态独立产生，在同一右下区域堆叠显示，避免互相覆盖 */}
         <div className="pointer-events-none fixed right-4 bottom-4 z-[70] flex max-h-[min(70vh,36rem)] w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2 overflow-y-auto sm:right-6 sm:bottom-6">

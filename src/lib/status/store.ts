@@ -138,9 +138,15 @@ export function createStatusStore(options: StatusStoreOptions = {}): StatusStore
     syncRealtime(state) {
       const down =
         state.status === 'reconnecting' ||
+        state.status === 'error' ||
         (state.status === 'offline' && state.reason !== 'paused')
       realtimeAttempt = state.attempts
-      realtimeDown = down && (state.attempts >= realtimeGraceAttempts || state.status === 'offline')
+      // 服务端能力不满足是终态，立即提示；普通重连仍有宽限次数
+      realtimeDown =
+        down &&
+        (state.status === 'error' ||
+          state.status === 'offline' ||
+          state.attempts >= realtimeGraceAttempts)
       if (realtimeDown) hadProblem = true
       else if (snapshot.kind === 'realtime') scheduleRecoveredHide()
       publish()

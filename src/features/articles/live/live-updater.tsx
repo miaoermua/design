@@ -154,13 +154,16 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
     const previous = statusRef.current
     statusRef.current = snapshot.state.status
     if (!enabled || !snapshot.everConnected) return
-    if (snapshot.state.status === 'online' && (previous === 'reconnecting' || previous === 'offline')) {
+    if (
+      snapshot.state.status === 'online' &&
+      (previous === 'reconnecting' || previous === 'offline')
+    ) {
       controllerRef.current?.check()
     }
   }, [enabled, snapshot.everConnected, snapshot.state.status])
 
   // 降级：实时连接不可用时，用可见性感知的低频轮询兜底；
-  // 连接正常时不轮询，避免「WebSocket + 高频轮询」同时打后端。
+  // 连接正常时不轮询，避免「实时连接 + 高频轮询」同时打后端。
   useEffect(() => {
     if (!enabled) return
 

@@ -1,309 +1,410 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  acquireRealtimeClient,
+  classifyConnectionError,
   createRealtimeClient,
-  type RealtimeSocket,
+  type RealtimeClient,
+  type RealtimeClientOptions,
   type RealtimeState,
-  type RealtimeTimers,
+  type RealtimeTransport,
+  type RealtimeTransportConfig,
+  type RealtimeTransportHandlers,
 } from '@/lib/realtime/client'
-import type { RealtimeEnvelope } from '@/lib/realtime/protocol'
+import type { RealtimeEvent, RealtimeRoomMessage } from '@/lib/realtime/protocol'
 
-class FakeSocket implements RealtimeSocket {
-  readyState = 0
-  sent: string[] = []
-  closed = false
-  onopen: (() => void) | null = null
-  onmessage: ((event: { data: unknown }) => void) | null = null
-  onclose: (() => void) | null = null
-  onerror: (() => void) | null = null
+const ORIGIN = 'https://api.example.com'
 
-  constructor(readonly url: string) {}
+class FakeTransport implements RealtimeTransport {
+  readonly config: RealtimeTransportConfig
+  lang: string
+  connectCalls = 0
+  disconnectCalls = 0
+  bindCalls = 0
+  unbindCalls = 0
+  destroyed = false
+  sent: RealtimeRoomMessage[] = []
+  handlers: RealtimeTransportHandlers | null = null
 
-  send(data: string): void {
-    this.sent.push(data)
+  constructor(config: RealtimeTransportConfig) {
+    this.config = config
+    this.lang = config.lang
   }
 
-  close(): void {
-    if (this.closed) return
-    this.closed = true
-    this.readyState = 3
-    this.onclose?.()
+  connect(): void {
+    this.connectCalls += 1
+  }
+  disconnect(): void {
+    this.disconnectCalls += 1
+  }
+  emitMessage(payload: RealtimeRoomMessage): void {
+    this.sent.push(payload)
+  }
+  setLang(lang: string): void {
+    this.lang = lang
+  }
+  bind(handlers: RealtimeTransportHandlers): void {
+    if (this.handlers) return
+    this.handlers = handlers
+    this.bindCalls += 1
+  }
+  unbind(): void {
+    this.handlers = null
+    this.unbindCalls += 1
+  }
+  destroy(): void {
+    this.unbind()
+    this.disconnect()
+    this.destroyed = true
   }
 
-  open(): void {
-    this.readyState = 1
-    this.onopen?.()
+  fireConnect(): void {
+    this.handlers?.onConnect()
   }
-
-  deliver(envelope: RealtimeEnvelope | string): void {
-    this.onmessage?.({ data: typeof envelope === 'string' ? envelope : JSON.stringify(envelope) })
+  fireDisconnect(reason = 'transport close'): void {
+    this.handlers?.onDisconnect(reason)
+  }
+  fireMessage(raw: unknown): void {
+    this.handlers?.onMessage(raw)
+  }
+  fireConnectError(error: Error): void {
+    this.handlers?.onConnectError(error)
+  }
+  fireReconnectAttempt(attempt: number): void {
+    this.handlers?.onReconnectAttempt(attempt)
+  }
+  fireReconnect(): void {
+    this.handlers?.onReconnect(1)
+  }
+  fireReconnectFailed(): void {
+    this.handlers?.onReconnectFailed()
   }
 }
 
-function createHarness(options: { maxAttempts?: number } = {}) {
-  const sockets: FakeSocket[] = []
+interface Harness {
+  client: RealtimeClient
+  transports: FakeTransport[]
+  events: RealtimeEvent[]
+  states: RealtimeState[]
+  last: () => FakeTransport
+}
+
+function createHarness(overrides: Partial<RealtimeClientOptions> = {}): Harness {
+  const transports: FakeTransport[] = []
+  const events: RealtimeEvent[] = []
   const states: RealtimeState[] = []
-  const events: RealtimeEnvelope[] = []
-
-  let clock = 0
-  let seq = 0
-  const timeouts = new Map<number, () => void>()
-  const intervals = new Map<number, () => void>()
-
-  const timers: RealtimeTimers = {
-    setTimeout: (handler) => {
-      const id = ++seq
-      timeouts.set(id, handler)
-      return id
-    },
-    clearTimeout: (handle) => {
-      timeouts.delete(handle as number)
-    },
-    setInterval: (handler) => {
-      const id = ++seq
-      intervals.set(id, handler)
-      return id
-    },
-    clearInterval: (handle) => {
-      intervals.delete(handle as number)
-    },
-  }
 
   const client = createRealtimeClient({
-    url: 'wss://example.com/ws/web',
-    createSocket: (url) => {
-      const socket = new FakeSocket(url)
-      sockets.push(socket)
-      return socket
+    origin: ORIGIN,
+    lang: 'zh',
+    createTransport: (config) => {
+      const transport = new FakeTransport(config)
+      transports.push(transport)
+      return transport
     },
-    timers,
-    random: () => 0.5,
-    now: () => clock,
-    onEvent: (envelope) => events.push(envelope),
-    onState: (state) => states.push(state),
-    baseDelayMs: 1_000,
-    maxDelayMs: 8_000,
-    heartbeatIntervalMs: 25_000,
-    heartbeatTimeoutMs: 60_000,
-    maxAttempts: options.maxAttempts ?? 0,
+    onEvent: (event) => events.push(event),
+    onState: (state) => states.push({ ...state }),
+    ...overrides,
   })
 
+  return { client, transports, events, states, last: () => transports[transports.length - 1]! }
+}
+
+function makeOptions(): RealtimeClientOptions {
   return {
-    client,
-    sockets,
-    states,
-    events,
-    last: () => sockets[sockets.length - 1]!,
-    advance: (ms: number) => {
-      clock += ms
-    },
-    runTimeouts: () => {
-      for (const [id, handler] of [...timeouts]) {
-        timeouts.delete(id)
-        handler()
-      }
-    },
-    runIntervals: () => {
-      for (const handler of intervals.values()) handler()
-    },
-    pendingTimeouts: () => timeouts.size,
-    pendingIntervals: () => intervals.size,
+    origin: ORIGIN,
+    lang: 'zh',
+    onEvent: () => {},
+    createTransport: (config) => new FakeTransport(config),
   }
 }
 
+afterEach(() => {
+  delete (globalThis as typeof globalThis & { __folioRealtimeClient?: unknown })
+    .__folioRealtimeClient
+  vi.restoreAllMocks()
+})
+
 describe('realtime client 连接管理', () => {
-  it('start 幂等：重复调用只有一条连接', () => {
+  it('start 幂等：重复调用只连接一次、只绑定一次监听器', () => {
     const h = createHarness()
     h.client.start()
     h.client.start()
-    expect(h.sockets).toHaveLength(1)
+    expect(h.transports).toHaveLength(1)
+    expect(h.last().connectCalls).toBe(1)
+    expect(h.last().bindCalls).toBe(1)
   })
 
-  it('只注入 socket factory，start 之前不会碰浏览器 WebSocket', () => {
+  it('start 之前不创建连接', () => {
     const h = createHarness()
-    expect(h.sockets).toHaveLength(0)
-    h.client.start()
-    expect(h.sockets).toHaveLength(1)
+    expect(h.last().connectCalls).toBe(0)
+    expect(h.client.getState().status).toBe('idle')
   })
 
-  it('握手地址带 lang 参数', () => {
+  it('工厂拿到的是 API origin 与当前语言，而不是旧 ws 地址', () => {
     const h = createHarness()
-    h.client.setLang('en')
-    h.client.start()
-    expect(h.last().url).toBe('wss://example.com/ws/web?lang=en')
+    expect(h.last().config).toEqual({ origin: ORIGIN, lang: 'zh' })
   })
 
   it('连接成功后状态为 online 且 attempts 归零', () => {
     const h = createHarness()
     h.client.start()
-    expect(h.client.getState().status).toBe('connecting')
-    h.last().open()
-    expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0, retryInMs: null })
+    expect(h.client.getState()).toMatchObject({ status: 'connecting', attempts: 0 })
+    h.last().fireConnect()
+    expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0, error: null })
   })
 
-  it('加入房间：连接前记住，连接后补发', () => {
+  it('加入房间：连接前记住，连上后用 message/join 补发', () => {
     const h = createHarness()
     const release = h.client.joinArticle('post-1')
-    expect(h.sockets).toHaveLength(0)
+    expect(h.last().sent).toHaveLength(0)
 
     h.client.start()
-    h.last().open()
-    expect(JSON.parse(h.last().sent[0]!)).toEqual({
-      v: 1,
-      event: 'room.join',
-      payload: { room: 'article-post-1' },
-    })
+    h.last().fireConnect()
+    expect(h.last().sent[0]).toEqual({ type: 'join', payload: { roomName: 'article-post-1' } })
 
     release()
-    expect(JSON.parse(h.last().sent[1]!)).toEqual({
-      v: 1,
-      event: 'room.leave',
-      payload: { room: 'article-post-1' },
-    })
+    expect(h.last().sent[1]).toEqual({ type: 'leave', payload: { roomName: 'article-post-1' } })
   })
 
   it('连接后加入房间立即发送', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
+    h.last().fireConnect()
     h.client.joinArticle('post-2')
-    expect(JSON.parse(h.last().sent[0]!).payload).toEqual({ room: 'article-post-2' })
+    expect(h.last().sent[0]).toEqual({ type: 'join', payload: { roomName: 'article-post-2' } })
   })
 
-  it('断开后按 equal jitter 退避重连，并在重连后重新加入房间', () => {
+  it('重连成功后重新加入房间，且不会重复注册监听器', () => {
     const h = createHarness()
     h.client.start()
     h.client.joinArticle('post-1')
-    h.last().open()
+    h.last().fireConnect()
+    h.last().fireDisconnect()
+    h.last().fireReconnect()
 
-    h.last().close()
-
-    const state = h.client.getState()
-    expect(state.status).toBe('reconnecting')
-    expect(state.attempts).toBe(1)
-    // cap = 1000，equal jitter 且 random 固定 0.5 → 750ms
-    expect(state.retryInMs).toBe(750)
-
-    h.runTimeouts()
-    expect(h.sockets).toHaveLength(2)
-    h.last().open()
-    expect(JSON.parse(h.last().sent[0]!).payload).toEqual({ room: 'article-post-1' })
-    expect(h.client.getState().attempts).toBe(0)
+    expect(h.last().bindCalls).toBe(1)
+    expect(h.last().sent.filter((m) => m.type === 'join')).toHaveLength(2)
+    expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0 })
   })
 
-  it('重连延迟有上限', () => {
+  it('断线 → reconnecting；客户端主动 disconnect 不改变状态', () => {
     const h = createHarness()
     h.client.start()
+    h.last().fireConnect()
+    h.last().fireDisconnect('io client disconnect')
+    expect(h.client.getState().status).toBe('online')
 
-    for (let index = 0; index < 6; index += 1) {
-      h.last().close()
-      h.advance(h.client.getState().retryInMs ?? 0)
-      h.runTimeouts()
-    }
-
-    h.last().close()
-    // cap 被封顶在 8s，抖动后最大不超过 8s
-    expect(h.client.getState().retryInMs).toBeLessThanOrEqual(8_000)
+    h.last().fireDisconnect('transport close')
+    expect(h.client.getState()).toMatchObject({ status: 'reconnecting', reason: 'network' })
   })
 
-  it('stop 之后不再重连，状态回到 idle', () => {
+  it('reconnect_attempt 递增次数，reconnect 成功后归零', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
-    h.client.stop()
-    expect(h.client.getState()).toMatchObject({ status: 'idle', reason: 'stopped' })
-    expect(h.pendingTimeouts()).toBe(0)
-    expect(h.pendingIntervals()).toBe(0)
-    expect(h.sockets).toHaveLength(1)
+    h.last().fireReconnectAttempt(1)
+    h.last().fireReconnectAttempt(3)
+    expect(h.client.getState()).toMatchObject({ status: 'reconnecting', attempts: 3 })
+    h.last().fireReconnect()
+    expect(h.client.getState()).toMatchObject({ status: 'online', attempts: 0 })
   })
 
-  it('pause 不重连，resume 重新连上', () => {
+  it('重连次数耗尽进入 offline/exhausted', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
+    h.last().fireReconnectFailed()
+    expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'exhausted' })
+  })
+
+  it('pause 不重连，resume 用同一个实例重新连接', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
 
     h.client.pause()
     expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'paused' })
-    expect(h.pendingTimeouts()).toBe(0)
+    const before = h.states.length
+    h.last().fireDisconnect('transport close')
+    expect(h.states).toHaveLength(before)
 
     h.client.resume()
-    expect(h.sockets).toHaveLength(2)
+    expect(h.transports).toHaveLength(1)
+    expect(h.last().connectCalls).toBe(2)
     expect(h.client.getState().status).toBe('connecting')
   })
 
-  it('达到最大尝试次数后停止并标记 exhausted', () => {
-    const h = createHarness({ maxAttempts: 1 })
+  it('stop 之后销毁并解绑，销毁后迟到的事件不再产生状态更新', () => {
+    const h = createHarness()
     h.client.start()
-    h.last().close()
-    expect(h.client.getState().status).toBe('reconnecting')
+    h.last().fireConnect()
+    h.client.stop()
 
-    h.runTimeouts()
-    h.last().close()
-    expect(h.client.getState()).toMatchObject({ status: 'offline', reason: 'exhausted' })
+    expect(h.client.getState()).toMatchObject({ status: 'idle', reason: 'stopped' })
+    expect(h.last().destroyed).toBe(true)
+    const before = h.states.length
+    h.last().fireMessage({ type: 'VISITOR_ONLINE', data: { online: 1 } })
+    h.last().fireConnectError(new Error('late'))
+    expect(h.states).toHaveLength(before)
+    expect(() => h.client.start()).not.toThrow()
+    expect(h.last().connectCalls).toBe(1)
+  })
+
+  it('setLang 更新握手 query 并新建会话，不新建实例也不重复绑定', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
+
+    h.client.setLang('en')
+    expect(h.last().lang).toBe('en')
+    expect(h.transports).toHaveLength(1)
+    expect(h.last().bindCalls).toBe(1)
+    expect(h.last().disconnectCalls).toBe(1)
+    expect(h.last().connectCalls).toBe(2)
+    expect(h.client.getState().status).toBe('connecting')
+
+    h.client.setLang('en')
+    expect(h.last().connectCalls).toBe(2)
   })
 })
 
-describe('realtime client 事件与心跳', () => {
+describe('realtime client 错误分类', () => {
+  it('网络/传输错误保持 reconnecting，并标明 transport', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnectError(new Error('websocket error'))
+    expect(h.client.getState()).toMatchObject({
+      status: 'reconnecting',
+      error: { kind: 'transport' },
+    })
+  })
+
+  it('服务端不支持 /web namespace 是终态 error，并停止重试', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnectError(new Error('Invalid namespace'))
+    expect(h.client.getState()).toMatchObject({
+      status: 'error',
+      error: { kind: 'unsupported-server', message: 'Invalid namespace' },
+    })
+    expect(h.last().disconnectCalls).toBe(1)
+
+    // 未暂停时 resume 直接返回；已暂停时也不允许重建会话
+    h.client.resume()
+    expect(h.last().connectCalls).toBe(1)
+    expect(h.client.getState().status).toBe('error')
+
+    h.client.pause()
+    h.client.resume()
+    expect(h.last().connectCalls).toBe(1)
+    expect(h.client.getState().status).not.toBe('connecting')
+  })
+
+  it('握手失败、超时、网络错误、服务端不支持可被区分', () => {
+    expect(classifyConnectionError(new Error('Invalid namespace')).kind).toBe('unsupported-server')
+    expect(
+      classifyConnectionError(
+        new Error('trying to reach a Socket.IO server in v2.x with a v3.x client'),
+      ).kind,
+    ).toBe('unsupported-server')
+    expect(classifyConnectionError(new Error('connection timeout')).kind).toBe('timeout')
+    expect(classifyConnectionError(new Error('xhr poll error')).kind).toBe('transport')
+    expect(classifyConnectionError(new Error('some middleware failure')).kind).toBe('handshake')
+    expect(classifyConnectionError(new Error('')).kind).toBe('unknown')
+    expect(classifyConnectionError(null).kind).toBe('unknown')
+  })
+})
+
+describe('realtime client 事件分发与去重', () => {
+  it('message 帧被分发为类型化业务事件', () => {
+    const h = createHarness()
+    h.client.start()
+    h.last().fireConnect()
+    h.last().fireMessage({ type: 'POST_UPDATE', data: { id: 'p1' } })
+    expect(h.events).toEqual([{ kind: 'article-update', id: 'p1', modifiedAt: null, next: null }])
+  })
+
   it('同一帧只投递一次', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
-
-    const frame = { v: 1, event: 'post.update', payload: { id: 'p1' }, id: 'evt-1' }
-    h.last().deliver(frame)
-    h.last().deliver(frame)
-
-    expect(h.events).toHaveLength(1)
-  })
-
-  it('没有 id 的帧按 event + 文章 id + modifiedAt 去重', () => {
-    const h = createHarness()
-    h.client.start()
-    h.last().open()
-
+    h.last().fireConnect()
     const frame = {
-      v: 1,
-      event: 'post.update',
-      payload: { id: 'p1', modifiedAt: '2024-01-01T00:00:00.000Z' },
+      type: 'VISITOR_ONLINE',
+      data: { online: 3, timestamp: '2024-05-01T00:00:00.000Z' },
     }
-    h.last().deliver(frame)
-    h.last().deliver(frame)
-
+    h.last().fireMessage(frame)
+    h.last().fireMessage(frame)
     expect(h.events).toHaveLength(1)
   })
 
-  it('脏帧不会打断连接', () => {
+  it('未知事件与脏帧不打断连接、不投递', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
-
-    h.last().deliver('{oops')
-    expect(h.client.getState().status).toBe('online')
+    h.last().fireConnect()
+    h.last().fireMessage('{oops')
+    h.last().fireMessage({ v: 1, event: 'post.update' })
+    h.last().fireMessage({ type: 'COMMENT_CREATE', data: {} })
     expect(h.events).toHaveLength(0)
+    expect(h.client.getState().status).toBe('online')
   })
 
-  it('发应用层 ping，收到任何帧都算活着', () => {
+  it('重连后重复下发的事件仍被去重', () => {
     const h = createHarness()
     h.client.start()
-    h.last().open()
+    h.last().fireConnect()
+    const frame = { type: 'ARTICLE_READ_COUNT_UPDATE', data: { count: 9, id: 'p1', type: 'post' } }
+    h.last().fireMessage(frame)
+    h.last().fireDisconnect()
+    h.last().fireReconnect()
+    h.last().fireMessage(frame)
+    expect(h.events).toHaveLength(1)
+  })
+})
 
-    h.advance(20_000)
-    h.last().deliver({ v: 1, event: 'gateway.connect' })
-    h.runIntervals()
+describe('全站单例 acquireRealtimeClient', () => {
+  it('相同 origin + lang 复用同一实例，不重复创建 transport', () => {
+    const transports: FakeTransport[] = []
+    const options = (): RealtimeClientOptions => ({
+      ...makeOptions(),
+      createTransport: (config) => {
+        const transport = new FakeTransport(config)
+        transports.push(transport)
+        return transport
+      },
+    })
 
-    const ping = JSON.parse(h.last().sent[h.last().sent.length - 1]!)
-    expect(ping.event).toBe('ping')
-    expect(typeof ping.id).toBe('string')
+    const a = acquireRealtimeClient(options())
+    const b = acquireRealtimeClient(options())
+    expect(a.client).toBe(b.client)
+    a.client.start()
+    b.client.start()
+    expect(transports).toHaveLength(1)
+    expect(transports[0]!.connectCalls).toBe(1)
+
+    expect(a.release()).toBe(false)
+    expect(transports[0]!.destroyed).toBe(false)
+    expect(b.release()).toBe(true)
+    expect(transports[0]!.destroyed).toBe(true)
   })
 
-  it('长时间没有任何帧即判定连接已死并重连', () => {
-    const h = createHarness()
-    h.client.start()
-    h.last().open()
+  it('语言变化时先停止旧实例，不同时留两条连接', () => {
+    const transports: FakeTransport[] = []
+    const options = (lang: 'zh' | 'en'): RealtimeClientOptions => ({
+      ...makeOptions(),
+      lang,
+      createTransport: (config) => {
+        const transport = new FakeTransport(config)
+        transports.push(transport)
+        return transport
+      },
+    })
 
-    h.advance(61_000)
-    h.runIntervals()
-
-    expect(h.last().closed).toBe(true)
-    expect(h.client.getState().status).toBe('reconnecting')
+    const a = acquireRealtimeClient(options('zh'))
+    a.client.start()
+    const b = acquireRealtimeClient(options('en'))
+    expect(transports).toHaveLength(2)
+    expect(transports[0]!.destroyed).toBe(true)
+    expect(a.client.getState().status).toBe('idle')
+    expect(b.client.getState().status).toBe('idle')
+    b.release()
+    a.release()
   })
 })
