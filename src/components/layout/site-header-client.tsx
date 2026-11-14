@@ -142,7 +142,12 @@ export function SiteHeaderClient({
                   {messages['nav.home']}
                 </Link>
               )}
+              {/*
+                换路由就重挂载：MobileMenu 用「在哪个路由打开的」记住开关状态，
+                只隐藏不卸载的话，浏览器返回到原路由会把这个菜单重新打开。
+              */}
               <MobileMenu
+                key={pathname}
                 groups={groups.filter((group) => group.href !== '/')}
                 links={links}
                 messages={messages}
