@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { ArchiveSection, ExploreTabs, buildYears, type ExploreTab } from '@/features/explore'
+import { TagNoteList } from '@/features/taxonomy'
 import { getSiteTimezone, getTimeline, listCategories, listTags } from '@/lib/api'
 import { t } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
@@ -74,35 +75,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 标签
               </h2>
               {sortedTags.length > 0 ? (
-                <ul className="mt-1 grid gap-x-12 sm:grid-cols-2">
-                  {sortedTags.map((tag) => (
-                    <li key={tag.name}>
-                      <Link
-                        href={`/tags/${encodeURIComponent(tag.name)}`}
-                        className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
-                      >
-                        <span
-                          className={
-                            'shrink-0 font-serif text-lead leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]'
-                          }
-                        >
-                          #{tag.name}
-                        </span>
-                        {tag.count !== null ? (
-                          <>
-                            <span
-                              aria-hidden="true"
-                              className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
-                            />
-                            <span className="text-meta tabular-nums text-[var(--text-secondary)]">
-                              {tag.count} 篇
-                            </span>
-                          </>
-                        ) : null}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <TagNoteList tags={sortedTags} className="mt-4" />
               ) : (
                 <div className="mt-5">
                   <EmptyState title="还没有标签" description="文章还没打上任何标签。" />

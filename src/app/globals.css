@@ -12,6 +12,8 @@
 /* 组件专属样式：只服务单个页面/组件，不属于站点级设计系统，
    因此放在各自的 feature / components 目录、由这里汇总引入。
    新增时保持「一个组件一个文件」，不要在 globals.css 里续写组件规则。 */
+@import '../features/taxonomy/tag-note.css';
+@import '../features/articles/article-cover.css';
 @import '../features/friends/friend-postcard.css';
 
 /*

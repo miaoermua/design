@@ -39,6 +39,9 @@ export function toArticle(row: V2PostRow): Article {
     title: row.title,
     slug: row.slug,
     summary: stringOrNull(row.summary),
+    // 列表正文：带 truncate=310 时是后端截断后的原始 Markdown/HTML，
+    // 概览由 UI 层再清理；这里不加工，避免把正文伪装成官方摘要。
+    text: stringOrNull(row.text),
     category: toCategoryRef(row),
     tags: stringArray(row.tags),
     cover: metaCover ? { src: metaCover, kind: 'image' } : toAttachment(row.images?.[0]),
@@ -56,6 +59,8 @@ export function toArticleDetail(row: V2PostDetail): ArticleDetail {
   const related = readArray(row, 'related', 'related')
   return {
     ...toArticle(row),
+    // 详情正文由 content 承担；不再重复保存一份完整原文
+    text: null,
     content: pickContent(row),
     contentFormat: stringOrNull(row.content_format) ?? 'markdown',
     copyright: Boolean(row.copyright),

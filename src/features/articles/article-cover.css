@@ -1,0 +1,54 @@
+/*
+ * 文章详情：封面 → 标题的渐变过渡
+ *
+ * 临时设计稿，见 docs/DESIGN-SYSTEM.md §14.11。未定为全局规范。
+ *
+ * 结构前提：封面（.article-cover）与标题容器（.article-hero）放在同一个
+ * grid 单元里叠着，标题贴住封面底边。这样标题本身压在那条淡出带上，
+ * 而淡出带的高度由标题的高度决定（多行标题 = 更长的渐变），
+ * 到标题结束处正好收成 100% 纸面，不会顺流滑进日期 / 阅读数据 / 标签。
+ *
+ * 渐变底部的终点色必须等于标题所在表面：<640px 正文直接铺页面纸（--surface）；
+ * ≥640px 起 .reading-sheet 铺 --reading-surface。两者不一致会在纸边留下色差。
+ */
+
+/* 封面与标题同格叠放：网格行高 = 两者较高者（封面），标题对齐到底边 */
+.article-cover-stack {
+  display: grid;
+  margin-block-start: 1.5rem;
+}
+
+.article-cover-stack > * {
+  grid-area: 1 / 1;
+}
+
+.article-cover {
+  align-self: start;
+}
+
+.article-hero {
+  /* 淡出带在标题之上的引导高度：这段完全压在封面图上 */
+  --article-hero-lead: clamp(3.5rem, 7vw, 5.5rem);
+  /* 标题与封面底边之间留一点余量，避免字脚贴边 */
+  --article-hero-tail: 1.25rem;
+  --article-hero-bg: var(--surface);
+
+  position: relative;
+  /* 背景叠在 <img> 之上：网格项按树序绘制，不提升层级会被图片盖住 */
+  z-index: 1;
+  align-self: end;
+  padding-block: var(--article-hero-lead) var(--article-hero-tail);
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--article-hero-bg) 58%, transparent) 22%,
+    color-mix(in srgb, var(--article-hero-bg) 88%, transparent) 50%,
+    var(--article-hero-bg) 100%
+  );
+}
+
+@media (min-width: 40rem) {
+  .article-hero {
+    --article-hero-bg: var(--reading-surface);
+  }
+}

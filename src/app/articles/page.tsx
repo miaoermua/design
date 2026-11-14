@@ -50,7 +50,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         <div className="border-t border-dashed border-[var(--edge-strong)]">
           <div className="divide-y divide-dashed divide-[var(--edge)]">
             {result.items.map((article) => (
-              <ArticleRow key={article.id} article={article} timeZone={timeZone} />
+              <ArticleRow key={article.id} article={article} timeZone={timeZone} withExcerpt />
             ))}
           </div>
         </div>

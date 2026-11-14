@@ -14,6 +14,8 @@ export interface Article {
   slug: string
   /** 官方摘要；为 null 表示作者没写，不填充任何替代文本 */
   summary: string | null
+  /** 列表返回的正文原文（带 truncate=310，仍是 Markdown/HTML）；用于生成一行正文概览 */
+  text: string | null
   category: ArticleCategoryRef | null
   tags: string[]
   /** 封面 = images[0]（v2 无 cover 字段） */
@@ -41,6 +43,12 @@ export interface ArticleDetail extends Article {
 
 export type ArticleSort = 'createdAt' | 'modifiedAt' | 'title'
 
+/**
+ * 列表查询参数。
+ *
+ * `truncate` 不在这里暴露：所有列表入口必须共用同一个截断长度，
+ * 由 `listArticles` 统一注入，避免某个页面漏传而拉回整篇正文。
+ */
 export interface ArticleListQuery {
   page?: number
   size?: number

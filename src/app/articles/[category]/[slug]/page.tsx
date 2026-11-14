@@ -155,6 +155,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     ...(canonical ? { mainEntityOfPage: canonical } : {}),
   }
 
+  const heading = (
+    <h1 className="font-serif text-[calc(var(--text-display)*0.78)] leading-[1.25] tracking-[-0.022em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
+      {article.title}
+    </h1>
+  )
+
   return (
     <Container>
       {/* 实时更新接线：桌面与移动端同一个组件，事件只影响当前这篇文章 */}
@@ -194,17 +200,31 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     </>
                   ) : null}
                 </nav>
-                <time className="meta meta-sep" dateTime={article.createdAt}>
-                  {formatDate(article.createdAt, timeZone)}
-                </time>
                 {article.isPinned ? (
                   <span className="meta meta-sep text-[var(--accent-strong)]">置顶</span>
                 ) : null}
               </div>
 
-              <h1 className="mt-5 font-serif text-[calc(var(--text-display)*0.78)] leading-[1.25] tracking-[-0.022em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
-                {article.title}
-              </h1>
+              {/* 封面与标题同格叠放：标题压在封面底部的淡出带上，
+                  渐变区域由标题自身高度撑开，到标题结束处为止。
+                  发布日期 / 阅读数据 / 标签全部落在渐变之后。 */}
+              {article.cover ? (
+                <div className="article-cover-stack">
+                  <figure className="article-cover">
+                    <CoverImage
+                      src={article.cover.src}
+                      alt={article.title}
+                      width={article.cover.width}
+                      height={article.cover.height}
+                      priority
+                      className="aspect-[16/9] w-full"
+                    />
+                  </figure>
+                  <div className="article-hero">{heading}</div>
+                </div>
+              ) : (
+                <div className="mt-5">{heading}</div>
+              )}
 
               {article.summary ? (
                 <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
@@ -212,14 +232,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 </p>
               ) : null}
 
-              {/* 元信息行：只留阅读数据。喜欢 / 分享 / 订阅 / 赞赏在操作栏，
+              {/* 元信息行：只留时间与阅读数据。喜欢 / 分享 / 订阅 / 赞赏在操作栏，
                   这里再放一个赞赏入口会让同一动作出现两次。 */}
               <div className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
-                {estimate ? <span>约 {estimate} 分钟</span> : null}
+                <time dateTime={article.createdAt}>{formatDate(article.createdAt, timeZone)}</time>
+                {estimate ? <span className="meta-sep">约 {estimate} 分钟</span> : null}
                 {article.readCount !== null ? (
-                  <span className={estimate ? 'meta-sep' : undefined}>
-                    {article.readCount.toLocaleString('zh-CN')} 次阅读
-                  </span>
+                  <span className="meta-sep">{article.readCount.toLocaleString('zh-CN')} 次阅读</span>
                 ) : null}
                 {article.likeCount !== null ? (
                   <span className="meta-sep">
@@ -245,19 +264,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     </Link>
                   ))}
                 </p>
-              ) : null}
-
-              {article.cover ? (
-                <figure className="mt-8">
-                  <CoverImage
-                    src={article.cover.src}
-                    alt={article.title}
-                    width={article.cover.width}
-                    height={article.cover.height}
-                    priority
-                    className="aspect-[16/9] w-full"
-                  />
-                </figure>
               ) : null}
             </header>
 

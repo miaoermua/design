@@ -90,7 +90,18 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
       (row) =>
         categoryIds.length === 0 || (row.category ? categoryIds.includes(row.category.id) : false),
     )
-    return { status: 200, body: paginate(rows, page, size) }
+    // 与 Core v12.10.0 的 truncate 行为一致：按字符截断 text，并丢弃 lexical content。
+    // 离线预览因此和真实后端一样，不会把整篇正文塞进列表 DOM。
+    const truncate = Number.parseInt(params.get('truncate') ?? '', 10)
+    const trimmed =
+      Number.isFinite(truncate) && truncate > 0
+        ? rows.map((row) => ({
+            ...row,
+            text: row.text ? row.text.slice(0, truncate) : row.text,
+            content: null,
+          }))
+        : rows
+    return { status: 200, body: paginate(trimmed, page, size) }
   }
 
   const postMatch = /^\/posts\/([^/]+)\/([^/]+)$/.exec(path)

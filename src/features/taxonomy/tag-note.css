@@ -1,0 +1,122 @@
+/*
+ * Tags 索引签（便利贴）
+ *
+ * 临时设计稿，见 docs/DESIGN-SYSTEM.md §14.12。未定为全局规范。
+ *
+ * 形状：一块纸同时有「朝左的尖角」和「右侧圆角矩形」。用 clip-path 在同一个
+ * 元素上裁出左尖角，右侧圆角由 border-radius 提供——两者是交集关系，
+ * 圆角不会被裁掉。不是箭头 + 卡片的两个元素拼接。
+ *
+ * 阴影不能用 box-shadow：clip-path 会把阴影一起裁掉，所以用父级
+ * filter: drop-shadow()，让投影跟随裁剪后的轮廓。
+ *
+ * 宽度随内容走（inline-flex + 不写固定宽度），长标签到容器边缘才收，
+ * 只有在极端长度下才对标签名做省略号兜底。
+ */
+
+.tag-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.95rem 0.55rem;
+}
+
+.tag-notes__item {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tag-note {
+  display: inline-flex;
+  max-width: 100%;
+  border-radius: 10px;
+  text-decoration: none;
+  /* 投影跟随裁剪轮廓，替代被裁掉的 box-shadow */
+  filter: drop-shadow(0 1px 1px rgb(var(--shadow-color) / 0.12));
+  transition: filter var(--duration-fast) var(--ease-out-soft);
+}
+
+.tag-note:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.tag-note__body {
+  --note-bg: var(--note-sage);
+
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  max-width: 100%;
+  min-width: 0;
+  /* 左内边距比尖角的进深大一点，文字不会压到斜边上 */
+  padding: 0.34rem 0.85rem 0.34rem 1.15rem;
+  border-radius: 2px 7px 7px 2px;
+  background-color: var(--note-bg);
+  clip-path: polygon(0 50%, 0.95rem 0, 100% 0, 100% 100%, 0.95rem 100%);
+  transition:
+    transform var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 悬停：整张纸上浮 1.5px，纸色略深一档，投影跟着变重 */
+.tag-note:hover {
+  filter: drop-shadow(0 2px 2px rgb(var(--shadow-color) / 0.16));
+}
+
+.tag-note:hover .tag-note__body {
+  transform: translateY(-1.5px);
+  background-color: color-mix(in srgb, var(--note-bg) 90%, var(--text-primary));
+}
+
+.tag-note__label {
+  font-family: var(--font-serif);
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  white-space: nowrap;
+  /* 只有极端长标签才会走到省略号：正常长度下由 fit-content 自然展开 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag-note__count {
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+  /* 不用 --text-secondary：它在五档纸色上只有 3.5–4.1:1，12px 达不到 AA 4.5。
+     层级交给字号（12 vs 15）与衬线/非衬线的差别，不靠把字压灰。 */
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* 五档纸色：由组件按标签名的稳定哈希分配，与列表顺序无关 */
+.tag-note__body--sage {
+  --note-bg: var(--note-sage);
+}
+
+.tag-note__body--blue {
+  --note-bg: var(--note-blue);
+}
+
+.tag-note__body--clay {
+  --note-bg: var(--note-clay);
+}
+
+.tag-note__body--ochre {
+  --note-bg: var(--note-ochre);
+}
+
+.tag-note__body--cream {
+  --note-bg: var(--note-cream);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-note,
+  .tag-note__body {
+    transition: none;
+  }
+
+  .tag-note:hover .tag-note__body {
+    transform: none;
+  }
+}

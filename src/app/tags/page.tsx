@@ -4,8 +4,9 @@ import { Container } from '@/components/ui/container'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
+import { TagNoteList } from '@/features/taxonomy'
 import { listCategories, listTags } from '@/lib/api'
-import { categoryPath, tagPath } from '@/lib/routes'
+import { categoryPath } from '@/lib/routes'
 
 /**
  * /tags —— 兼容路由
@@ -21,15 +22,6 @@ export const metadata: Metadata = {
   description: '按分类与标签浏览文章。',
 }
 
-/** 用相对频次决定字号，而不是凭感觉给每个标签写死大小 */
-function tagSizeClass(count: number | null, maxCount: number): string {
-  if (count === null || maxCount <= 0) return 'text-body'
-  const ratio = count / maxCount
-  if (ratio > 0.6) return 'text-h2'
-  if (ratio > 0.3) return 'text-lead'
-  return 'text-small'
-}
-
 export default async function TagsPage() {
   requireFeature('taxonomy')
 
@@ -37,14 +29,13 @@ export default async function TagsPage() {
   const sortedTags = [...tags].sort(
     (a, b) => (b.count ?? 0) - (a.count ?? 0) || a.name.localeCompare(b.name, 'zh-CN'),
   )
-  const maxCount = sortedTags.reduce((max, tag) => Math.max(max, tag.count ?? 0), 0)
 
   return (
     <Container>
       <PageHeader
         kicker="标签"
         title="按主题翻阅"
-        description="标签按文章数从多到少排列，右侧数字是该标签下的文章数。"
+        description="标签按文章数从多到少排列，名字后面的数字是该标签下的文章数。"
         meta={
           <p className="meta">
             {sortedTags.length} 个标签 · {categories.length} 个分类
@@ -57,33 +48,7 @@ export default async function TagsPage() {
           标签
         </h2>
         {sortedTags.length > 0 ? (
-          <ul className="grid gap-x-12 sm:grid-cols-2">
-            {sortedTags.map((tag) => (
-              <li key={tag.name}>
-                <Link
-                  href={tagPath(tag.name)}
-                  className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
-                >
-                  <span
-                    className={`shrink-0 font-serif leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)] ${tagSizeClass(tag.count, maxCount)}`}
-                  >
-                    #{tag.name}
-                  </span>
-                  {tag.count !== null ? (
-                    <>
-                      <span
-                        aria-hidden="true"
-                        className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
-                      />
-                      <span className="text-meta tabular-nums text-[var(--text-secondary)]">
-                        {tag.count} 篇
-                      </span>
-                    </>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <TagNoteList tags={sortedTags} className="mt-5" />
         ) : (
           <div className="mt-5">
             <EmptyState title="还没有标签" description="文章还没打上任何标签。" />

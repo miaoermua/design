@@ -55,6 +55,14 @@
   --color-success: #4a6b52;
   --color-info: #4a6a7c;
 
+  /* 便利贴纸：低饱和植物色，只服务 Tags 索引签（见 DESIGN-SYSTEM §14.12）。
+     与纸色同族，饱和度和明度都压在纸面附近，避免彩色块把版面拽走。 */
+  --color-note-sage: #d8ddca;
+  --color-note-blue: #d2dde2;
+  --color-note-clay: #e6d2c6;
+  --color-note-ochre: #e7dbbc;
+  --color-note-cream: #efe6d3;
+
   /* ══ 2. 字体：Serif 标题 × Sans 正文 × Mono 代码 ═══════════════ */
   /* 中文自托管（Noto Sans SC / Noto Serif SC，OFL 1.1）。字体文件与 @font-face 在
      styles/fonts.css，本文件只负责语义字体栈；分片不覆盖的生僻字由后面的系统族兜底。
@@ -161,6 +169,13 @@
   --accent-wash: var(--color-accent-wash);
   --accent-line: var(--color-accent-line);
 
+  /* 便利贴纸（组件唯一可用层）：Tags 索引签的五种纸色 */
+  --note-sage: var(--color-note-sage);
+  --note-blue: var(--color-note-blue);
+  --note-clay: var(--color-note-clay);
+  --note-ochre: var(--color-note-ochre);
+  --note-cream: var(--color-note-cream);
+
   /* 阅读区：正文永远落在比页面更亮一级的纸上 */
   --reading-surface: color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper));
 
@@ -238,6 +253,13 @@
   --color-accent-line: #35504f;
 
   --color-danger: #d98b7d;
+
+  /* 便利贴纸：暗色下压到纸面之上一点，仍是低饱和，不发光 */
+  --color-note-sage: #333a30;
+  --color-note-blue: #2e3a42;
+  --color-note-clay: #43352e;
+  --color-note-ochre: #3f382a;
+  --color-note-cream: #3a352b;
   --color-warning: #d6ab6d;
   --color-success: #86ab92;
   --color-info: #86a9bd;

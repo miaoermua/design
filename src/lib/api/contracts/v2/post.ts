@@ -10,6 +10,8 @@
  *   ⚠️ 实测列表**没有** commentsIndex 字段，因此契约里不声明、UI 不展示评论数。
  *   ⚠️ 没有 cover 字段：封面语义由 images[0]（或 meta.cover）承担。
  *   ⚠️ 列表项也带 related（可能为空数组），详情接口才保证 liked。
+ *   ⚠️ `?truncate=N` 是 Core v12.10.0 的官方列表参数：text 按字符截断到 N，
+ *      且 lexical `content` 被置 null；不传则返回完整正文。
  */
 
 import type { EntityId, IsoDateString, V2Image } from './common'
@@ -28,7 +30,7 @@ export interface V2PostRow {
   id: EntityId
   title: string
   slug: string
-  /** Markdown / 纯文本正文；列表默认返回完整正文 */
+  /** Markdown / HTML 正文；列表带 truncate 时是后端按字符截断后的原文，仍含标记 */
   text?: string | null
   /** Lexical 富文本 JSON 字符串；content_format=lexical 时使用 */
   content?: string | null
