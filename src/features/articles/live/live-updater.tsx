@@ -36,6 +36,14 @@ import { requestArticleRefresh } from './refresh'
 /** 降级轮询间隔：只在实时连接不可用、且页面可见时才发请求 */
 const POLL_INTERVAL_MS = 60_000
 
+/**
+ * 恢复核对与「页面可见 / 轮询」核对的最小间隔。
+ *
+ * 页面重新可见会先触发降级核对（此时状态还是 offline），紧接着连接恢复成功又会
+ * 触发恢复核对；两者落在同一个瞬间时只保留一次请求。不同时刻的核对不受影响。
+ */
+const RECOVERY_CHECK_DEDUPE_MS = 3_000
+
 export interface LiveArticleUpdaterProps {
   identity: ArticleIdentity
   /** 服务端判定是否启用了实时能力（未配置 / mock / MX_REALTIME=off 时为 false） */
@@ -148,19 +156,43 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
     if (signal) controllerRef.current?.handleSignal(signal)
   })
 
-  // 连接恢复：断线期间的事件不会补发，因此重连成功后主动核对一次
+  /**
+   * 恢复语义（不是「previous 状态在某个集合里」这种近似判断）：
+   * - `wasOnlineRef`：本次挂载里已经真正连上过，用来区分**首次连接**与**恢复**；
+   * - `recoveryPendingRef`：连上之后进入过中断态，等下一次 online 补一次核对。
+   *
+   * 首次连接（connecting → online）不核对：页面刚由服务端渲染，数据本来就是新的。
+   * 同一次恢复只会消耗一次 pending，重复的 online 不会重复核对。
+   */
   const statusRef = useRef(snapshot.state.status)
+  const wasOnlineRef = useRef(false)
+  const recoveryPendingRef = useRef(false)
+  /** 最近一次 HTTP 核对的时间，用于恢复核对去重（0 表示本次挂载还没核对过） */
+  const lastCheckAtRef = useRef(0)
+
   useEffect(() => {
-    const previous = statusRef.current
-    statusRef.current = snapshot.state.status
-    if (!enabled || !snapshot.everConnected) return
-    if (
-      snapshot.state.status === 'online' &&
-      (previous === 'reconnecting' || previous === 'offline')
-    ) {
+    const status = snapshot.state.status
+    statusRef.current = status
+    if (!enabled) return
+
+    if (status === 'online') {
+      const recovering = wasOnlineRef.current && recoveryPendingRef.current
+      wasOnlineRef.current = true
+      recoveryPendingRef.current = false
+      if (!recovering) return
+      // 同一次恢复里，页面可见性可能刚触发过一次核对（见下面的 tick），
+      // 关掉这条请求，避免背靠背打两次同样的接口
+      const now = Date.now()
+      if (now - lastCheckAtRef.current < RECOVERY_CHECK_DEDUPE_MS) return
+      lastCheckAtRef.current = now
       controllerRef.current?.check()
+      return
     }
-  }, [enabled, snapshot.everConnected, snapshot.state.status])
+
+    if (status === 'reconnecting' || status === 'offline' || status === 'error') {
+      if (wasOnlineRef.current) recoveryPendingRef.current = true
+    }
+  }, [enabled, snapshot.state.status])
 
   // 降级：实时连接不可用时，用可见性感知的低频轮询兜底；
   // 连接正常时不轮询，避免「实时连接 + 高频轮询」同时打后端。
@@ -170,6 +202,7 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       if (statusRef.current === 'online') return
+      lastCheckAtRef.current = Date.now()
       controllerRef.current?.check()
     }
 
