@@ -40,7 +40,7 @@ H4 之后不再新增层级，视觉上靠字号与颜色区分。
 
 ## 四、代码
 
-行内代码见上一节；下面是带语言标记的代码块，由 Shiki 在服务端着色，双主题通过 CSS 变量切换。
+行内代码见上一节；下面是带语言标记的代码块，由 Shiki 在服务端着色，双主题通过 CSS 变量切换。没有文件名的块只有语言标识，标题栏仍然存在。
 
 ```ts
 interface RenderedContent {
@@ -54,13 +54,144 @@ export async function render(markdown: string): Promise<RenderedContent> {
 }
 ```
 
+写了 `filename` 时，卡片多出一条独立标题栏，文件名在左、语言标识靠右、复制按钮始终在最右：
+
+```tsx filename="src/app/articles/[category]/[slug]/page.tsx" {3,7-9}
+export default async function ArticlePage({ params }: Props) {
+  const { category, slug } = await params
+  const post = await getPostBySlug({ category, slug })
+  if (!post) notFound()
+
+  // 目录由正文渲染时一并产出，不在这里二次解析 HTML
+  const { html, toc } = await renderMarkdown(post.text)
+  return <ArticleBody html={html} toc={toc} />
+}
+```
+
+`{3,7-9}` 这样的行号集合会把对应行整行标出，`[!code ++]` / `[!code --]` 记号则用于逐行标注增删：
+
+```ts
+const before = readLegacyTheme() // [!code --]
+const after = readThemeConfig() // [!code ++]
+const locale = await getLocale() // [!code highlight]
+```
+
 ```bash
 pnpm build && MX_MOCK=1 PORT=3021 pnpm start
 ```
 
+diff 语言按行首判定增删；文件头的 `---` / `+++` 与 hunk 的 `@@` 不参与增删配色：
+
 ```diff
-- const html = marked.parse(markdown)
-+ const { html } = await renderMarkdown(markdown)
+--- a/src/lib/content/highlight.ts
++++ b/src/lib/content/highlight.ts
+@@ -1,3 +1,3 @@
+-const html = marked.parse(markdown)
++const { html } = await renderMarkdown(markdown)
+ return html
+```
+
+单个语言标识、没有名字的纯文本块也照常成立：
+
+```
+普通文本没有语言标识，卡片进入无标题栏形态。
+```
+
+未知语言降级为纯文本着色，行号与标题栏不受影响：
+
+```text-file filename="notes/todo.txt"
+这里不是任何一种 Shiki 语言，内容仍然可读、可复制。
+```
+
+单行代码块只有一行行号：
+
+```ts
+export const SITE_NAME = 'Folio'
+```
+
+空代码块也保留一行行号，不会塌成空白条：
+
+```ts
+```
+
+长代码块默认折叠到半屏高度，底部是渐变遮罩与展开按钮；按钮出现前正文保持完整可读：
+
+```ts
+const LANGS = [
+  'typescript',
+  'tsx',
+  'javascript',
+  'jsx',
+  'json',
+  'css',
+  'html',
+  'bash',
+  'sql',
+  'python',
+  'rust',
+  'go',
+  'yaml',
+  'markdown',
+  'diff',
+] as const
+
+const ALIASES: Record<string, string> = {
+  ts: 'typescript',
+  js: 'javascript',
+  sh: 'bash',
+  shell: 'bash',
+  zsh: 'bash',
+  yml: 'yaml',
+  md: 'markdown',
+  py: 'python',
+  rs: 'rust',
+  golang: 'go',
+}
+
+export function normalizeLang(value?: string): string | undefined {
+  if (!value) return undefined
+  return ALIASES[value] ?? value
+}
+
+export function isSupportedLang(value?: string): boolean {
+  const normalized = normalizeLang(value)
+  return normalized ? (LANGS as readonly string[]).includes(normalized) : false
+}
+```
+
+作者明确要求展开时用 `expand`，同样的长度也不再折叠：
+
+```ts expand
+export interface ThemeConfig {
+  accent: string
+  radius: 'sm' | 'md' | 'lg'
+  paper: {
+    grain: number
+    ambient: number
+  }
+  post: {
+    toc: boolean
+    comments: boolean
+    donate: boolean
+  }
+  social: {
+    enabled: boolean
+    github?: string
+    mail?: string
+  }
+}
+
+export const DEFAULTS: ThemeConfig = {
+  accent: 'indigo',
+  radius: 'md',
+  paper: { grain: 0.06, ambient: 0.12 },
+  post: { toc: true, comments: true, donate: false },
+  social: { enabled: true },
+}
+
+export function mergeTheme(input?: Partial<ThemeConfig>): ThemeConfig {
+  return { ...DEFAULTS, ...input }
+}
 ```
 
 ## 五、数学公式

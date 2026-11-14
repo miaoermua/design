@@ -1,0 +1,397 @@
+/**
+ * Folio — 代码块卡片（Code Block）
+ *
+ * 只服务 `.code-block`：正文里的围栏代码块。行内 `<code>`、KaTeX、Mermaid
+ * 与「折叠块里的代码」各归各的样式表，这里不重复定义。
+ *
+ * 结构（DOM 见 `lib/content/highlight.ts`，交互见 `components/markdown/code-block-enhancer.tsx`）：
+ *
+ *   .code-block                卡片：边框、圆角、底色、投影
+ *   ├── __header               标题栏：文件名（或其缺省时的语言标识）+ 右侧复制按钮
+ *   ├── __body                 两列：行号槽 + 滚动区（折叠时被 `max-height` 截断）
+ *   │   ├── __gutter           行号：独立列，不参与文本选择
+ *   │   └── __content          横向滚动容器，直接包住 Shiki 的 `<pre>`
+ *   └── __expand               展开按钮（折叠时才出现，客户端插入）
+ *
+ * 三条硬约束，改之前先读：
+ *   1. **行号与正文必须同一行高**：两侧都用 `--text-code` 的字号与行高、
+ *      同样的上下内边距，且代码不折行（`white-space: pre`）。任何一侧多出
+ *      一个 padding 或换行都会让第 N 行错位。
+ *   2. **横向滚动只发生在 `__content` 里**：行号在滚动区之外，因此长行滚动时
+ *      行号不动、也不会被裁掉；`__gutter` 不设 `overflow`。
+ *   3. **复制只取 `.line` 的文本**：行号是独立元素、装饰是伪元素，
+ *      所以从 DOM 读出来的内容天然干净。
+ *
+ * 颜色全部走语义 Token；diff 的增删色用功能色（`--color-success` /
+ * `--color-danger`）压到低透明度，避免在暖纸上跳出一块荧光。
+ */
+
+.code-block {
+  /* 行号槽宽度按位数伸缩：两位数是常态，三位数仍然对齐 */
+  --cb-gutter-min: 2.75rem;
+  --cb-pad-block: 0.75rem;
+  --cb-pad-inline: 1rem;
+  /* 折叠后保留的高度：视口一半，且不超过 30rem（大屏上不至于拉满整屏） */
+  --cb-collapse-max: min(50vh, 30rem);
+
+  position: relative;
+  margin-block: 1.9em;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background-color: var(--code-surface);
+}
+
+/* ── 标题栏 ─────────────────────────────────────────────────────
+   有文件名时是独立的一条：文件名在左、语言标识与复制按钮在右。
+   只有语言时同样成立，只是文件名缺席 —— 两种形态共用同一套内边距，
+   头部与代码区因此是「一条线接一块面」，不是两个拼起来的盒子。 */
+.code-block__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.875rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 80%, transparent);
+  background-color: color-mix(in srgb, var(--text-primary) 5%, var(--code-surface));
+}
+
+/* 文件名：等宽字体、正文墨色，是这一栏的主体 */
+.code-block__filename {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 语言标识：小一号、大字距的大写标签，退到辅助色，不与文件名抢注意力。
+   `margin-inline-start: auto` 只在这里出现一次 —— 它把「剩下的空间」全部吃掉，
+   于是标识与复制按钮一起靠右；若再给复制按钮也写 auto，两个 auto 会把空闲
+   空间平分，标识就跑到标题栏正中间去了。 */
+.code-block__lang {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+/* 没有文件名也没有语言时（`code-block--bare`）：标题栏里只剩复制按钮，
+   留着整条标题栏会空出一大块「没有内容的头部」。这里把它压成一条窄控制带，
+   去掉底色 —— 结构还在（复制按钮有地方待），视觉上不再假装有标题。 */
+.code-block--bare .code-block__header {
+  min-height: 1.875rem;
+  padding-block: 0.1875rem;
+  background-color: transparent;
+  border-bottom-color: color-mix(in srgb, var(--edge) 55%, transparent);
+}
+
+/* ── 复制按钮 ───────────────────────────────────────────────────
+   始终可见（不靠 hover），常态是安静的描边图标，悬停才浮起一层纸色。
+   hover 只是增强：手机上没有 hover，按钮同样在。 */
+.code-block__copy {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  /* 不写 auto：靠右的职责在 `__lang` 身上，这里只跟着它走 */
+  margin-inline-start: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 没有语言标识时（bare 形态本就没有标题栏内容，但作者手写文件名 + 无语言时同理），
+   复制按钮自己顶到右端 */
+.code-block__header > .code-block__copy:first-child {
+  margin-inline-start: auto;
+}
+
+.code-block__copy:hover {
+  color: var(--text-heading);
+  background-color: var(--accent-wash);
+}
+
+.code-block__copy:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* 三个图标叠在同一格，靠状态切换显示，切换时不做位移动画 */
+.code-block__copy > span {
+  display: none;
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
+.code-block__copy > span > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.code-block__copy .code-block__copy-icon {
+  display: block;
+}
+
+/* 成功：换成对勾并染成功色，1.8s 后由脚本摘掉状态 */
+.code-block__copy[data-state='copied'] {
+  color: var(--color-success);
+}
+
+.code-block__copy[data-state='copied'] .code-block__copy-icon,
+.code-block__copy[data-state='failed'] .code-block__copy-icon {
+  display: none;
+}
+
+.code-block__copy[data-state='copied'] .code-block__copy-done,
+.code-block__copy[data-state='failed'] .code-block__copy-fail {
+  display: block;
+}
+
+/* 失败：警告色 + 描边，和成功状态区分开，不靠颜色单独表达 */
+.code-block__copy[data-state='failed'] {
+  color: var(--color-danger);
+  background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+/* ── 主体：行号槽 + 代码 ───────────────────────────────────── */
+.code-block__body {
+  display: flex;
+  align-items: stretch;
+  /* 默认不限高：脚本还没跑（或用户禁用 JS）时内容必须完整可读。
+     折叠是增强，不是前提 —— 与 Spoiler「默认可见、增强后才模糊」同一个取舍。 */
+  max-height: none;
+  overflow: hidden;
+}
+
+/* 折叠：只截断，不出现内层滚动条 —— 两列同时被裁，行号与代码不会错位 */
+.code-block[data-collapsed='true'] .code-block__body {
+  max-height: var(--cb-collapse-max);
+}
+
+/* 展开后解除限制 */
+.code-block[data-collapsed='false'] .code-block__body {
+  max-height: none;
+}
+
+/* 作者写了 expand：即使脚本判出高度也永不截断（不依赖 data-* 是否落到元素上） */
+.code-block--expand .code-block__body {
+  max-height: none;
+}
+
+/* 行号槽：独立列。颜色比正文淡一档，右侧一条发丝线把它和代码分开。
+   `user-select: none` 是第二道保险（第一道是它本来就独立于 `<pre>`）。 */
+.code-block__gutter {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  min-width: var(--cb-gutter-min);
+  padding-block: var(--cb-pad-block);
+  border-right: 1px solid color-mix(in srgb, var(--edge) 70%, transparent);
+  background-color: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  line-height: var(--text-code--line-height);
+  color: var(--text-tertiary);
+  text-align: right;
+  user-select: none;
+  /* 数字等宽，位数变化时不会左右跳动 */
+  font-variant-numeric: tabular-nums;
+}
+
+.code-block__gutter > span {
+  padding-inline: 0.5rem;
+}
+
+.code-block__content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Shiki 输出 ─────────────────────────────────────────────────
+   这里只改布局，不改着色：颜色仍由渲染期注入的 `--shiki-*` 决定。 */
+.code-block .code-block__content pre {
+  margin: 0;
+  padding: var(--cb-pad-block) var(--cb-pad-inline);
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  font-size: var(--text-code);
+  line-height: var(--text-code--line-height);
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.code-block .code-block__content pre code {
+  display: block;
+  /* 不折行：长行交给横向滚动，行号才能与代码保持一一对应。
+     行距由 `.line` 自己的 `white-space` 保证 —— 这里是 `normal`，
+     否则 Shiki 在行与行之间留下的换行符会被当成真正的空行（每行多出一倍行高）。 */
+  width: max-content;
+  min-width: 100%;
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  white-space: normal;
+}
+
+/* 一行一格：diff 的底色与高亮才能铺满整行（含横向溢出的部分）。
+   `white-space: pre` 放在这里而不是 `code` 上：行内不折行、保留缩进，
+   而行与行之间的换行文本节点在块级布局里不再生成空行。 */
+.code-block .line {
+  display: block;
+  padding-inline: 0.25rem;
+  white-space: pre;
+  /* 空行也要占满一行高度 */
+  min-height: calc(1em * var(--text-code--line-height));
+}
+
+.code-block .line::after {
+  content: ' ';
+}
+
+.code-block .code-block__content pre {
+  color: var(--shiki-light, inherit);
+}
+
+.code-block .code-block__content pre span {
+  color: var(--shiki-light);
+}
+
+[data-theme='dark'] .code-block .code-block__content pre {
+  color: var(--shiki-dark, inherit);
+}
+
+[data-theme='dark'] .code-block .code-block__content pre span {
+  color: var(--shiki-dark);
+}
+
+/* ── 整行高亮与 diff ────────────────────────────────────────────
+   左侧竖线是「行首标记位」，与 Shiro 的 2px 竖条同义；
+   底色压到低透明度，两种主题下都不刺眼。 */
+.code-block .line.highlighted,
+.code-block .line.diff {
+  position: relative;
+}
+
+.code-block .line.highlighted::before,
+.code-block .line.diff::before {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 2px;
+  content: '';
+}
+
+.code-block .line.highlighted {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.code-block .line.highlighted::before {
+  background-color: var(--accent);
+}
+
+.code-block .line.diff.add {
+  background-color: color-mix(in srgb, var(--color-success) 13%, transparent);
+}
+
+.code-block .line.diff.add::before {
+  background-color: var(--color-success);
+}
+
+.code-block .line.diff.remove {
+  background-color: color-mix(in srgb, var(--color-danger) 13%, transparent);
+}
+
+.code-block .line.diff.remove::before {
+  background-color: var(--color-danger);
+}
+
+/* diff 的文件头（`@@ … @@`）：只做压暗，不参与增删配色 */
+.code-block .line.diff-hunk {
+  color: var(--text-tertiary);
+  background-color: color-mix(in srgb, var(--text-primary) 4%, transparent);
+}
+
+/* ── 展开按钮 ───────────────────────────────────────────────────
+   折叠时贴在卡片底部：上面一层渐变把被截断的代码压暗，下面才是按钮，
+   这样「被裁掉」这件事本身可见，不是突然断掉。 */
+.code-block__expand {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 4.5rem;
+  padding-bottom: 0.5rem;
+  background-image: linear-gradient(to bottom, transparent, var(--code-surface) 66%);
+  color: var(--text-strong);
+  font-size: var(--text-meta);
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.code-block__expand[hidden] {
+  display: none;
+}
+
+.code-block__expand:hover {
+  color: var(--text-heading);
+}
+
+.code-block__expand:hover > span {
+  border-color: var(--accent-line);
+  color: var(--text-heading);
+}
+
+.code-block__expand:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+/* 按钮压在渐变上，底与边都要比正文实一档，否则在纸色背景里糊成一片 */
+.code-block__expand > span {
+  padding: 0.125rem 0.75rem;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-raised);
+  letter-spacing: 0.04em;
+}
+
+/* 展开后按钮被隐藏，渐变也随之消失（由脚本置 hidden，不在这里猜状态） */
+
+@media (max-width: 43.75rem) {
+  .code-block {
+    --cb-pad-inline: 0.75rem;
+    --cb-gutter-min: 2.25rem;
+    /* 手机竖屏可视高度小，折叠线跟着视口走，避免折叠后只剩两行 */
+    --cb-collapse-max: min(46vh, 22rem);
+    margin-block: 1.6em;
+  }
+
+  .code-block__header {
+    padding-inline-start: 0.625rem;
+  }
+
+  .code-block .code-block__content pre {
+    font-size: 0.8125rem;
+  }
+
+  /* 窄屏行号跟着缩一档，否则正文可用宽度被吃掉 */
+  .code-block__gutter {
+    font-size: 0.8125rem;
+  }
+}

@@ -3,6 +3,7 @@
 @import '../design-system/styles/material.css';
 @import '../design-system/styles/motion.css';
 @import '../design-system/styles/prose.css';
+@import '../design-system/styles/code-block.css';
 @import '../design-system/styles/media.css';
 @import '../design-system/styles/containers.css';
 @import '../design-system/styles/footnotes.css';

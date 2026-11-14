@@ -1,3 +1,4 @@
+import { CodeBlockEnhancer } from '@/components/markdown/code-block-enhancer'
 import { MediaEnhancer } from '@/components/markdown/media-enhancer'
 import { SpoilerEnhancer } from '@/components/markdown/spoiler-enhancer'
 import { cn } from '@/lib/utils/cn'
@@ -17,6 +18,7 @@ export function Prose({ html, className }: ProseProps) {
     <>
       <div className={cn('prose', className)} dangerouslySetInnerHTML={{ __html: html }} />
       <MermaidHydrator />
+      <CodeBlockEnhancer />
       <MediaEnhancer />
       <SpoilerEnhancer />
     </>

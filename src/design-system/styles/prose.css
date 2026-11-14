@@ -185,7 +185,10 @@
   margin-block: 3em;
 }
 
-/* ── 代码 ───────────────────────────────────────────────────── */
+/* ── 代码 ─────────────────────────────────────────────────────
+   这里只保留行内 `<code>` 与「代码块的排版外壳」两件事。
+   围栏代码块是一个独立组件（标题栏 / 行号 / 复制 / 折叠 / diff），
+   外观全部在 `code-block.css`，此处不再重复定义任何颜色或边框。 */
 .prose code {
   font-family: var(--font-mono);
   font-size: 0.875em;
@@ -195,8 +198,12 @@
   overflow-wrap: anywhere;
 }
 
-.prose pre {
-  position: relative;
+/* 裸 `<pre>`（没有经过代码卡片包裹的极少数情况，例如作者手写的 `<pre>`）：
+   仍给一条可读的边与内边距，不至于贴着纸面。
+   选择器显式排除 `__content`：卡片内部的一切由 `code-block.css` 负责，
+   两处都写一遍只会让「谁覆盖谁」变成靠特异度猜。 */
+.prose > pre,
+.prose :not(.code-block__content) > pre {
   margin-block: 1.9em;
   padding: 1.05rem 1.15rem;
   border: 1px solid var(--edge);
@@ -208,33 +215,13 @@
   tab-size: 2;
 }
 
-.prose pre code {
+.prose > pre code,
+.prose :not(.code-block__content) > pre code {
   background: none;
   padding: 0;
   font-size: inherit;
   border-radius: 0;
   white-space: pre;
-}
-
-/*
- * Shiki 输出：双主题变量由渲染期注入（--shiki-light / --shiki-dark）。
- * 底色统一改成 --code-surface，避免纯白代码块压在暖纸上。
- */
-.prose pre.shiki {
-  background: var(--code-surface) !important;
-  color: var(--shiki-light, inherit);
-}
-
-.prose pre.shiki span {
-  color: var(--shiki-light);
-}
-
-[data-theme='dark'] .prose pre.shiki {
-  color: var(--shiki-dark, inherit);
-}
-
-[data-theme='dark'] .prose pre.shiki span {
-  color: var(--shiki-dark);
 }
 
 /* ── 表格 ───────────────────────────────────────────────────── */
@@ -426,4 +413,3 @@
   color: var(--text-tertiary);
   cursor: help;
 }
-

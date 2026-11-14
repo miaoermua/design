@@ -35,7 +35,7 @@
 src/design-system/tokens/tokens.css      ← 唯一色值/字号/间距/圆角/阴影/动效/材质/字体栈来源
 src/design-system/styles/fonts.css       ← 只声明 @font-face（自托管中文 Web Font），不含语义变量
 src/design-system/styles/material.css    ← 材质实现（颗粒、环境光、纸面、冰面）
-src/design-system/styles/{motion,prose,media,footnotes,mentions,containers}.css
+src/design-system/styles/{motion,prose,code-block,media,footnotes,mentions,containers}.css
 src/app/globals.css                      ← base 层：元素默认样式 + 少量结构化类
 src/features/*/[component].css           ← 组件专属样式（当前：friends/friend-postcard.css），
                                            由 globals.css 顶部 @import 汇总引入
@@ -303,7 +303,9 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 - 链接：**颜色继承正文**，靠下划线识别 —— `text-decoration-color: --accent-soft`、1px、offset 0.22em；hover 升到 `--accent` + 2px（`prose.css:74-88`）。`--accent-strong` 不是链接的默认色。
 - 引用：`border-left: 2px solid var(--color-accent-soft)` + `--text-secondary` + `--font-serif` + `font-style: normal`（中文斜体难读）+ `1.04em` / lh 1.85（`prose.css:158-167`）。
 - 列表：`ul` 用 4px 圆点 `::before`，色为 `--color-accent-soft`（`prose.css:124-133`）；`ol > li::marker` 用 `--text-tertiary` + mono + 0.85em。
-- 行内代码：`.prose code` = `--font-mono` + `0.875em`（相对正文，不是 `--text-code`）+ `--code-surface` 底 + `--radius-sm` + `overflow-wrap: anywhere`（`prose.css:189-195`）；代码块 `.prose pre` 用 `--edge` 描边、`--radius-md`、`--code-surface` 底、`--text-code` / `--text-code--line-height`、`tab-size: 2`（`prose.css:196-208`），着色交给 Shiki。
+- 行内代码：`.prose code` = `--font-mono` + `0.875em`（相对正文，不是 `--text-code`）+ `--code-surface` 底 + `--radius-sm` + `overflow-wrap: anywhere`（`prose.css:192-199`）。
+- 围栏代码块：**是一个独立组件，不再由 `prose.css` 画外壳**。服务端一次产出 `.code-block`（标题栏 + 行号槽 + 滚动区 + 原样 Shiki `<pre>`），外观全在 `code-block.css`；`prose.css` 只保留「作者手写裸 `<pre>`」的兜底（`.prose > pre` / 非 `__content` 下的 `pre`），且显式排除卡片内部，避免同一属性两处定义。行高、字号、内边距、`white-space` 的取舍与三条硬约束写在 `code-block.css` 顶部注释里。
+- 裸 `<pre>` 兜底：用 `--edge` 描边、`--radius-md`、`--code-surface` 底、`--text-code` / `--text-code--line-height`、`tab-size: 2`（`prose.css:205-216`），着色交给 Shiki。
 - 表格：`th` 用 `--text-caption` + 600 + `letter-spacing: 0.04em` + `text-transform: uppercase`（`prose.css:254-262`），行分隔 `--edge`；窄屏横向滚动。
 - 图片：`.prose figure` **只有 `margin: 2em 0`，没有边框**（`prose.css:280-282`）；`figcaption` 居中 + `--text-caption` + `--text-secondary`（`prose.css:284-290`）。Gallery/Carousel 沿用 `media.css`，只换 Token。
 - KaTeX：`.prose .katex` 放大到 `1.04em`，`.katex-display` 用 `overflow-x: auto` 允许独立公式横向滚动（`prose.css:293-302`）。
@@ -315,17 +317,20 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必须与之对齐，不允许为不存在的 DOM 类名保留无意义规则。
 
-| 样式文件                         | 负责范围                                                                                     |
-| -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `prose.css`                      | `.prose` 正文排版：段落、标题、列表、引用、表格、代码、图片与图注、KaTeX、Mermaid 占位       |
-| `containers.css`                 | Callout / Banner / Details / Spoiler 等块级容器：外壳、图标区、类型配色、折叠与剧透状态      |
-| `media.css`                      | Gallery / Carousel、图片预览层（`.md-preview`）等媒体交互                                    |
-| `footnotes.css` / `mentions.css` | 脚注、@提及                                                                                  |
-| `reading.css`                    | AI 摘要卡、AI 精读窗口（含窗口内的 Markdown 排版）、评论区；只消费语义 Token，不新增全局材质 |
+| 样式文件                         | 负责范围                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `prose.css`                      | `.prose` 正文排版：段落、标题、列表、引用、表格、行内代码、裸 `<pre>` 兜底、图片与图注、KaTeX、Mermaid 占位 |
+| `code-block.css`                 | 围栏代码块组件：标题栏（文件名 / 语言标识 / 复制按钮）、行号槽、滚动区、折叠遮罩、行高亮与 diff 增删配色    |
+| `containers.css`                 | Callout / Banner / Details / Spoiler 等块级容器：外壳、图标区、类型配色、折叠与剧透状态                     |
+| `media.css`                      | Gallery / Carousel、图片预览层（`.md-preview`）等媒体交互                                                   |
+| `footnotes.css` / `mentions.css` | 脚注、@提及                                                                                                 |
+| `reading.css`                    | AI 摘要卡、AI 精读窗口（含窗口内的 Markdown 排版）、评论区；只消费语义 Token，不新增全局材质                |
 
 - **Callout 类型配色只有一个实现**：`.md-callout--*` 的左边线与标题色在 `containers.css`；`prose.css` **不得**再出现同名规则，否则两个文件会争夺同一属性、调色时只改一处就静默失效。
 - **Callout 的装饰色与文字色必须分开**：`--notice-tone` 只做左边线、圆点与 8% 底纹（装饰下限 3:1），标题文字用 `--notice-ink`（下限 4.5:1）。中性提示没有功能色，`--notice-ink` 取 `--text-primary`，**不得**复用 `--edge-strong` 这类描边色——Phase 4D-1 之前二者共用同一变量，实测标题只有 1.5:1。
 - **Spoiler 是渐进增强**：无 JS 时内容必须正常可读（默认可见，不靠 CSS 兜底隐藏）；JS 初始化后容器带 `data-spoiler-ready="true"`，展开后该项带 `data-revealed="true"`。**不得**用旧的 `.prose .spoiler` 一类选择器把内容永久隐藏——那会让无 JS 读者看不到正文。
+- **代码块也是渐进增强**：折叠由客户端按「内容是否超过视口一半」施加，短块不出现控件，`expand` 与用户手动展开后不再折叠；`.code-block__body` 默认不限高，**不得**把 `max-height` 写成无条件的，否则无 JS 时长代码块会被永久截断且没有展开入口。
+- **代码卡的骨架只在服务端产出一次**（`highlight.ts` → `renderCard`）。客户端只补复制按钮与折叠，**不得重新解析已生成的 Shiki HTML**、不得把行号塞进 `<pre>` 里——行号是 `<pre>` 的兄弟节点，复制时才天然取不到。
 
 ### 10.2 新增 Markdown 扩展的检查清单
 
@@ -388,6 +393,7 @@ scripts/fetch-noto-fonts.mjs                          ← 字体抓取/生成脚
 src/design-system/styles/material.css                 ← 材质实现
 src/design-system/styles/motion.css                   ← 可复用动效 primitive 与减弱动效策略
 src/design-system/styles/prose.css                    ← 正文排版
+src/design-system/styles/code-block.css               ← 围栏代码块组件（标题栏 / 行号 / 复制 / 折叠 / diff）
 src/design-system/styles/media.css                    ← 图片 / Gallery / 预览层
 src/design-system/styles/containers.css               ← 提示块 / 横幅 / 折叠 / 剧透
 src/design-system/styles/footnotes.css                ← 脚注

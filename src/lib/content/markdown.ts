@@ -11,6 +11,7 @@
 import katex from 'katex'
 import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
 import { createAlertExtension } from './alerts'
+import { parseFenceInfo } from './code-meta'
 import { createContainerExtension } from './containers'
 import { escapeAttribute, escapeText } from './escape'
 import {
@@ -177,7 +178,7 @@ function createRenderer(state: RenderState): Renderer {
   renderer.code = function (token: Tokens.Code): string {
     const highlighted = (token as Tokens.Code & { folioHtml?: string }).folioHtml
     if (highlighted) return highlighted
-    return plainCodeBlock(token.text, token.lang ?? undefined)
+    return plainCodeBlock(token.text, parseFenceInfo(token.lang))
   }
 
   renderer.link = function (this: Renderer, token: Tokens.Link): string {
@@ -239,14 +240,15 @@ function createMarkdownEngine(state: RenderState): Marked {
     walkTokens: async (token) => {
       if (token.type !== 'code') return
       const code = token as Tokens.Code
-      const lang = code.lang ?? ''
+      const info = code.lang ?? ''
       const casted = code as Tokens.Code & { folioHtml?: string }
+      const fence = parseFenceInfo(info)
 
-      if (MERMAID_FENCE.test(lang.trim())) {
+      if (MERMAID_FENCE.test(info.trim())) {
         casted.folioHtml = renderMermaid(code.text, state.mermaidSources)
         return
       }
-      casted.folioHtml = await highlightCode(code.text, lang.trim() || undefined)
+      casted.folioHtml = await highlightCode(code.text, fence)
     },
   })
   return engine
