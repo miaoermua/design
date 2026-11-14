@@ -17,7 +17,7 @@ import { articlePath } from '@/lib/routes'
  * 所以这里做三件事，且只做这三件事：
  * 1. 用**现有数据层**（`getArticle`，`fresh: true` 绕开 300s 缓存）核对
  *    文章是否还在、id 是否还是同一篇、`modifiedAt` 是否真的变了；
- * 2. 只有确实变了才 `revalidateTag('posts')`，让随后的 `router.refresh()`
+ * 2. 只有确实变了才 `revalidateTag('posts', { expire: 0 })`，让随后的 `router.refresh()`
  *    用新数据重渲染（正文、目录、阅读时长、上下篇一起更新）；
  * 3. 把结论压缩成一个小状态返回给客户端，**不返回正文**——
  *    正文永远只从正式渲染管线进入页面。
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       if (moved.ok && moved.article.id === input.id) {
         const path = articlePath(moved.article.category?.slug, moved.article.slug)
         if (path) {
-          revalidateTag('posts')
+          revalidateTag('posts', { expire: 0 })
           return NextResponse.json({ status: 'moved', path })
         }
       }
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     // 地址没了，或者这个地址已经属于另一篇文章：都不能继续展示旧内容。
     // 这里同样要失效缓存，否则紧随其后的 router.refresh() 还会拿到旧缓存。
     if (!current.ok || current.article.id !== input.id) {
-      revalidateTag('posts')
+      revalidateTag('posts', { expire: 0 })
       return NextResponse.json({ status: 'gone' })
     }
 
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'unchanged' })
     }
 
-    revalidateTag('posts')
+    revalidateTag('posts', { expire: 0 })
     return NextResponse.json({ status: 'updated' })
   } catch {
     // 不把上游错误体、URL 或栈返回给浏览器

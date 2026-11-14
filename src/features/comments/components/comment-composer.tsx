@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useMemo, useState, useSyncExternalStore } from 'react'
 import { commentFailureMessage, type CommentFailureReason } from '../errors'
 import { COMMENT_LIMITS, validateCommentDraft, type CommentField } from '../validation'
 
@@ -23,6 +23,43 @@ interface Draft {
 
 const IDENTITY_KEY = 'folio-comment-identity'
 
+/** 记住的身份串（原始 JSON）；空串 = 没有记住过 */
+function readIdentity(): string {
+  try {
+    return window.localStorage.getItem(IDENTITY_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** 服务端读不到 localStorage：固定空串，保证水合与服务端输出一致 */
+function readServerIdentity(): string {
+  return ''
+}
+
+function subscribeIdentity(onChange: () => void): () => void {
+  // 同标签页内的写入不会触发 storage 事件，但本地写入已经落在 draft 覆盖值上，
+  // 这里只负责跨标签页的同步。
+  window.addEventListener('storage', onChange)
+  return () => window.removeEventListener('storage', onChange)
+}
+
+const EMPTY_IDENTITY = { author: '', url: '' }
+
+function parseIdentity(raw: string): { author: string; url: string } {
+  if (!raw) return EMPTY_IDENTITY
+  try {
+    const parsed = JSON.parse(raw) as Partial<Draft>
+    return {
+      author: typeof parsed.author === 'string' ? parsed.author : '',
+      // 旧版本可能存过邮箱：不再回填
+      url: typeof parsed.url === 'string' ? parsed.url : '',
+    }
+  } catch {
+    return EMPTY_IDENTITY
+  }
+}
+
 /**
  * 匿名评论表单（发评论与回复共用）
  *
@@ -44,32 +81,30 @@ export function CommentComposer({
   onCancel,
   variant = 'root',
 }: CommentComposerProps) {
-  const [draft, setDraft] = useState<Draft>({ author: '', mail: '', url: '' })
+  // 记住的昵称/网址只在客户端存在：用 useSyncExternalStore 读取，
+  // 服务端快照是空串，水合时与服务端输出一致。
+  const storedIdentity = useSyncExternalStore(
+    subscribeIdentity,
+    readIdentity,
+    readServerIdentity,
+  )
+  const identity = useMemo(() => parseIdentity(storedIdentity), [storedIdentity])
+
+  // 输入框的初始值由已记住的身份派生；用户只要动过输入框，就切到本地覆盖值。
+  const [editedDraft, setEditedDraft] = useState<Draft | null>(null)
+  const draft: Draft = editedDraft ?? {
+    author: identity.author,
+    mail: '',
+    url: identity.url,
+  }
+  const setDraft = setEditedDraft
+
   const [text, setText] = useState('')
   const [pending, setPending] = useState(false)
   const [invalidField, setInvalidField] = useState<CommentField | null>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const identityLoaded = useRef(false)
   const messageId = useId()
   const compact = variant === 'reply'
-
-  useEffect(() => {
-    if (identityLoaded.current) return
-    identityLoaded.current = true
-    try {
-      const stored = window.localStorage.getItem(IDENTITY_KEY)
-      if (!stored) return
-      const parsed = JSON.parse(stored) as Partial<Draft>
-      setDraft({
-        author: typeof parsed.author === 'string' ? parsed.author : '',
-        // 旧版本可能存过邮箱：不再回填
-        mail: '',
-        url: typeof parsed.url === 'string' ? parsed.url : '',
-      })
-    } catch {
-      // 本地存储坏了不影响发评论
-    }
-  }, [])
 
   function remember(next: Draft) {
     try {

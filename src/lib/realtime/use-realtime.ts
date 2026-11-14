@@ -22,7 +22,11 @@ export function useRealtimeSnapshot(): RealtimeSnapshot {
 /** 订阅业务事件；回调放进 ref，避免每次重渲染都重订阅 */
 export function useRealtimeEvent(handler: (envelope: RealtimeEnvelope) => void): void {
   const ref = useRef(handler)
-  ref.current = handler
+
+  // 在 effect 里同步 ref：渲染期写 ref 会被 react-hooks/refs 判为访问渲染期副作用
+  useEffect(() => {
+    ref.current = handler
+  }, [handler])
 
   useEffect(() => realtimeBus.onEvent((envelope) => ref.current(envelope)), [])
 }
