@@ -13,7 +13,7 @@ import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { readArticleInsights } from '@/features/ai-insights'
 import { AISummaryCard, readArticleSummary } from '@/features/ai-summary'
-import { ArticleCard, ArticleNeighbors } from '@/features/articles'
+import { ArticleCard } from '@/features/articles'
 import { CommentsSection } from '@/features/comments'
 import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
@@ -22,8 +22,6 @@ import {
   getArticle,
   getSiteTimezone,
   isNotFound,
-  listArticles,
-  type Article,
   type ArticleDetail,
 } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
@@ -75,28 +73,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   }
 }
 
-/** 相邻文章来自列表窗口；查询失败属于附加信息缺失，不阻断正文 */
-async function findNeighbors(
-  article: ArticleDetail,
-): Promise<{ newer: Article | null; older: Article | null }> {
-  try {
-    const list = await listArticles({
-      page: 1,
-      size: 50,
-      sortBy: 'createdAt',
-      sortOrder: -1,
-    })
-    const index = list.items.findIndex((item) => item.id === article.id)
-    if (index < 0) return { newer: null, older: null }
-    return {
-      newer: index > 0 ? (list.items[index - 1] ?? null) : null,
-      older: index < list.items.length - 1 ? (list.items[index + 1] ?? null) : null,
-    }
-  } catch {
-    return { newer: null, older: null }
-  }
-}
-
 export default async function ArticlePage({ params }: ArticlePageProps) {
   requireFeature('articles')
 
@@ -127,10 +103,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     isMarkdown && article.content.trim() ? await renderMarkdown(article.content, locale) : null
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
 
-  // AI 资源与相邻文章都是附加信息：并行取，任一失败都只影响自己那一块
+  // AI 资源是附加信息：并行取，任一失败都只影响自己那一块
   const contentLang = toContentLang(locale)
-  const [neighbors, summary, insights] = await Promise.all([
-    findNeighbors(article),
+  const [summary, insights] = await Promise.all([
     readArticleSummary(article.id, contentLang),
     rendered
       ? readArticleInsights({
@@ -329,8 +304,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 locale={locale}
                 showLicense={article.copyright}
               />
-
-              <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} locale={locale} />
 
               <div className="mt-10 flex items-center justify-between border-t border-dashed border-[var(--edge)] pt-6">
                 <Link

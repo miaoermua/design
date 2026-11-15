@@ -40,7 +40,7 @@ describe('SubscribePanel 三种订阅方式', () => {
     openPanel({ channels: CHANNELS })
 
     expect(screen.getByLabelText('邮箱地址')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /\/feed\.xml/ }).getAttribute('href')).toBe('/feed.xml')
+    expect(screen.getByRole('link', { name: /\/feed/ }).getAttribute('href')).toBe('/feed')
     expect(screen.getByRole('link', { name: /Telegram 频道/ }).getAttribute('href')).toBe(
       'https://t.me/folio_demo',
     )

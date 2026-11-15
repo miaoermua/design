@@ -33,7 +33,8 @@ interface SubscribePanelProps {
  * 三种方式的能力边界不同，界面必须说清楚：
  *   - 邮件：core 发确认邮件，用户点链接之后才算订阅成功，所以成功文案
  *     只能说「确认邮件已发送」。
- *   - RSS：主题只提供 `/feed.xml`，是否「已订阅」由阅读器自己维护。
+ *   - RSS：`/feed` 转发后端 core 的 feed（内容由后端决定），是否「已订阅」
+ *     由阅读器自己维护。
  *   - 频道：纯跳转，站内不记录任何订阅状态。
  */
 export function SubscribePanel({ types, channels, className }: SubscribePanelProps) {
@@ -221,12 +222,12 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
           <div className="mt-3 border-t border-dashed border-[var(--edge)] pt-3">
             <p className="text-meta text-[var(--text-secondary)]">RSS</p>
             <a
-              href="/feed.xml"
+              href="/feed"
               target="_blank"
               rel="noopener noreferrer"
               className="text-small mt-1 inline-flex items-center gap-1 text-[var(--text-heading)] underline decoration-[var(--edge-strong)] underline-offset-4 transition-colors hover:text-[var(--accent-strong)]"
             >
-              /feed.xml
+              /feed
               <span aria-hidden="true">↗</span>
             </a>
             <p className="text-meta mt-1 text-[var(--text-secondary)]">

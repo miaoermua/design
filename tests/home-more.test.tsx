@@ -20,7 +20,7 @@ import { HomeMore } from '@/components/home/home-more'
  * 首页「更多」
  *
  * 重点不是"三个按钮都渲染出来了"，而是：
- * - `subscribe` 不是直接跳 `/feed.xml`，而是展开两条渠道；
+ * - `subscribe` 不是直接跳 `/feed`，而是展开两条渠道；
  * - 浏览器通知的权限只在用户点那一行时才申请（这里断言 `enable()` 的调用时机）；
  * - `link` 的站内 / 站外分别用 `<a>` 的两种形态。
  */
@@ -97,7 +97,7 @@ describe('首页更多：订阅入口', () => {
     render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
     fireEvent.click(screen.getByRole('button', { name: '订阅' }))
 
-    expect(screen.getByRole('link', { name: /RSS/ }).getAttribute('href')).toBe('/feed.xml')
+    expect(screen.getByRole('link', { name: /RSS/ }).getAttribute('href')).toBe('/feed')
 
     const notifyRow = screen.getByRole('button', { name: /浏览器通知/ })
     expect(notifyRow.getAttribute('aria-pressed')).toBe('false')

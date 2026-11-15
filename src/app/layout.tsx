@@ -55,7 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: toOgLocale(locale),
     },
     twitter: { card: 'summary' },
-    alternates: { types: { 'application/rss+xml': '/feed.xml' } },
+    alternates: { types: { 'application/rss+xml': '/feed' } },
     robots: { index: true, follow: true },
   }
 }

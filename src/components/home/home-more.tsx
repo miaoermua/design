@@ -20,7 +20,7 @@ interface HomeMoreProps {
  *
  * 三种入口类型：
  *   - `like`：喜欢本站（core 的 `POST /like_this`，按 IP 一天一次）
- *   - `subscribe`：跳转到 /feed.xml 订阅
+ *   - `subscribe`：展开订阅渠道（RSS 走 /feed，或浏览器通知）
  *   - `link`：自定义链接，站内路径用客户端路由、外部地址新标签打开
  *
  * 图标支持 CSS / builtin 两套体系，与社交图标同源；
@@ -85,7 +85,7 @@ function MoreEntry({
 /**
  * 订阅入口
  *
- * 点开是两条并列的渠道，而不是直接跳 `/feed.xml`：
+ * 点开是两条并列的渠道，而不是直接跳 `/feed`：
  *   - RSS：唯一的「真订阅」，不依赖任何权限；
  *   - 浏览器通知：**权限只在这里、且只在用户点了这一行之后才申请**。
  *     页面加载时不去问，是为了不在读者第一次进来就弹一个他还没决定要的框。
@@ -178,7 +178,7 @@ function SubscribeEntry({ item }: { item: ThemeHomepageMoreItem }) {
           role="group"
           aria-label={t(locale, 'home.moreSubscribeTitle')}
         >
-          <Link href="/feed.xml" className="home-more__panel-row">
+          <Link href="/feed" className="home-more__panel-row">
             <span className="home-more__panel-title">
               <RssIcon />
               <span>{t(locale, 'home.moreSubscribeRss')}</span>
