@@ -192,7 +192,7 @@
   line-height: 1;
   cursor: pointer;
   /* 组件专属：2.25rem 翻页按钮压在图片上，只需轻微虚化让箭头可读。
-     不是玻璃材质，不复用 --material-glass-blur（14px 是唯一存活的 .glass-control 参数）。 */
+     不是玻璃材质，不复用导航的 --nav-blur（用途与面积都不同）。 */
   backdrop-filter: blur(6px);
   transition:
     color var(--duration-fast) var(--ease-out-soft),

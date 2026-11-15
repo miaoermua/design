@@ -37,7 +37,7 @@
   --color-paper-sunk: #e9e5d9;
   --color-paper-deep: #dfd9c9;
 
-  /* 冰：只服务材质层（--edge-frost / --material-glass-tint），不作页面底色。
+  /* 冰：只服务 --edge-frost（阅读纸面外框、浮层边框），不作页面底色。
      它和 --accent-wash 视觉很近（ΔE 2.6）但职责不同：冰是「冷材质」，
      wash 是「主题色的浅底」，不要互换。 */
   --color-frost: #dce5e5;
@@ -271,18 +271,9 @@
       transparent 72%
     );
 
-  /*
-   * 冰面 tint 是 --color-frost 的 RGB 三元组形式。
-   * 必须用三元组是因为下游写作 rgb(var(--material-glass-tint) / α)，
-   * 而 rgb() 吃不了 HEX。两个值必须**逐通道相等**（tests/design-color-system.test.ts
-   * 断言亮暗两套都一致）—— 改 frost 就要同步改这里，反之亦然。
-   */
-  --material-glass-tint: 220 229 229;
-  /* 小型浮标控件（工具按钮）的遮罩与模糊。面积小，遮罩略实、模糊略轻，避免糊成一团 */
-  --material-glass-alpha-control: 0.88;
-  --material-glass-alpha-control-hover: 0.94;
-  --material-glass-blur: 14px;
-  --material-glass-saturate: 1.4;
+  /* 浮层顶缘的高光（.glass-panel 的 inset rim）。原 .glass-control 专用的
+     tint / alpha / blur / saturate 参数已随该死类一并删除：工具按钮的材质
+     由 .toolbar-dock 的 .glass-nav（--nav-* 参数）统一承担。 */
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
 
   color-scheme: light;
@@ -375,16 +366,7 @@
       transparent 74%
     );
 
-  /* 与 --color-frost 逐通道相等（#2a3436 = 42 52 54）。原值 36 44 47 是独立漂移的
-     深一档，导致「亮色同源、暗色不同源」的隐式硬拷贝；本轮统一回 frost。 */
-  --material-glass-tint: 42 52 54;
-
-  /* 模糊半径不再按主题分档：唯一存活的冰面是小面积控件，暗色同样用 14px，
-     否则 24px 会把图标边缘糊掉（见 material.css `.glass-control` 注释）。 */
-  --material-glass-saturate: 1.25;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 22%, transparent);
-  --material-glass-alpha-control: 0.82;
-  --material-glass-alpha-control-hover: 0.9;
 
   color-scheme: dark;
 }

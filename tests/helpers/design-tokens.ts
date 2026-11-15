@@ -24,7 +24,7 @@ export const EXTERNAL_PREFIXES = ['--tw-', '--shiki', '--katex', '--mermaid', '-
  *   - 新出现的死别名会让测试失败，逼你在同一批里补文档或补消费；
  *   - 一旦某个 Token 被真正使用，它必须从这份名单里消失。
  * 当前为空：Phase「颜色系统收敛」已删除唯一登记的 `--surface-glass`（预留的玻璃基色，
- * 冰面实际由 --material-glass-* 驱动）；新增别名必须自带消费者。
+ * 冰面边框由 --edge-frost 驱动，浮层高光是 --material-glass-rim）；新增别名必须自带消费者。
  *
  * 判定口径见 `isDeadAlias`：别名层不生成 Tailwind 工具类，唯一消费方式是 var()。
  * 只被 tokens.css 内部其它 Token 引用的（如 --focus-ring-color、--shadow-color）

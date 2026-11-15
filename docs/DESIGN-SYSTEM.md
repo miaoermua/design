@@ -20,6 +20,8 @@
 > **2026-11-15 阅读辅助区样式重构**：参考 Shiro 侧栏做法，全面调整桌面端阅读辅助区的视觉和谐度。① `ReadingAside` 去掉虚线分隔（`border-t border-dashed`），改用间距分区；目录标题改为 `text-meta font-medium tracking-[0.06em] uppercase` 小型大写标签。② 阅读进度从桌面端圆环（`ReadingProgressRing`）改为竖向线性进度条（`ReadingProgressBar`）：高度 2rem、宽 1px、底色 `--edge`、填充色 `--accent` 从底部上升、旁边显示百分比数字。移动端折叠目录仍保留圆环进度。③ 目录列表活跃项竖线从 `w-px`（1px）改为 `w-[2px] rounded-full`，加强 accent 色可见性。④ `.action-rail-button` 的 `border-radius` 从 `--radius-sm` 改为 `--radius-pill`（药丸化），hover 色从 `--text-heading` 改为 `--accent-strong` + `--accent-wash` 底色。⑤ 桌面端（≥80rem）操作按钮隐藏文字标签只留图标（sr-only 方式），图标放大到 1.25rem，对齐 Shiro 纯图标竖排做法。同步 §7。
 >
 > **2026-11-15 一言与项目页面**：新增 `/says` 一言页面与 `/projects` 项目页面，完成 Mix Space 云函数 says/projects 的前端对接。① 完整 API 层：contracts（`V2Say`、`V2Project`）→ domain → adapters → repositories，mock 数据与路由同步覆盖。② Feature Registry 新增 `says: true`、`projects: true`。③ 导航 `ALL_NAV` 新增两个 `section: 'more'` 入口，自动归入菜单「更多」分区。④ 一言页面设计：暖纸底 + 双列网格（`sm:grid-cols-2`）+ 左缘 3px 彩色竖线（色相由 id 哈希）+ `surface-raised` 卡片 + `shadow-raise` + 出处/作者/相对时间。⑤ 项目页面设计：三列响应式网格（1→2→3 列）+ 圆形头像/首字母 fallback（色相由 name 哈希）+ 药丸行动链接（GitHub / 预览 / 文档）+ hover 上浮 + `shadow-pop`。⑥ i18n 三语完整覆盖（zh-CN 12 键、en 12 键）。同步 §9。
+>
+> **2026-11-15 `.glass-control` 死链清理**：上一条「保留定义」的决定被本轮取代——颜色系统审计确认 `.glass-control` 在工具组改用 `.toolbar-dock` 的 `.glass-nav` 后已无任何 DOM 生产者（`toolbar-button.tsx` 只渲染胶囊内的透明格子，`tests/search-entry.test.tsx` 明确禁止按钮携带该类），遂按 `.glass-bar` 先例删除该类及其 `@supports` / `prefers-reduced-transparency` 分支，连同五个专用材质参数（tint 三元组、两档 alpha、blur、saturate，亮暗两套）。`--color-frost` 不受影响：仍经 `--edge-frost` 服务阅读纸面外框与 `.glass-panel` 边框；`--material-glass-rim` 保留（`.glass-panel` 顶缘高光）。契约测试改为反向断言：类与五个参数不得复活，tint/frost 逐通道同源断言随之移除。工具栏视觉零变化（删除的类本就没有消费者）。同步 §3.1、§3.3、§7、§14.5、§14.8。
 
 ---
 
@@ -79,7 +81,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | 最高面     | `--color-paper-lift`    | `#ffffff` | 内缘高光、玻璃 rim                                                                                                                                                                            |
 | 下沉面     | `--color-paper-sunk`    | `#e9e5d9` | 代码块底、空状态                                                                                                                                                                              |
 | 更深       | `--color-paper-deep`    | `#dfd9c9` | 亮色下**没有组件消费者**；暗色值 `#0c0f11` 仍被暗色 `--material-ambient` 消费，是真实使用中的环境光基色。**不得因为亮色零消费者而删除**（`design-color-system.test.ts` 有反向守护，见 §14.8） |
-| 冰         | `--color-frost`         | `#dce5e5` | 材质玻璃 tint（与 `--material-glass-tint` 逐通道同源）、`--edge-frost`                                                                                                                        |
+| 冰         | `--color-frost`         | `#dce5e5` | 经 `--edge-frost` 服务阅读纸面外框与 `.glass-panel` 边框（原玻璃 tint 用途已随 `.glass-control` 删除）                                                                                        |
 | 正文       | `--color-ink`           | `#525650` | 段落                                                                                                                                                                                          |
 | 强正文     | `--color-ink-soft`      | `#3f433f` | 强调段、`strong`                                                                                                                                                                              |
 | 次级       | `--color-ink-muted`     | `#646760` | 一切**需要读**的文字（含 12px meta）；在 paper/raised/lift/sunk/reading/wash 上均 ≥4.5:1（最差 sunk 4.57）                                                                                    |
@@ -137,7 +139,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | 语义 · 边框   | `--edge` / `--edge-strong` / `--edge-frost`                                     | 1px 边界（普通 / 强 / 冰面）                                          | 分隔线、虚线、阅读纸面外框                                              | 文字                                                                  | 装饰性发丝边不套 3:1；需要识别边界的控件另按非文本门限                       |
 | 组件 · 便利贴 | `--note-sage` / `--note-blue` / `--note-clay` / `--note-ochre` / `--note-cream` | Tags 索引签的五种纸色                                                 | 只服务 `.tag-note__body` 与其 hover 混色                                | 普通正文、链接、按钮                                                  | 纸面上的文字只用 `--text-heading` / `--text-primary`（§11）                  |
 | 组件 · 导航   | `--nav-*`                                                                       | 悬浮导航的角色色（背景、边框、hover、active、文字、图标、焦点、光斑） | `.nav-card` / 菜单 / 工具按钮                                           | 全站其它组件                                                          | 亮暗各一套；`--nav-ink` 在玻璃上 ≥4.5:1                                      |
-| 材质          | `--material-*`                                                                  | 颗粒、环境光、玻璃 tint / alpha / blur / rim                          | `material.css`                                                          | 组件直接拿来当文字色                                                  | `--material-glass-tint` 必须与 `--color-frost` 逐通道同源                    |
+| 材质          | `--material-*`                                                                  | 颗粒、环境光、浮层顶缘高光（rim）                                     | `material.css`                                                          | 组件直接拿来当文字色                                                  | 玻璃 tint / alpha / blur / saturate 已随 `.glass-control` 删除，不得复活     |
 | 焦点 / 阴影   | `--focus-ring*` / `--shadow-*`                                                  | 全站唯一焦点样式与投影基色                                            | 焦点环、投影                                                            | 文字与底色                                                            | 焦点环按非文本 ≥3:1                                                          |
 
 **读表两条铁律**：① 组件只消费第 2 层（语义）与第 3 层（组件专属），不直接取 `--color-*`（受控例外见 §14.3）；② 12px 文字只能用表里标了「≥4.5:1」的墨色，层级靠字号/字重/字距/布局表达，不靠压低对比度。
@@ -308,26 +310,27 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 7. 材质层（可整体关闭）
 
-| 类               | 实现                                                                                                                                                                                                                                        | 用量                                                           |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                                                                    | 全站 1 层，不随内容滚动                                        |
-| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                                                                             | 全站 1 层                                                      |
-| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                                                                                | 文章/日记详情各 1 个                                           |
-| `.glass-nav`     | 纸面底 `--nav-backdrop` + `backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur))`（亮 14px / 暗 12px）+ `--nav-edge` 发丝边 + `--nav-shadow`。**底色调是暖纸，不是冰色**                                                     | 悬浮导航卡片、右下工具胶囊（两处都挂在宿主的 `.nav-glass` 层） |
-| `.glass-control` | `rgb(var(--material-glass-tint) / var(--material-glass-alpha-control))` + `backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur))`（亮暗均 14px；alpha 亮 0.88 / 暗 0.82），加发丝边与 `--shadow-raise` | 工具组圆按钮（`toolbar-button.tsx`），**有消费者**             |
-| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                                                                           | 搜索面板                                                       |
+| 类               | 实现                                                                                                                                                                                    | 用量                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                | 全站 1 层，不随内容滚动                                        |
+| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                         | 全站 1 层                                                      |
+| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                            | 文章/日记详情各 1 个                                           |
+| `.glass-nav`     | 纸面底 `--nav-backdrop` + `backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur))`（亮 14px / 暗 12px）+ `--nav-edge` 发丝边 + `--nav-shadow`。**底色调是暖纸，不是冰色** | 悬浮导航卡片、右下工具胶囊（两处都挂在宿主的 `.nav-glass` 层） |
+| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                       | 搜索面板                                                       |
 
-`.glass-nav` 用 `--nav-backdrop`（暖纸），`.glass-control` 用 `--material-glass-tint`（冰色）—— 两条线**不要混为一谈**。`.glass-bar` 曾是一块「大面积冰色薄片」的预留类，全站从没有 DOM 生产者，`scripts/visual/contrast.mjs` 里 `.glass-bar a` 的采样目标也一直匹配不到元素；本轮已删除该类及其专用 `--material-glass-alpha-bar`，并把 `--material-glass-blur` 收敛为唯一存活玻璃（`.glass-control`）的 14px 参数。它**没有**被并入导航。将来若真需要整行玻璃，必须连同真实生产者一起新增。
+`.glass-nav` 用 `--nav-backdrop`（暖纸），是全站唯一的玻璃材质。`.glass-bar` 曾是一块「大面积冰色薄片」的预留类，全站从没有 DOM 生产者，`scripts/visual/contrast.mjs` 里 `.glass-bar a` 的采样目标也一直匹配不到元素；已删除该类及其专用 alpha 参数。它**没有**被并入导航。将来若真需要整行玻璃，必须连同真实生产者一起新增。
 
-材质同源：`--material-glass-tint` 是 `--color-frost` 的 RGB 三元组形式（下游 `rgb(var(--material-glass-tint) / α)` 吃不了 HEX），亮色 `220 229 229` = `#dce5e5`；暗色原值 `36 44 47` 是独立漂移出来的，本轮统一回 `42 52 54` = `#2a3436`。两套都由 `design-color-system.test.ts` 逐通道断言同源，改 frost 忘了改 tint 会直接失败。
+`.glass-control` 曾是工具组圆按钮的独立冰面（冰色 tint + 更实的遮罩 + 更小的模糊）。右下工具组改为 `.toolbar-dock` 一整块 `.glass-nav` 后，按钮退化为胶囊内的透明格子，该类失去全部 DOM 生产者，已按 `.glass-bar` 同例删除：类规则、`@supports` / `prefers-reduced-transparency` 分支、五个专用材质参数（tint 三元组、两档 alpha、blur、saturate，亮暗两套）全部移除，`design-color-system.test.ts` 与 `markdown-css-contract.test.ts` 断言其不得复活。**工具按钮的材质由宿主胶囊的 `.glass-nav` 统一承担**，不要给按钮重新引入独立玻璃。
+
+Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint（该用途随 `.glass-control` 删除），仍经 `--edge-frost` 混色服务 `.reading-sheet` 外框与 `.glass-panel` 边框；`design-color-system.test.ts` 守护这条语义链不被误删。
 
 两条必须记住的实现约束：
 
 1. **玻璃不能挂在 `.nav-card` 上**。带 `backdrop-filter` 的元素会成为 `position: fixed` 后代的包含块，移动端菜单面板会被缩进卡片内部（实测宽度从 350px 缩到 161px）。因此 `.glass-nav` 落在卡片内独立的 `.nav-glass` 绝对定位层，卡片本身不带滤镜；`tests/nav-menu.test.tsx` 有回归护栏。
 2. **菜单面板刻意做实色，不跟着卡片做玻璃**。卡片只有 60px 高，透一点无妨；面板下压着整段正文，实测即使把不透明度提到 97% 仍能看到文章标题的淡影。这与 `.glass-panel` 的判断一致：浮层优先可读性。面板沿用 `--surface-raised` + `--nav-edge` + `--nav-shadow`，与卡片同色系但实心。
 
-退化路径：`@supports not (backdrop-filter)` → 实色纸面（`.glass-nav` / `.glass-control`）；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
-工具按钮的激活态走 `--nav-item-active` + `--nav-item-active-ink`（与 `.nav-link[data-active='true']` 同一对语义 Token）；`.glass-control` 自身的 `[data-active='true']` 规则仍保留 `--accent-wash` 兜底，两者按选择器权重分工。
+退化路径：`@supports not (backdrop-filter)` → 实色纸面（`.glass-nav`）；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
+工具按钮的激活态走 `--nav-item-active` + `--nav-item-active-ink`（与 `.nav-link[data-active='true']` 同一对语义 Token），按钮自身不再携带任何材质或 `[data-active]` 底色规则。
 友链明信片的邮戳不属于材质层：它是 SVG 墨迹（`currentColor` + 语义 Token 混色），不加模糊、不加投影，避免变成第二枚玻璃按钮。邮戳允许压过邮票左缘与下缘、也允许盖在模糊底上，圆底还会越过卡底 12px 由根节点 `overflow: hidden` 裁掉（`--pc-mark-ox` / `--pc-mark-dy` 把它定位到 164–240 / 80–156），但不覆盖 72px 主头像（圆心距 78.8px ≥ 36 + 38）—— 这里**没有**齿孔 alpha mask 参与（齿孔 mask 只作用于邮票的 `__stamp-paper`）。双层头像的底层是同一张头像的 `blur()` 副本（组件内 `filter` + 透明度），同样不算材质 Token；邮票纸边的 `drop-shadow` 是组件级细节，不得提升为材质参数。
 明信片的纸面与纸纹同样不进材质层：卡片自建 `--pc-grain`（两层频率相乘）、底色与墨色都在 `friend-postcard.css` 里用语义 Token 混色，**不消费 `--material-grain-*`**。全站材质关掉后这张卡仍是一张完整的暖纸明信片；反过来，改 `--material-grain-opacity` 也不会影响它 —— 两者的颗粒是刻意分开的（全站那张 240px / SVG 内 0.05 不透明度，贴到 312px 小卡上会被压平到看不出纸）。
 **关闭全部材质**：删掉 `globals.css` 顶部对 `material.css` 的 `@import`，站点仍是完整的纸色排版。
@@ -456,7 +459,7 @@ Markdown 扩展一律使用**真实渲染器输出的 `.md-*` 类名**；CSS 必
 2. 亮色写在 `@theme` 与 `:root`，暗色只覆盖对应变量（保持同名）。
 3. `pnpm test` —— 引用完整性、硬编码、对比度、文档同步四组检查会立刻告诉你漏了哪（守护范围与盲区见 §14.9）。
 4. 在本文第 3/4/5/6 节补一行；本文与 `tokens.css` 必须同批更新。只改一边就会被 `tests/design-doc-sync.test.ts` 拦下。
-5. **新增/修改颜色必须同时满足**：① 在 §3.3 总览表里能说出唯一职责，且与已有 Token 不重叠；② 亮暗两套各有值（`design-doc-sync.test.ts` 检查同名）；③ 若用于文字，在完整矩阵覆盖的每个表面上 ≥4.5:1；若只做非文本，≥3:1；④ 组件经语义层消费，不直接取 `--color-*`；⑤ 新增的 `color-mix()` 配方必须在测试里有对应公式与一致断言；⑥ 涉及玻璃 tint 时与 `--color-frost` 同源。改完跑 `pnpm test`，`design-color-system.test.ts` 会逐面报出比值，不会静默通过。
+5. **新增/修改颜色必须同时满足**：① 在 §3.3 总览表里能说出唯一职责，且与已有 Token 不重叠；② 亮暗两套各有值（`design-doc-sync.test.ts` 检查同名）；③ 若用于文字，在完整矩阵覆盖的每个表面上 ≥4.5:1；若只做非文本，≥3:1；④ 组件经语义层消费，不直接取 `--color-*`；⑤ 新增的 `color-mix()` 配方必须在测试里有对应公式与一致断言；⑥ 不得复活已随 `.glass-control` 删除的玻璃 tint 等材质参数（反向断言守护）。改完跑 `pnpm test`，`design-color-system.test.ts` 会逐面报出比值，不会静默通过。
 
 ---
 
@@ -554,18 +557,18 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 | 材质                                                    | 位置                     | 模糊                                                | 参数归属                            |
 | ------------------------------------------------------- | ------------------------ | --------------------------------------------------- | ----------------------------------- |
-| `.glass-nav`（导航卡片 / 工具胶囊内的 `.nav-glass` 层） | `material.css:97-103`    | `--nav-blur`：亮 14px / 暗 12px                     | 导航语义 Token（§4.1）              |
-| 已删除的整行玻璃薄片类（原 `.glass-bar`）               | —                        | 无 DOM 生产者，本轮删除（见 §7）                    | 死 CSS，不再计入材质                |
-| `.glass-control`（工具组圆按钮）                        | `material.css`           | `--material-glass-blur`：亮暗均 14px                | 材质 Token（唯一存活的冰面）        |
-| `.glass-panel`（搜索面板）                              | `material.css:133-140`   | **无模糊**（刻意实色，避免菜单与正文叠字）          | 材质 Token                          |
+| `.glass-nav`（导航卡片 / 工具胶囊内的 `.nav-glass` 层） | `material.css`           | `--nav-blur`：亮 14px / 暗 12px                     | 导航语义 Token（§4.1）              |
+| 已删除的整行玻璃薄片类（原 `.glass-bar`）               | —                        | 无 DOM 生产者，已删除（见 §7）                      | 死 CSS，不再计入材质                |
+| 已删除的工具组圆按钮冰面（原 `.glass-control`）         | —                        | 无 DOM 生产者，已连同五个专用材质参数删除（见 §7）  | 死 CSS，不再计入材质                |
+| `.glass-panel`（搜索面板）                              | `material.css`           | **无模糊**（刻意实色，避免菜单与正文叠字）          | 语义 Token + `--material-glass-rim` |
 | `.nav-panel`（菜单面板，实色）                          | `globals.css` 导航样式块 | **无模糊**（实色 `--surface-raised`，避免正文透字） | 语义 Token（§4）                    |
 | Gallery 翻页按钮                                        | `media.css:196`          | `blur(6px)` + `color-mix(--surface-raised 88%)`     | **组件专属参数**（有意不 Token 化） |
 | 图片预览遮罩 `.md-preview`                              | `media.css:233`          | `blur(8px)` + `color-mix(--color-ink 84%)`          | **组件专属参数**（有意不 Token 化） |
 
 边界判定（已定案，不再作为待办）：模糊只用于"必须压住滚动内容或图片"的薄层，正文卡片永不使用。
 
-- `.glass-*` 必须使用 `--material-glass-*` 材质 Token。
-- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成 `--material-glass-blur`（材质 14px 与小面积按钮的 6/8px 用途不同，合并属于实质视觉变更）。
+- 材质层现存的玻璃参数只有 `--material-glass-rim`（`.glass-panel` 顶缘高光）；`.glass-nav` 的模糊与饱和走 `--nav-*` 导航语义 Token。
+- `.md-gallery__nav` 的 `blur(6px)` 与 `.md-preview` 的 `blur(8px)` 是**组件专属参数**：它们服务于图片交互，透明度、用途、主题无关性都与顶栏玻璃不同。**不得**为了"统一"把它们改成导航玻璃的模糊参数（顶栏半径与小面积按钮的 6/8px 用途不同，合并属于实质视觉变更）。
 
 关闭路径（**A**，可人工验证）：删掉 `globals.css:3` 对 `material.css` 的 `@import`，站点仍是完整的纸色排版 —— 这是材质层与排版层解耦的真实边界。
 
@@ -585,7 +588,9 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 **定义（可自动判定的那一类）**：语义别名层的 Token 不生成 Tailwind 工具类，唯一消费方式是 `var()`。若它在 `tokens.css` 之外没有任何 `var()` 引用，即为死 Token。
 
-当前白名单为**空**（**A**：`tests/helpers/design-tokens.ts` 的 `KNOWN_DEAD_ALIASES`）：本轮按完整证据链删除了原登记的 surface-glass 死别名 —— 它在 CSS、Tailwind 工具类、TSX、运行时动态引用、暗色覆盖、测试白名单、文档七处都无消费者，底层 `--color-frost` 仍经 `--edge-frost` 与材质 tint 活着。历史判断保留在本段，不重复当作新发现报告。
+当前白名单为**空**（**A**：`tests/helpers/design-tokens.ts` 的 `KNOWN_DEAD_ALIASES`）：「颜色系统收敛」轮按完整证据链删除了原登记的 surface-glass 死别名 —— 它在 CSS、Tailwind 工具类、TSX、运行时动态引用、暗色覆盖、测试白名单、文档七处都无消费者，底层 `--color-frost` 仍经 `--edge-frost` 活着。历史判断保留在本段，不重复当作新发现报告。
+
+**2026-11-15 `.glass-control` 死链清理**：工具组改用 `.toolbar-dock` 的 `.glass-nav` 后，`.glass-control` 失去全部 DOM 生产者（2026-11-15 工具组改组时曾决定「保留定义」，本轮审计后改为删除，与 `.glass-bar` 同例）。同批删除五个只被该类消费的材质参数：material-glass-tint（亮暗两套三元组）、material-glass-alpha-control、material-glass-alpha-control-hover、material-glass-blur、material-glass-saturate，并移除 tint/frost 逐通道同源断言（失去比对对象）。`--color-frost`、`--edge-frost`、`--material-glass-rim`、`.glass-nav`、`.glass-panel` 全部保留且有消费者。五个参数已登记进 `design-color-system.test.ts` 的「已删除 Token 不允许复活」名单，`markdown-css-contract.test.ts` 同时断言 `.glass-control` 选择器不得重新出现。
 
 | Token                | 状态                                           | 处理                                                       |
 | -------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
@@ -606,32 +611,32 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 ### 14.9 自动化守护范围与盲区
 
-| 规则                                                                 | 测试                                             | 状态                                                                                    |
-| -------------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| Token 族结构、暗色覆盖同名                                           | `design-tokens.test.ts`                          | A                                                                                       |
-| `var()` 引用完整性（全 CSS + TSX）                                   | `design-tokens.test.ts`                          | A                                                                                       |
-| TS/TSX 层禁止 HEX 字面量                                             | `design-tokens.test.ts`                          | A                                                                                       |
-| **CSS 层禁止 HEX / `rgb()` / `hsl()` 字面量**（`tokens.css` 豁免）   | `design-tokens.test.ts`（本次扩展）              | A                                                                                       |
-| **CSS 层禁止 `dark:` 变体**（本次扩展）                              | `design-tokens.test.ts`                          | A                                                                                       |
-| **语义别名死 Token 白名单**（本次新增）                              | `design-tokens.test.ts`                          | A                                                                                       |
-| **字号角色使用情况**（本次新增）                                     | `design-tokens.test.ts`                          | A                                                                                       |
-| 对比度门限（§11 表中 5 组 HEX）                                      | `design-tokens.test.ts`                          | A                                                                                       |
-| 亮暗对比度矩阵（标准/派生表面、便利贴、Callout/Banner、导航/玻璃）   | `design-color-system.test.ts`（本轮新增）        | A                                                                                       |
-| 组件不直接消费调色板 / 状态语义层完整 / 已删除 Token 不复活          | `design-color-system.test.ts`（本轮新增）        | A                                                                                       |
-| tertiary 装饰白名单 / accent 不作文字色 / 小字号×弱色                | `design-color-system.test.ts`（本轮新增）        | A（覆盖范围与盲区写在测试文件头）                                                       |
-| 材质 tint 与 frost 逐通道同源                                        | `design-color-system.test.ts`（本轮新增）        | A                                                                                       |
-| 文档 Token 存在性 / 精确值 / 字体栈 / §13 路径                       | `design-doc-sync.test.ts`                        | A                                                                                       |
-| Markdown 渲染器输出 ↔ CSS 选择器（`.md-*`）                          | `markdown-css-contract.test.ts`（Phase 4B 新增） | A                                                                                       |
-| 失效选择器回归（`.prose .spoiler` / `.prose .callout`）              | `markdown-css-contract.test.ts`                  | A                                                                                       |
-| Callout 类型配色只有 `containers.css` 一处实现                       | `markdown-css-contract.test.ts`                  | A                                                                                       |
-| 自托管字体：202 分片 / manifest / OFL / 无外部地址                   | `self-hosted-fonts.test.ts`（Phase 4A 新增）     | A                                                                                       |
-| 字体栈单一来源（`tokens.css` 定义、`fonts.css` 只声明 `@font-face`） | `self-hosted-fonts.test.ts`                      | A                                                                                       |
-| `@theme` 调色板层是否被工具类消费                                    | —                                                | **盲区**：需要 Tailwind 的类名提取，用正则冒充会误报，故不做                            |
-| 半透明玻璃背后是图片/渐变时的实际底色                                | —                                                | **盲区**：矩阵只对五种代表性纯色背后底色取极值，见 `design-color-system.test.ts` 文件头 |
-| TSX 条件表达式拼出的最终 class 字符串                                | —                                                | **盲区**：由 tertiary/accent 两条 Token 级禁令 + 对比度矩阵兜底                         |
-| `color-mix()` 合成色的实际对比度                                     | `design-color-system.test.ts`                    | **A（本轮补齐）**：OKLab 插值 + sRGB alpha 合成；仅对代表性背后底色取极值               |
-| 全站 CSS 的 AST 级选择器有效性                                       | —                                                | **部分盲区**：正文扩展块已由 contract 测试覆盖，其余选择器仍不做脆弱解析                |
-| Accent 视觉面积、材质层级、字重观感                                  | —                                                | 人工验收，见 §14.10                                                                     |
+| 规则                                                                 | 测试                                                            | 状态                                                                                    |
+| -------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Token 族结构、暗色覆盖同名                                           | `design-tokens.test.ts`                                         | A                                                                                       |
+| `var()` 引用完整性（全 CSS + TSX）                                   | `design-tokens.test.ts`                                         | A                                                                                       |
+| TS/TSX 层禁止 HEX 字面量                                             | `design-tokens.test.ts`                                         | A                                                                                       |
+| **CSS 层禁止 HEX / `rgb()` / `hsl()` 字面量**（`tokens.css` 豁免）   | `design-tokens.test.ts`（本次扩展）                             | A                                                                                       |
+| **CSS 层禁止 `dark:` 变体**（本次扩展）                              | `design-tokens.test.ts`                                         | A                                                                                       |
+| **语义别名死 Token 白名单**（本次新增）                              | `design-tokens.test.ts`                                         | A                                                                                       |
+| **字号角色使用情况**（本次新增）                                     | `design-tokens.test.ts`                                         | A                                                                                       |
+| 对比度门限（§11 表中 5 组 HEX）                                      | `design-tokens.test.ts`                                         | A                                                                                       |
+| 亮暗对比度矩阵（标准/派生表面、便利贴、Callout/Banner、导航/玻璃）   | `design-color-system.test.ts`（本轮新增）                       | A                                                                                       |
+| 组件不直接消费调色板 / 状态语义层完整 / 已删除 Token 不复活          | `design-color-system.test.ts`（本轮新增）                       | A                                                                                       |
+| tertiary 装饰白名单 / accent 不作文字色 / 小字号×弱色                | `design-color-system.test.ts`（本轮新增）                       | A（覆盖范围与盲区写在测试文件头）                                                       |
+| `.glass-control` 类与五个专用材质参数不得复活；frost 语义链保留      | `design-color-system.test.ts` / `markdown-css-contract.test.ts` | A                                                                                       |
+| 文档 Token 存在性 / 精确值 / 字体栈 / §13 路径                       | `design-doc-sync.test.ts`                                       | A                                                                                       |
+| Markdown 渲染器输出 ↔ CSS 选择器（`.md-*`）                          | `markdown-css-contract.test.ts`（Phase 4B 新增）                | A                                                                                       |
+| 失效选择器回归（`.prose .spoiler` / `.prose .callout`）              | `markdown-css-contract.test.ts`                                 | A                                                                                       |
+| Callout 类型配色只有 `containers.css` 一处实现                       | `markdown-css-contract.test.ts`                                 | A                                                                                       |
+| 自托管字体：202 分片 / manifest / OFL / 无外部地址                   | `self-hosted-fonts.test.ts`（Phase 4A 新增）                    | A                                                                                       |
+| 字体栈单一来源（`tokens.css` 定义、`fonts.css` 只声明 `@font-face`） | `self-hosted-fonts.test.ts`                                     | A                                                                                       |
+| `@theme` 调色板层是否被工具类消费                                    | —                                                               | **盲区**：需要 Tailwind 的类名提取，用正则冒充会误报，故不做                            |
+| 半透明玻璃背后是图片/渐变时的实际底色                                | —                                                               | **盲区**：矩阵只对五种代表性纯色背后底色取极值，见 `design-color-system.test.ts` 文件头 |
+| TSX 条件表达式拼出的最终 class 字符串                                | —                                                               | **盲区**：由 tertiary/accent 两条 Token 级禁令 + 对比度矩阵兜底                         |
+| `color-mix()` 合成色的实际对比度                                     | `design-color-system.test.ts`                                   | **A（本轮补齐）**：OKLab 插值 + sRGB alpha 合成；仅对代表性背后底色取极值               |
+| 全站 CSS 的 AST 级选择器有效性                                       | —                                                               | **部分盲区**：正文扩展块已由 contract 测试覆盖，其余选择器仍不做脆弱解析                |
+| Accent 视觉面积、材质层级、字重观感                                  | —                                                               | 人工验收，见 §14.10                                                                     |
 
 ### 14.10 断点使用规范与人工验收
 

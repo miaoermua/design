@@ -4,21 +4,25 @@
  * 三种材质，全部由 --material-* 驱动，参数集中在 tokens.css：
  *   1. 纸张颗粒  .paper-grain     —— 单一全局噪点层，固定不随内容滚动
  *   2. 环境光    .paper-ambient   —— 顶部受光 + 右下阴影，极低对比度
- *   3. 冰面      .glass-nav / .glass-control / .glass-panel —— 浮标与浮层专用
+ *   3. 冰面      .glass-nav / .glass-panel —— 浮标与浮层专用
  *
  * 冰面的分工：
- *   - .glass-nav       悬浮导航与菜单（纸面底 + 22px 模糊，暖纸而非冰蓝）；
- *   - .glass-control   工具组小圆按钮（14px 模糊、遮罩更实）；
+ *   - .glass-nav       悬浮导航与菜单（纸面底 + 模糊，暖纸而非冰蓝）；
  *   - .glass-panel     下拉/菜单面板，刻意做实色（半透明会让两层文字叠加）。
  *
  * .glass-bar 曾是一块「大面积冰色薄片」的预留类，但全站从未有组件挂它，
  * scripts/visual/contrast.mjs 里 `.glass-bar a` 的采样目标也一直匹配不到元素。
- * 本轮删除：避免它把 --color-frost / --material-glass-tint 的关系重新搅混。
+ * 已删除：避免它把 --color-frost 的关系重新搅混。
  * 将来若真需要整行玻璃，必须连同真实生产者一起新增，不要复活这个空类。
+ *
+ * .glass-control 曾是工具组圆按钮的独立冰面。右下工具组改为 .toolbar-dock
+ * 一整块 .glass-nav 玻璃后，按钮退化为胶囊内的透明格子，该类失去全部 DOM
+ * 生产者，已连同其专用材质参数（tint / alpha / blur / saturate）一并删除。
+ * 工具按钮的材质由宿主胶囊的 .glass-nav 统一承担，不要复活这个空类。
  *
  * 关闭方式：不 @import 本文件即可，页面仍完整（纸色与排版都在 typography/base 层）。
  * 约束：全站只有一层颗粒、一层环境光；材质层的 backdrop-filter 只出现在 .glass-* 上，
- *       取值来自 --material-glass-blur 等参数。
+ *       取值来自 --nav-blur 等导航语义参数。
  *
  * media.css 另有两处组件专属的局部模糊（相册翻页按钮 6px、图片预览遮罩 8px）：它们
  * 服务于图片交互而非玻璃材质，背景透明度与用途都不同，因此不复用 --material-glass-*。
@@ -84,8 +88,8 @@
  * 导航冰面（悬浮栏与菜单面板共用）
  *
  * 底色是**纸面自身**（--nav-backdrop 由 --color-paper-raised 合成），保留磨砂
- * 但不给整条导航染冰蓝；它与 .glass-control 的 tint（= --color-frost）是两条线，
- * 不要混为一谈。玻璃感的来源只有模糊与饱和参数，暗色只换 Token 值。
+ * 但不给整条导航染冰蓝。玻璃感的来源只有模糊与饱和参数，暗色只换 Token 值。
+ * 右下工具胶囊（.toolbar-dock）与顶栏共用这一层，按钮本身不再携带材质。
  */
 .glass-nav {
   background-color: var(--nav-backdrop);
@@ -93,30 +97,6 @@
   backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur));
   border: var(--border-hairline) solid var(--nav-edge);
   box-shadow: var(--nav-shadow);
-}
-
-/*
- * 小型浮标控件（工具组四个圆按钮共用的冰面）。
- * --material-glass-tint 是 --color-frost 的 RGB 三元组（tokens.css 有同源说明与测试守护）。
- * 遮罩更实、模糊半径更小：小面积上大半径模糊会把图标边缘一起糊掉。
- */
-.glass-control {
-  background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-control));
-  -webkit-backdrop-filter: saturate(var(--material-glass-saturate))
-    blur(var(--material-glass-blur));
-  backdrop-filter: saturate(var(--material-glass-saturate)) blur(var(--material-glass-blur));
-  border: var(--border-hairline) solid color-mix(in srgb, var(--edge-frost) 72%, transparent);
-  box-shadow: var(--shadow-raise);
-}
-
-/* 悬停只把遮罩加实一档，不换成实色，避免四个按钮在鼠标经过时「失焦」 */
-.glass-control:hover {
-  background-color: rgb(var(--material-glass-tint) / var(--material-glass-alpha-control-hover));
-}
-
-/* 激活态只用一次性语义底色；选择器权重高于 .glass-control 与降级规则 */
-.glass-control[data-active='true'] {
-  background-color: var(--accent-wash);
 }
 
 /*
@@ -134,8 +114,7 @@
 
 /* 不支持 backdrop-filter 时退化为不透明纸面，保持可读性 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-nav,
-  .glass-control {
+  .glass-nav {
     background-color: var(--surface-raised);
     box-shadow: none;
   }
@@ -143,8 +122,7 @@
 
 /* 用户要求降低透明度/减少动态时，玻璃退化为实色 */
 @media (prefers-reduced-transparency: reduce) {
-  .glass-nav,
-  .glass-control {
+  .glass-nav {
     background-color: var(--surface-raised);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

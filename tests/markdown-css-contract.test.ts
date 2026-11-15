@@ -212,9 +212,14 @@ describe('图片预览与材质边界', () => {
     expect(preview).toContain('backdrop-filter: blur(8px)')
 
     const material = cssText.get('material.css') as string
-    // 材质层仍以 --material-glass-* 参数驱动，且没有把组件专属数值写进来
-    expect(material).toContain('var(--material-glass-blur)')
-    expect(selectorsIn(material).some((s) => s.includes('.glass-control'))).toBe(true)
+    // .glass-control 已随工具组改用 .toolbar-dock 的 .glass-nav 而删除：
+    // 不允许复活，其专用参数也不允许重新定义；存活的玻璃契约仍须在场
+    expect(selectorsIn(material).some((s) => s.includes('.glass-control'))).toBe(false)
+    expect(material).not.toContain('--material-glass-tint')
+    expect(material).not.toContain('--material-glass-alpha-control')
+    expect(material).not.toContain('--material-glass-blur')
+    expect(material).not.toContain('--material-glass-saturate')
+    expect(selectorsIn(material).some((s) => s.includes('.glass-nav'))).toBe(true)
     expect(selectorsIn(material).some((s) => s.includes('.glass-panel'))).toBe(true)
     expect(material, '材质层混入了组件专属 blur 数值').not.toMatch(/blur\((?:6|8)px\)/)
   })

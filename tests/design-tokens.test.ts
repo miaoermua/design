@@ -85,7 +85,7 @@ describe('Design Token：结构', () => {
 
     expect(darkBlock).toContain('--color-paper:')
     expect(darkBlock).toContain('--color-accent:')
-    expect(darkBlock).toContain('--material-glass-tint:')
+    expect(darkBlock).toContain('--material-glass-rim:')
 
     for (const file of tsFiles) {
       const source = readFileSync(file, 'utf8')

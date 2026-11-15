@@ -24,7 +24,7 @@ import {
  * 覆盖范围（写清楚，避免被当成"全站对比度都测了"）：
  *   - 静态可解析的 **Token 值** 与 **CSS 颜色配方**：亮/暗两套、标准表面、
  *     Reading / Code / Accent Wash、五种便利贴（含 hover）、Callout / Banner
- *     四种状态、导航玻璃在五种滚动背景上的合成、玻璃控件。
+ *     四种状态、导航玻璃在五种滚动背景上的合成。
  *   - color-mix(in oklab) 按 CSS Color 5 的 OKLab 插值计算（不是 sRGB 近似）；
  *     半透明层按 sRGB alpha 合成，并只对**代表性的不透明背后底色**取极值。
  *
@@ -73,7 +73,6 @@ interface Bundle {
   callout: Record<string, string>
   banner: Record<string, string>
   nav: string[]
-  glass: string[]
   states: Record<string, string>
 }
 
@@ -115,9 +114,6 @@ function bundle(theme: Theme): Bundle {
   const behinds = [paper, raised, lift, sunk, deep]
   const navAlpha = theme === 'light' ? 0.82 : 0.88
   const nav = behinds.map((behind) => composite(raised, navAlpha, behind))
-  // .glass-control = material-glass-tint(=frost) @ 0.88/0.82
-  const controlAlpha = theme === 'light' ? 0.88 : 0.82
-  const glass = behinds.map((behind) => composite(frost, controlAlpha, behind))
 
   return {
     inks: {
@@ -136,7 +132,6 @@ function bundle(theme: Theme): Bundle {
     callout,
     banner,
     nav,
-    glass,
     states,
   }
 }
@@ -225,10 +220,6 @@ describe('颜色对比度矩阵（OKLab 混色，亮暗两套）', () => {
         assertMin(problems, `${theme}/nav[${index}]/ink`, b.inks.secondary, bg, 4.5)
         assertMin(problems, `${theme}/nav[${index}]/strong`, strong, bg, 4.5)
         assertMin(problems, `${theme}/nav[${index}]/focus`, b.inks.accentStrong, bg, 3)
-      }
-      // 玻璃控件只有图标（非文本），按 3:1 检查 ink-muted
-      for (const [index, bg] of b.glass.entries()) {
-        assertMin(problems, `${theme}/glass[${index}]/icon`, b.inks.secondary, bg, 3)
       }
       expect(problems, problems.join('\n')).toEqual([])
     })
@@ -361,6 +352,12 @@ describe('Token 架构：调色板不得被组件绕过', () => {
       '--nav-ink-muted',
       '--material-glass-alpha-bar',
       '--material-glass-blur-control',
+      // .glass-control 死链清理：工具按钮材质已并入 .toolbar-dock 的 .glass-nav
+      '--material-glass-tint',
+      '--material-glass-alpha-control',
+      '--material-glass-alpha-control-hover',
+      '--material-glass-blur',
+      '--material-glass-saturate',
     ]
     const defined = cssDefinitions(tokensText)
     for (const name of deleted) {
@@ -371,27 +368,28 @@ describe('Token 架构：调色板不得被组件绕过', () => {
     expect(refs.map((r) => `${r.file}:${r.line}`), '已删除 Token 仍被组件引用').toEqual([])
   })
 
-  it('.glass-bar 死 CSS 已删除，且没有把它并进导航', () => {
+  it('.glass-bar 与 .glass-control 死 CSS 已删除，且没有把它们并进导航', () => {
     const material = readFileSync(`${SRC}/design-system/styles/material.css`, 'utf8')
     const code = stripCssComments(material)
     expect(code).not.toContain('.glass-bar')
+    // 工具按钮的材质由 .toolbar-dock 的 .glass-nav 承担，独立冰面类不得复活
+    expect(code).not.toContain('.glass-control')
     expect(code).toContain('.glass-nav')
-    expect(code).toContain('.glass-control')
+    expect(code).toContain('.glass-panel')
     // 导航玻璃必须继续走 --nav-backdrop，不能改用 frost tint
     expect(code.match(/\.glass-nav\s*\{[^}]*\}/s)?.[0]).toContain('var(--nav-backdrop)')
   })
 
-  it('--material-glass-tint 与 --color-frost 在亮暗两套逐通道同源', () => {
-    for (const [theme, block] of [
-      ['light', rootBlock],
-      ['dark', darkBlock],
-    ] as const) {
-      const triple = block.match(/--material-glass-tint:\s*([\d\s]+);/)?.[1].trim().split(/\s+/)
-      expect(triple, `${theme} 找不到 tint 三元组`).toHaveLength(3)
-      const frost = color(theme, '--color-frost').replace('#', '')
-      const expected = [0, 2, 4].map((i) => Number.parseInt(frost.slice(i, i + 2), 16))
-      expect(triple?.map(Number), `${theme} tint 与 frost 不同源`).toEqual(expected)
+  it('--color-frost 仍经 --edge-frost 活着（tint 删除不波及 frost 语义）', () => {
+    for (const theme of THEMES) {
+      expect(color(theme, '--color-frost'), `${theme} frost 调色板值丢失`).toMatch(/^#[0-9a-f]{6}$/)
     }
+    expect(rootBlock).toContain('--edge-frost:')
+    expect(aliases.get('--edge-frost')).toContain('var(--color-frost)')
+    const material = stripCssComments(
+      readFileSync(`${SRC}/design-system/styles/material.css`, 'utf8'),
+    )
+    expect(material, '--edge-frost 失去了材质层消费者').toContain('var(--edge-frost)')
   })
 
   it('--color-paper-deep 因暗色环境光而保留，不得因亮色零消费者删除', () => {

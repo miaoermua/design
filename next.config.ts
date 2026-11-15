@@ -14,7 +14,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // `/atom.xml` 与 `/feed` 在后端是同一个 handler（core 的 `@Get(['/feed',
     // '/atom.xml'])`），这里也做成同一个 route 的两个入口，而不是复制一份实现。
-    // Kami 同样用 rewrites 把这两个路径指向一个 `/api/feed`。
+    // Kami 与 Shiro 同样用 rewrites 把这两个路径指向一个实现。
+    //
+    // 老路径 `/feed.xml` 不在这里：它有自己的 route（早期本地渲染版本），
+    // 站内已无入口指向它，暂不并入。
     return [{ source: '/atom.xml', destination: '/feed' }]
   },
 }

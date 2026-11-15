@@ -17,6 +17,7 @@ import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
+import { inlineMediaSources } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang, type Locale } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
@@ -124,6 +125,11 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   const isMarkdown = diary.contentFormat === 'markdown'
   const rendered =
     isMarkdown && diary.content.trim() ? await renderMarkdown(diary.content, locale) : null
+  // core 的 `images` 是正文里抽出来的全部图片（`::: gallery` / `::: carousel`
+  // 里的也在其中）。正文已经渲染过的不在文末再铺一遍，否则用相册的日记会把
+  // 同一批图显示两次；这里只补正文里没出现过的附件。
+  const inlineSources = rendered ? inlineMediaSources(rendered.html) : new Set<string>()
+  const trailingImages = diary.images.filter((image) => !inlineSources.has(image.src))
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
     (chip): chip is string => Boolean(chip),
   )
@@ -202,16 +208,16 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             )}
           </div>
 
-          {diary.images.length > 0 ? (
+          {trailingImages.length > 0 ? (
             <div
               className={cn(
                 'mt-8 grid gap-2',
-                diary.images.length === 1
+                trailingImages.length === 1
                   ? 'max-w-[26rem] grid-cols-1'
                   : 'grid-cols-2 sm:grid-cols-3',
               )}
             >
-              {diary.images.map((image) =>
+              {trailingImages.map((image) =>
                 image.kind === 'video' ? (
                   <video
                     key={image.src}
