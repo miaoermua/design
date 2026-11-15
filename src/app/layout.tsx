@@ -15,6 +15,7 @@ import { RealtimeRuntime } from '@/components/realtime/realtime-runtime'
 import { DevtoolNotice } from '@/components/ui/devtool-notice'
 import { StatusCapsule } from '@/components/ui/status-capsule'
 import { Toaster } from '@/components/ui/toaster'
+import { SystemNotificationBridge } from '@/components/ui/system-notification-bridge'
 import { getThemeConfig } from '@/core/config/theme'
 import { describeError } from '@/lib/api'
 import { LocaleProvider } from '@/lib/i18n/client'
@@ -140,6 +141,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Toaster locale={locale} />
             <StatusCapsule locale={locale} />
           </div>
+
+          {/* 页面切到后台时把新通知镜像到系统通知；未开启或未授权时什么都不做 */}
+          <SystemNotificationBridge />
 
           {/* 仅在 Theme Snippet 显式开启时挂载；默认不输出任何客户端 JS */}
           {theme.bandevtool.enabled ? <DevtoolNotice /> : null}

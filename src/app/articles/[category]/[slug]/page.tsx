@@ -6,6 +6,8 @@ import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
 import { SectionHeading } from '@/components/ui/page-header'
 import { ActionRail } from '@/components/reading/action-rail'
+import { AiDisclosure } from '@/components/reading/ai-disclosure'
+import { ArticleInfo } from '@/components/reading/article-info'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
@@ -314,12 +316,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <span className="h-px w-10 bg-[var(--edge)]" />
             </div>
 
+            <AiDisclosure disclosure={article.aiDisclosure} locale={locale} />
+
             <footer className="mt-10">
-              {article.copyright ? (
-                <p className="text-caption text-[var(--text-secondary)]">
-                  {t(locale, 'article.copyright')}
-                </p>
-              ) : null}
+              <ArticleInfo
+                title={article.title}
+                author={identity?.owner.name ?? null}
+                url={canonical}
+                publishedAt={article.createdAt}
+                modifiedAt={article.modifiedAt}
+                timeZone={timeZone}
+                locale={locale}
+                showLicense={article.copyright}
+              />
 
               <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} locale={locale} />
 
@@ -349,13 +358,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               />
             }
           />
-
-          {/* 评论区在 grid 内左列：ReadingAside 侧栏空间自然延伸至旁边 */}
-          <div className="xl:col-start-1">
-            <CommentsSection refId={article.id} timeZone={timeZone} />
-          </div>
         </div>
       </article>
+
+      {/*
+        评论区在 `#article-content` 之外：阅读进度按正文章顶到文底计算，
+        评论一旦进容器就会把进度条拖成「读完正文才走一半」。
+        这里复用同一套栅格，让左列仍然与正文左边界对齐、右侧留出辅助栏空档。
+      */}
+      <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+        <div className="mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1">
+          <CommentsSection refId={article.id} timeZone={timeZone} />
+        </div>
+      </div>
 
       {article.related.length > 0 ? (
         <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">

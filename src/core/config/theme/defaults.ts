@@ -104,7 +104,10 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
     notes: { enabled: true, limit: HOME_RECENT_DIARIES },
     more: {
       enabled: true,
+      // 未配置时的最小可用组合：喜欢本站 + 订阅。两者都不依赖作者额外填 URL，
+      // 所以「什么都不配」也能得到一排能点、有反馈的入口。
       items: [
+        { title: '点赞', type: 'like', url: null, icon: null, color: null },
         { title: '订阅', type: 'subscribe', url: null, icon: null, color: null },
       ],
     },

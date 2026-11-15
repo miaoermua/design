@@ -548,7 +548,8 @@
   margin-top: 1.5rem;
   padding: 1rem 1.05rem 1.05rem;
   border: 1px solid var(--edge);
-  border-radius: var(--radius-lg);
+  /* 设计系统没有大圆角 Token，卡片层用 md（6px），与其它输入区一致 */
+  border-radius: var(--radius-md);
   background: color-mix(in oklab, var(--surface-lift) 55%, var(--reading-surface));
 }
 
@@ -742,6 +743,149 @@
 
   .comment__replies {
     padding-left: 0.75rem;
+  }
+}
+
+/* ── AI 参与声明 ────────────────────────────────────────────────
+ * 定位：作者对创作过程的主动披露。信息量小、位置安静，
+ * 用左缘细线 + 最小字号表示「这是正文之后的附注」，
+ * 不套卡片、不用强调色块——它不是警告，也不是卖点。
+ */
+
+.ai-gen {
+  margin-top: 2.5rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  border-left: 2px solid var(--accent-line);
+}
+
+.ai-gen__head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: var(--text-meta--line-height);
+  color: var(--text-secondary);
+}
+
+.ai-gen__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.05rem 0.28rem;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-xs, 3px);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.ai-gen__label {
+  letter-spacing: 0.02em;
+}
+
+.ai-gen__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.75rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+/* 用中点做分隔，不加背景色块：标签数量不定，色块会变成一排按钮 */
+.ai-gen__list li {
+  position: relative;
+}
+
+.ai-gen__list li + li::before {
+  content: '·';
+  margin-right: 0.75rem;
+  margin-left: -0.6rem;
+  color: var(--text-tertiary);
+}
+
+/* ── 文章信息 ──────────────────────────────────────────────────
+ * 定位：正文的收束性元数据 + 转载 / 许可边界。
+ * 全部使用设计系统里最小的一级字号（--text-meta），
+ * 键值两列对齐，扫读即可，不与正文争注意力。
+ */
+
+.article-info {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--edge);
+}
+
+.article-info__heading {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.article-info__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.7rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: var(--text-meta--line-height);
+}
+
+.article-info__row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.article-info__row dt {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.article-info__row dd {
+  min-width: 0;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.article-info__link {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--edge-strong);
+  text-underline-offset: 0.2em;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.article-info__link:hover {
+  color: var(--accent-strong);
+  text-decoration-color: var(--accent);
+}
+
+.article-info__license {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.8;
+  /* 许可声明是可读文字，不用装饰色 --text-tertiary */
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .article-info__row {
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    gap: 0.6rem;
   }
 }
 

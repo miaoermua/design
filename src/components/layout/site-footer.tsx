@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { footerSinceYear, getThemeConfig } from '@/core/config/theme'
 import type { SiteIdentity } from '@/lib/api'
@@ -23,18 +24,21 @@ const ICP_QUERY_URL = 'https://beian.miit.gov.cn/'
 /**
  * 页脚
  *
- * 明确的两排，都靠左：
+ * 靠左的三排：
  *   - 第一排：`© 2021–2026  名字 ｜ 个性签名`
  *   - 第二排：`Powered by Mix-Space. Design. ｜ ICP`
+ *   - 第三排：Theme Snippet 的 `footer.links`（可选，追加不覆盖）
  *
  * 三处内容全部来自真实接口，不写死：
  *   - 名字 / 个性签名 → `identity.owner.name` / `identity.owner.introduce`
  *   - 起始年份 → Theme Snippet 的 `footer.since`
  * 年份区间用起始年与当前年拼出；两者相同时只显示一个年份，避免「2026–2026」。
  *
+ * `footer.links` 是**追加**的一排，不是替换：原有版权行、Powered by、ICP
+ * 无论配置里写了什么都保持原样。这样「加两个友链」不会意外抹掉版权信息。
+ *
  * 刻意不再放：页脚导航（与顶栏重复）、社交图标（正文已有 Social 组件）、
- * RSS（走 /feed，由站点元信息暴露）、项目宣传链接列表。
- * 页脚是收束，不是第二个导航。
+ * RSS（走 /feed，由站点元信息暴露）。
  */
 export async function SiteFooter({ identity }: { identity: SiteIdentity | null }) {
   const theme = await getThemeConfig()
@@ -47,7 +51,7 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
   const sinceYear = footerSinceYear(theme.footer.since, currentYear)
   const yearRange = sinceYear === currentYear ? `${currentYear}` : `${sinceYear}–${currentYear}`
 
-  const { icp } = theme.footer
+  const { icp, links } = theme.footer
 
   return (
     <footer className="mt-[var(--spacing-section)] border-t border-[var(--edge)]">
@@ -105,23 +109,30 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
             ) : null}
           </p>
 
-          {theme.footer.links.length > 0 ? (
-            <p className="text-meta text-[var(--text-secondary)]">
-              {theme.footer.links.map((link, index) => (
-                <span key={link.url}>
+          {links.length > 0 ? (
+            <p className="text-meta flex flex-wrap items-center gap-x-1 gap-y-1 text-[var(--text-secondary)]">
+              {links.map((link, index) => (
+                <span key={link.url} className="inline-flex items-center gap-x-1">
                   {index > 0 ? (
                     <span aria-hidden="true" className="footer-sep">
                       ｜
                     </span>
                   ) : null}
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="link-quiet whitespace-nowrap"
-                  >
-                    {link.title}
-                  </a>
+                  {link.url.startsWith('/') && !link.url.startsWith('//') ? (
+                    // 站内路径走客户端路由：页脚里的 /about 不该整页刷新
+                    <Link href={link.url} className="link-quiet whitespace-nowrap">
+                      {link.title}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="link-quiet whitespace-nowrap"
+                    >
+                      {link.title}
+                    </a>
+                  )}
                 </span>
               ))}
             </p>

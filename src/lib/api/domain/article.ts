@@ -1,4 +1,5 @@
 import type { Attachment } from './common'
+import type { AiDisclosure } from './disclosure'
 
 /** 文章所属分类（官方 category 内嵌对象的最小投影） */
 export interface ArticleCategoryRef {
@@ -39,6 +40,8 @@ export interface ArticleDetail extends Article {
   related: Article[]
   /** null = 匿名请求，后端未给登录态 */
   liked: boolean | null
+  /** AI 参与声明（`meta.aiGen`）；null 表示作者未声明 */
+  aiDisclosure: AiDisclosure | null
 }
 
 export type ArticleSort = 'createdAt' | 'modifiedAt' | 'title'

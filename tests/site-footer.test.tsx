@@ -9,6 +9,8 @@ const state = vi.hoisted(() => ({
     enabled: false,
     since: null as number | null,
     icp: { enabled: false, label: null as string | null, url: null as string | null },
+    /** `footer.links` 是追加的一排，默认空 */
+    links: [] as { title: string; url: string }[],
   },
 }))
 
@@ -50,6 +52,7 @@ async function renderFooter(
     enabled: false,
     since: 2021,
     icp: { enabled: false, label: null, url: null },
+    links: [],
     ...overrides,
   }
   const view = render(await SiteFooter({ identity: id }))
@@ -118,6 +121,44 @@ describe('Footer 第二栏', () => {
     expect(screen.getByRole('link', { name: '浙ICP备00000000号' }).getAttribute('href')).toBe(
       'https://beian.miit.gov.cn/',
     )
+  })
+})
+
+describe('Footer 第三栏：自定义链接', () => {
+  it('没配置时不渲染这一排，也不留空行', async () => {
+    const { container } = await renderFooter({ links: [] })
+    expect(container.querySelectorAll('p')).toHaveLength(2)
+  })
+
+  it('站内路径与外部地址都渲染，外部地址新窗口打开', async () => {
+    await renderFooter({
+      links: [
+        { title: '关于', url: '/about' },
+        { title: '友链', url: 'https://example.com/friends' },
+      ],
+    })
+
+    const about = screen.getByRole('link', { name: '关于' })
+    expect(about.getAttribute('href')).toBe('/about')
+    // 站内链接不做 target="_blank"
+    expect(about.getAttribute('target')).toBeNull()
+
+    const friends = screen.getByRole('link', { name: '友链' })
+    expect(friends.getAttribute('href')).toBe('https://example.com/friends')
+    expect(friends.getAttribute('target')).toBe('_blank')
+    expect(friends.getAttribute('rel')).toContain('noopener')
+  })
+
+  it('是追加而不是覆盖：Powered by 与 ICP 仍按原样输出', async () => {
+    await renderFooter({
+      icp: { enabled: true, label: '浙ICP备00000000号', url: null },
+      links: [{ title: '关于', url: '/about' }],
+    })
+
+    expect(screen.getByRole('link', { name: 'Mix-Space' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Design' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '浙ICP备00000000号' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '关于' })).toBeTruthy()
   })
 })
 

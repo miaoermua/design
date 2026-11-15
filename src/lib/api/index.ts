@@ -9,6 +9,7 @@ export * from './domain/article'
 export * from './domain/ai'
 export * from './domain/comment'
 export * from './domain/diary'
+export * from './domain/disclosure'
 export * from './domain/taxonomy'
 export * from './domain/common'
 export * from './domain/say'
@@ -43,6 +44,8 @@ export { getPageBySlug, listPages, type PageContent, type PageSummary } from './
 export { listTopics, getTopicById, type Topic } from './repositories/topics'
 export {
   likeRecord,
+  getSiteLikeCount,
+  likeSite,
   getSubscribeCapability,
   subscribeEmail,
   type SubscribeCapability,

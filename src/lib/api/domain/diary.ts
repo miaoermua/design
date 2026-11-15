@@ -1,4 +1,5 @@
 import type { Attachment } from './common'
+import type { AiDisclosure } from './disclosure'
 
 export interface DiaryTopic {
   id: string
@@ -32,6 +33,8 @@ export interface Diary {
   images: Attachment[]
   readCount: number | null
   likeCount: number | null
+  /** AI 参与声明（`meta.aiGen`）；null 表示作者未声明 */
+  aiDisclosure: AiDisclosure | null
 }
 
 export interface DiaryListQuery {

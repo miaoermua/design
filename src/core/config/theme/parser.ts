@@ -119,6 +119,32 @@ function parseFooterIcp(value: unknown): ThemeIcp {
   }
 }
 
+/**
+ * 站内路径或 http(s) 绝对地址。
+ *
+ * 页脚链接的**主要用途是站内导航**（线上实例配置的就是 `/about`、`/friends`
+ * 这种根相对路径），所以不能只收绝对 URL。安全边界仍然明确：
+ *   - 允许 `https://…` / `http://…`
+ *   - 允许以单个 `/` 开头的根相对路径
+ *   - 拒绝 `//host`（协议相对，会继承当前协议并指向外部主机）
+ *   - 拒绝 `javascript:` / `data:` 等一切非 http 协议
+ */
+export function safeNavHref(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  // 根相对路径：必须以单个 / 开头，且不能是 //host
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//')) return null
+    // 退格符 / 制表符换行等控制字符会让 URL 解析与展示产生分歧，直接拒绝
+    if (/[\u0000-\u001f\u007f]/.test(trimmed)) return null
+    return trimmed
+  }
+
+  return safeHttpUrl(trimmed)
+}
+
 function parseFooterLinks(value: unknown): ThemeFooterLink[] {
   if (!Array.isArray(value)) return []
   const links: ThemeFooterLink[] = []
@@ -132,7 +158,7 @@ function parseFooterLinks(value: unknown): ThemeFooterLink[] {
     if (!title) continue
 
     if (typeof item.url !== 'string' || item.url.length > FOOTER_LINK_URL_MAX_LENGTH) continue
-    const url = safeHttpUrl(item.url)
+    const url = safeNavHref(item.url)
     if (!url || seen.has(url)) continue
     seen.add(url)
 
@@ -214,14 +240,12 @@ function parseHomepageMoreItem(value: unknown): ThemeHomepageMoreItem | null {
   if (!title) return null
 
   const rawType = typeof value.type === 'string' ? value.type : 'link'
-  const type = VALID_MORE_TYPES.has(rawType)
-    ? (rawType as ThemeHomepageMoreItem['type'])
-    : 'link'
+  const type = VALID_MORE_TYPES.has(rawType) ? (rawType as ThemeHomepageMoreItem['type']) : 'link'
 
-  // link 类型需要有效 URL；like/subscribe 是内置入口，不需要
+  // link 类型需要有效地址（站内路径或 http(s)）；like/subscribe 是内置入口
   let url: string | null = null
   if (type === 'link') {
-    url = safeHttpUrl(value.url)
+    url = safeNavHref(value.url)
     if (!url) return null
   }
 

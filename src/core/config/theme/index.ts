@@ -22,6 +22,7 @@ export {
   parseHomepage,
   parseDonateQrcodes,
   safeHttpUrl,
+  safeNavHref,
 } from './parser'
 export { normalizeCustomCssList, normalizeCssUrl, type CustomCssUrlResult } from './css-url'
 export {

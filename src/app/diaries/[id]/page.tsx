@@ -5,6 +5,8 @@ import { Container } from '@/components/ui/container'
 import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
 import { ActionRail } from '@/components/reading/action-rail'
+import { AiDisclosure } from '@/components/reading/ai-disclosure'
+import { ArticleInfo } from '@/components/reading/article-info'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
@@ -120,7 +122,8 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   const timeZone = getSiteTimezone()
   const isMarkdown = diary.contentFormat === 'markdown'
-  const rendered = isMarkdown && diary.content.trim() ? await renderMarkdown(diary.content, locale) : null
+  const rendered =
+    isMarkdown && diary.content.trim() ? await renderMarkdown(diary.content, locale) : null
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
     (chip): chip is string => Boolean(chip),
   )
@@ -174,13 +177,13 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
             <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
               {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}
-              {diary.bookmark ? <span className="meta-sep">{t(locale, 'diary.bookmark')}</span> : null}
+              {diary.bookmark ? (
+                <span className="meta-sep">{t(locale, 'diary.bookmark')}</span>
+              ) : null}
             </p>
           </header>
 
-          {summary ? (
-            <AISummaryCard key={diary.id} summary={summary} insights={insights} />
-          ) : null}
+          {summary ? <AISummaryCard key={diary.id} summary={summary} insights={insights} /> : null}
 
           <ReadingInline items={rendered?.toc ?? []} targetId="diary-content" />
 
@@ -231,8 +234,20 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             </div>
           ) : null}
 
+          <AiDisclosure disclosure={diary.aiDisclosure} locale={locale} />
+
           <footer className="mt-14 border-t border-dashed border-[var(--edge-strong)] pt-6">
-            <p className="meta flex flex-wrap items-center gap-x-1">
+            <ArticleInfo
+              title={diary.title}
+              author={identity?.owner.name ?? null}
+              url={canonical}
+              publishedAt={diary.publishedAt}
+              modifiedAt={diary.modifiedAt}
+              timeZone={timeZone}
+              locale={locale}
+            />
+
+            <p className="meta mt-6 flex flex-wrap items-center gap-x-1">
               {diary.readCount !== null ? (
                 <span>
                   {tf(locale, 'meta.readCount', {
@@ -244,13 +259,6 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
                 <span className="meta-sep">
                   {tf(locale, 'meta.likeCount', {
                     count: diary.likeCount.toLocaleString('zh-CN'),
-                  })}
-                </span>
-              ) : null}
-              {diary.modifiedAt && diary.modifiedAt !== diary.publishedAt ? (
-                <span className="meta-sep">
-                  {tf(locale, 'meta.updated', {
-                    date: formatDate(diary.modifiedAt, timeZone),
                   })}
                 </span>
               ) : null}

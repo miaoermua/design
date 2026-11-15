@@ -225,7 +225,8 @@ const postRows: V2PostRow[] = [
     copyright: true,
     read_count: 1284,
     like_count: 36,
-    meta: null,
+    // AI 参与声明：数组形态（core 的复选框组），用于验证多选项叠加
+    meta: { aiGen: [0, 8], keywords: ['OpenWrt', '网络'] },
     created_at: '2026-11-02T09:10:00.000Z',
     modified_at: '2026-11-04T02:20:00.000Z',
   },
@@ -351,6 +352,8 @@ const noteRows: V2NoteRow[] = [
     images: [{ src: cover('miaoer-note-wind'), width: 1600, height: 1000 }],
     read_count: 96,
     like_count: 12,
+    // AI 参与声明：标量形态（早期单选写法），用于验证与数组形态都能解析
+    meta: { aiGen: 1 },
     topic_id: 't1',
     topic: { id: 't1', name: '日常', slug: 'daily' },
     public_at: '2026-11-06T10:20:00.000Z',
@@ -552,8 +555,11 @@ export const mockThemeSnippet: Record<string, unknown> = {
   footer: {
     since: 2021,
     links: [
-      { name: '友链', url: 'https://www.miaoer.net/friends' },
-      { name: '留言', url: 'https://www.miaoer.net/message' },
+      { title: '关于', url: '/about' },
+      { title: '留言', url: '/message' },
+      { title: '友链', url: '/friends' },
+      { title: 'RSS', url: '/feed' },
+      { title: 'GitHub', url: 'https://github.com/miaoermua/design' },
     ],
     icp: {
       enabled: true,
@@ -610,6 +616,22 @@ export const mockThemeSnippet: Record<string, unknown> = {
     profile: { enabled: true },
     articles: { enabled: true, limit: 6 },
     notes: { enabled: true, limit: 3 },
+    more: {
+      enabled: true,
+      // 三种入口各来一个：内置点赞 / 内置订阅 / 站内链接 + CSS 图标
+      items: [
+        { title: '点赞', type: 'like' },
+        { title: '订阅', type: 'subscribe' },
+        { title: '全部文章', type: 'link', url: '/articles' },
+        { title: '归档', type: 'link', url: '/archives', icon: { type: 'builtin', name: 'rss' } },
+        {
+          title: 'GitHub',
+          type: 'link',
+          url: 'https://github.com/miaoermua',
+          icon: { type: 'css', name: 'fa-brands fa-github' },
+        },
+      ],
+    },
   },
   donate: {
     enabled: true,

@@ -4,6 +4,8 @@ import {
   DEFAULT_THEME_CONFIG,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
+  HOME_MORE_ITEM_MAX,
+  HOME_MORE_TITLE_MAX,
   IMPLEMENTED_ICON_TYPES,
   SOCIAL_ICON_STYLESHEET_MAX,
   SOCIAL_ITEM_MAX,
@@ -53,12 +55,24 @@ describe('Theme：Footer', () => {
     })
   })
 
-  it('旧版 footer.links 已移除：配置里留着也不再生效', () => {
+  it('footer.links：追加的站内 / 外部链接都保留，非法地址丢弃', () => {
     const footer = parseFooter(
-      { links: [{ name: '旧入口', url: 'https://example.com/old' }] },
+      {
+        links: [
+          { title: '关于', url: '/about' },
+          { title: '友链', url: 'https://example.com/friends' },
+          { title: '坏链接', url: 'javascript:alert(1)' },
+          { title: '协议相对', url: '//evil.example/x' },
+          { title: '', url: '/no-title' },
+        ],
+      },
       YEAR,
     )
-    expect('links' in footer).toBe(false)
+    // 站内根相对路径是页脚链接的主要形态：线上实例配的就是 /about 这类地址
+    expect(footer.links).toEqual([
+      { title: '关于', url: '/about' },
+      { title: '友链', url: 'https://example.com/friends' },
+    ])
     expect(footer.since).toBeNull()
   })
 
@@ -365,6 +379,105 @@ describe('Theme：Homepage', () => {
   })
 })
 
+describe('Theme：Homepage more', () => {
+  /** 只关心 more 段，其余字段用默认值兜底 */
+  const parseMore = (more: unknown) => parseHomepage({ more }, DEFAULT_THEME_CONFIG.homepage).more
+
+  it('未配置时给出「点赞 + 订阅」的最小可用组合', () => {
+    const { more } = parseThemeConfig({}).homepage
+    expect(more).toEqual(DEFAULT_THEME_CONFIG.homepage.more)
+    expect(more.enabled).toBe(true)
+    expect(more.items.map((item) => item.type)).toEqual(['like', 'subscribe'])
+  })
+
+  it('三种类型都保留：like / subscribe 不需要 URL，link 需要', () => {
+    const more = parseMore({
+      items: [
+        { title: '喜欢', type: 'like' },
+        { title: '订阅', type: 'subscribe' },
+        { title: '归档', type: 'link', url: '/archives' },
+        { title: 'GitHub', type: 'link', url: 'https://github.com/miaoermua' },
+      ],
+    })
+
+    expect(more.items).toEqual([
+      { title: '喜欢', type: 'like', url: null, icon: null, color: null },
+      { title: '订阅', type: 'subscribe', url: null, icon: null, color: null },
+      { title: '归档', type: 'link', url: '/archives', icon: null, color: null },
+      {
+        title: 'GitHub',
+        type: 'link',
+        url: 'https://github.com/miaoermua',
+        icon: null,
+        color: null,
+      },
+    ])
+  })
+
+  it('未知 type 回落到 link 而不是丢条目（只要 URL 合法）', () => {
+    const more = parseMore({ items: [{ title: '写错的类型', type: 'donate', url: '/x' }] })
+    expect(more.items[0]).toEqual({
+      title: '写错的类型',
+      type: 'link',
+      url: '/x',
+      icon: null,
+      color: null,
+    })
+  })
+
+  it('link 缺 URL 或伪协议被丢弃；全被丢弃时回落默认组合', () => {
+    const partial = parseMore({
+      items: [
+        { title: '没有地址', type: 'link' },
+        { title: '伪协议', type: 'link', url: 'javascript:alert(1)' },
+        { title: '协议相对', type: 'link', url: '//evil.example/x' },
+        { title: '好的', type: 'link', url: '/ok' },
+      ],
+    })
+    expect(partial.items.map((item) => item.title)).toEqual(['好的'])
+
+    const allInvalid = parseMore({ items: [{ title: '没有地址', type: 'link' }] })
+    expect(allInvalid.items).toEqual(DEFAULT_THEME_CONFIG.homepage.more.items)
+  })
+
+  it('缺标题的条目丢弃，过长的标题被截断', () => {
+    const more = parseMore({
+      items: [
+        { type: 'like' },
+        { title: '   ', type: 'link', url: '/blank' },
+        { title: 'x'.repeat(HOME_MORE_TITLE_MAX + 10), type: 'link', url: '/long' },
+      ],
+    })
+
+    expect(more.items).toHaveLength(1)
+    expect(more.items[0].title).toHaveLength(HOME_MORE_TITLE_MAX)
+  })
+
+  it('条目数量按上限截断', () => {
+    const items = Array.from({ length: HOME_MORE_ITEM_MAX + 6 }, (_, index) => ({
+      title: `入口 ${index}`,
+      type: 'link',
+      url: `/p/${index}`,
+    }))
+    expect(parseMore({ items }).items).toHaveLength(HOME_MORE_ITEM_MAX)
+  })
+
+  it('enabled 可关闭，items 不被清空', () => {
+    const more = parseMore({
+      enabled: false,
+      items: [{ title: '归档', type: 'link', url: '/archives' }],
+    })
+    expect(more.enabled).toBe(false)
+    expect(more.items).toHaveLength(1)
+  })
+
+  it('items 不是数组时回落默认条目，enabled 仍按配置读取', () => {
+    const more = parseMore({ enabled: false, items: 'oops' })
+    expect(more.enabled).toBe(false)
+    expect(more.items).toEqual(DEFAULT_THEME_CONFIG.homepage.more.items)
+  })
+})
+
 describe('Theme：Donate', () => {
   it('默认关闭、文案为「赞赏」、二维码为空', () => {
     expect(DEFAULT_THEME_CONFIG.donate).toEqual({ enabled: false, label: '赞赏', qrcode: [] })
@@ -490,12 +603,13 @@ describe('Theme：整体解析', () => {
 
   it('单个字段非法不影响其它字段', () => {
     const config = parseThemeConfig({
-      footer: { since: 'bad', links: [{ name: '坏', url: 'javascript:x' }] },
+      footer: { since: 'bad', links: [{ title: '坏', url: 'javascript:x' }] },
       homepage: { articles: { enabled: false } },
       donate: { enabled: true, qrcode: [{ name: '好', url: 'https://ok.example/qr.webp' }] },
     })
     expect(config.footer.since).toBeNull()
-    expect('links' in config.footer).toBe(false)
+    // 非法链接被丢弃，但不是整块失效
+    expect(config.footer.links).toEqual([])
     expect(config.homepage.articles.enabled).toBe(false)
     expect(config.donate.enabled).toBe(true)
     expect(config.donate.qrcode).toHaveLength(1)

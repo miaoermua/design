@@ -409,6 +409,7 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
    */
   const DECORATIVE: { file: string; match: string; reason: string }[] = [
     { file: 'src/app/globals.css', match: '.meta-sep::before', reason: '分隔符「·」，纯装饰' },
+    { file: 'src/design-system/styles/reading.css', match: '.ai-gen__list li + li::before', reason: 'AI 参与声明的项目分隔符「·」，纯装饰' },
     { file: 'src/app/globals.css', match: '.footer-sep', reason: '页脚分隔符，纯装饰' },
     { file: 'src/app/about/page.tsx', match: 'group-hover:translate-x-0.5', reason: '链接尾部箭头图标' },
     { file: 'src/app/search/page.tsx', match: 'size-[1.15rem]', reason: '搜索框放大镜图标' },

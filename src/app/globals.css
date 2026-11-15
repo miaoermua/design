@@ -1294,6 +1294,13 @@ details[open] > .toc-summary .toc-chevron {
 
 /* ── 首页「更多」入口行 ──
    药丸按钮，图标 + 文字，accent hover，与设计系统的药丸风格一致。 */
+.home-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .home-more__entry {
   display: inline-flex;
   align-items: center;
@@ -1327,6 +1334,90 @@ details[open] > .toc-summary .toc-chevron {
 
 .home-more__entry[aria-pressed='true'] {
   border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* 计数是附属信息：等宽数字 + 略淡，避免和入口标题抢注意力 */
+.home-more__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
+.home-more__entry[aria-pressed='true'] .home-more__count {
+  color: var(--accent-strong);
+  opacity: 0.75;
+}
+
+/* 订阅入口：展开两条渠道。absolute 弹出，不参与这一行的布局，
+   所以面板再高也不会把「更多」整排推下去。 */
+.home-more__subscribe {
+  position: relative;
+  display: inline-flex;
+}
+
+.home-more__panel {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 0.35rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+}
+
+.home-more__panel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-out-soft);
+}
+
+.home-more__panel-row:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.home-more__panel-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+.home-more__panel-row:disabled {
+  cursor: not-allowed;
+}
+
+.home-more__panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-primary);
+}
+
+.home-more__panel-hint {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* 权限状态是这一行的副标题，不抢标题的注意力 */
+.home-more__notify-state {
+  margin-left: auto;
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
+.home-more__panel-row[aria-pressed='true'] .home-more__notify-state {
   color: var(--accent-strong);
 }
 
