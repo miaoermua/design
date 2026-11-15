@@ -16,6 +16,8 @@
  * 不参与任何属性透传。
  */
 
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, type MessageKey } from '@/lib/i18n/dictionary'
 import { escapeText } from './escape'
 
 /** 作者可写的提示类型（`::: info` …） */
@@ -31,27 +33,29 @@ export type NoticeKind = 'callout' | 'banner' | 'alert'
 
 /**
  * 标题文案。
- * Alerts 用与 callout 同一套中文标签，而不是照抄 GitHub 的英文，
- * 避免同一篇正文里出现两种语言的同类提示；类型区分靠标签 + 色调。
+ *
+ * Callout 与 GitHub Alerts 共用同一张表：同一篇正文里不该出现两种语言、
+ * 两套叫法的同类提示，类型区分靠标签 + 色调，而不是靠「谁抄谁的英文」。
+ * 这里只存字典键，实际文案按渲染时的界面语言取。
  */
-const NOTICE_LABELS: Record<NoticeType, string> = {
-  note: '笔记',
-  tip: '提示',
-  info: '说明',
-  important: '重要',
-  success: '完成',
-  warning: '注意',
-  caution: '谨慎',
-  error: '错误',
-  danger: '危险',
+const NOTICE_LABELS: Record<NoticeType, MessageKey> = {
+  note: 'notice.note',
+  tip: 'notice.tip',
+  info: 'notice.info',
+  important: 'notice.important',
+  success: 'notice.success',
+  warning: 'notice.warning',
+  caution: 'notice.caution',
+  error: 'notice.error',
+  danger: 'notice.danger',
 }
 
 export function isCalloutType(value: string): value is CalloutType {
   return (CALLOUT_TYPES as readonly string[]).includes(value)
 }
 
-export function noticeLabel(type: NoticeType): string {
-  return NOTICE_LABELS[type]
+export function noticeLabel(type: NoticeType, locale: Locale = DEFAULT_LOCALE): string {
+  return t(locale, NOTICE_LABELS[type])
 }
 
 /**
@@ -65,12 +69,13 @@ export function renderNoticeHtml(
   type: NoticeType,
   title: string,
   body: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
   if (kind === 'banner') {
     return `<aside class="md-banner md-banner--${type}"><div class="md-banner__body">${body}</div></aside>`
   }
 
-  const label = title.trim() || noticeLabel(type)
+  const label = title.trim() || noticeLabel(type, locale)
   return [
     `<div class="md-callout md-callout--${type}">`,
     `<p class="md-callout__title">${escapeText(label)}</p>`,
@@ -80,8 +85,12 @@ export function renderNoticeHtml(
 }
 
 /** 原生折叠块（`::: details 概要`）：结构与 `<details>` 完全一致，只是由 Markdown 产出 */
-export function renderDetailsHtml(summary: string, body: string): string {
-  const label = escapeText(summary.trim() || '详情')
+export function renderDetailsHtml(
+  summary: string,
+  body: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const label = escapeText(summary.trim() || t(locale, 'notice.details'))
   return [
     '<details class="md-details">',
     `<summary class="md-details__summary">${label}</summary>`,

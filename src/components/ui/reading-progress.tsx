@@ -107,3 +107,68 @@ export function ReadingProgressRing({ targetId, className }: ReadingProgressRing
     </div>
   )
 }
+
+/**
+ * 竖向线性阅读进度条（桌面端右栏用）
+ *
+ * 参考 Shiro 的 ReadIndicatorVertical：一条竖向进度线 + 底部百分比数字。
+ * 高度由容器决定（默认 48px），进度条填充 accent 色从底部上升。
+ * 与环形进度共用同一套 scroll 监听和计算逻辑。
+ */
+export function ReadingProgressBar({ targetId, className }: ReadingProgressRingProps) {
+  const [percent, setPercent] = useState(0)
+  const frame = useRef(0)
+
+  useEffect(() => {
+    const target = document.getElementById(targetId)
+    if (!target) return
+
+    const update = () => {
+      frame.current = 0
+      const rect = target.getBoundingClientRect()
+      const contentTop = window.scrollY + rect.top
+      setPercent(
+        progressPercent(
+          computeReadingProgress({
+            scrollY: window.scrollY,
+            viewportHeight: window.innerHeight,
+            contentTop,
+            contentHeight: rect.height,
+          }),
+        ),
+      )
+    }
+
+    const schedule = () => {
+      if (frame.current) return
+      frame.current = window.requestAnimationFrame(update)
+    }
+
+    update()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      if (frame.current) window.cancelAnimationFrame(frame.current)
+    }
+  }, [targetId])
+
+  return (
+    <div
+      className={cn('flex items-center gap-2', className)}
+      data-reading-progress={percent}
+    >
+      {/* 竖向进度线：底色 edge，填充色 accent，高度 2rem */}
+      <div className="relative h-[2rem] w-px overflow-hidden bg-[var(--edge)]">
+        <div
+          className="absolute bottom-0 left-0 w-full bg-[var(--accent)] motion-safe:transition-[height] motion-safe:duration-150"
+          style={{ height: `${percent}%` }}
+        />
+      </div>
+      <span className="text-[0.6875rem] leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
+        {percent}%
+      </span>
+    </div>
+  )
+}

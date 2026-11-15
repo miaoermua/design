@@ -20,6 +20,8 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 import { notify } from '@/lib/notifications/store'
 import { realtimeBus } from '@/lib/realtime/bus'
 import { useRealtimeEvent, useRealtimeSnapshot } from '@/lib/realtime/use-realtime'
@@ -64,6 +66,7 @@ function refreshKeepingScroll(refresh: () => void): void {
 
 export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProps) {
   const router = useRouter()
+  const locale = useLocale()
   const snapshot = useRealtimeSnapshot()
 
   // identity 的最新值：刷新成功后 props 会变，但 controller 要在整个生命周期里
@@ -102,8 +105,8 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
       onUpdated() {
         notify({
           level: 'info',
-          title: '文章已更新',
-          description: '正文与目录已同步为最新版本',
+          title: t(locale, 'live.updated'),
+          description: t(locale, 'live.updatedHint'),
           dedupeKey: `article-updated:${identity.id}`,
           durationMs: 4_000,
         })
@@ -113,8 +116,8 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
       onMoved(path) {
         notify({
           level: 'info',
-          title: '文章地址已更新',
-          description: '正在前往新的地址',
+          title: t(locale, 'live.moved'),
+          description: t(locale, 'live.movedHint'),
           dedupeKey: `article-moved:${identity.id}`,
           durationMs: 4_000,
         })
@@ -124,12 +127,12 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
       onGone() {
         notify({
           level: 'warning',
-          title: '这篇文章已被删除或取消发布',
-          description: '页面将不再显示旧内容',
+          title: t(locale, 'live.removed'),
+          description: t(locale, 'live.removedHint'),
           dedupeKey: `article-gone:${identity.id}`,
           // 不自动消失：读者需要知道「内容消失」不是自己点错了
           durationMs: 0,
-          action: { label: '返回文章列表', href: '/articles' },
+          action: { label: t(locale, 'live.backToList'), href: '/articles' },
         })
         // 重新渲染会走 404 边界，旧正文不会继续留在屏幕上
         router.refresh()
@@ -149,7 +152,7 @@ export function LiveArticleUpdater({ identity, enabled }: LiveArticleUpdaterProp
       controllerRef.current = null
       release()
     }
-  }, [enabled, identity.id, router])
+  }, [enabled, identity.id, locale, router])
 
   useRealtimeEvent((envelope) => {
     const signal = toArticleSignal(envelope)

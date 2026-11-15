@@ -1,5 +1,6 @@
 import { isFeatureEnabled } from '@/core/registry/features'
 import { getArticleInsights } from '@/lib/api'
+import type { Locale } from '@/lib/i18n/config'
 import {
   parseInsightsDocument,
   resolveInsightRefs,
@@ -48,6 +49,8 @@ export async function readArticleInsights(input: {
   lang?: string
   source: string
   toc: TocItem[]
+  /** 界面语言：精读正文里由主题生成的标签（§ 提示、脚注、锚点）跟着它走 */
+  locale?: Locale
 }): Promise<AiInsightsView | null> {
   if (!isFeatureEnabled('aiInsights')) return null
 
@@ -57,14 +60,21 @@ export async function readArticleInsights(input: {
   const { body, meta } = parseInsightsDocument(raw.content)
   if (!body.trim()) return null
 
-  const { markdown, total, resolved } = resolveInsightRefs(body, input.source, input.toc)
+  const { markdown, total, resolved } = resolveInsightRefs(
+    body,
+    input.source,
+    input.toc,
+    input.locale,
+  )
   const sections = splitInsightSections(markdown)
   const [lead, ...rest] = sections
   if (!lead) return null
 
-  const leadRendered = await renderMarkdown(lead.markdown)
+  const leadRendered = await renderMarkdown(lead.markdown, input.locale)
   const restMarkdown = rest.map((section) => section.markdown).join('\n')
-  const restRendered = restMarkdown.trim() ? await renderMarkdown(restMarkdown) : null
+  const restRendered = restMarkdown.trim()
+    ? await renderMarkdown(restMarkdown, input.locale)
+    : null
 
   return {
     leadHtml: prefixHeadingIds(leadRendered.html, 'insight-lead-'),

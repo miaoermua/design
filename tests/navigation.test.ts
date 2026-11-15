@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import * as navigation from '@/core/navigation'
-import { getPrimaryNav, isNavItemActive, type NavItem } from '@/core/navigation'
+import {
+  buildNav,
+  getPrimaryNav,
+  getQuickNav,
+  isDesktopOnly,
+  isNavItemActive,
+  type NavItem,
+} from '@/core/navigation'
 import { isInteractionEnabled } from '@/features/interactions'
 import { featureFlags } from '@/core/registry/features'
 
@@ -70,6 +77,82 @@ describe('isNavItemActive', () => {
     const friends = item('/friends')
     expect(isNavItemActive(friends, '/friends')).toBe(true)
     expect(isNavItemActive(friends, '/about')).toBe(false)
+  })
+})
+
+/**
+ * 导航树装配
+ *
+ * 这里钉住的是「菜单不是第二套导航」这件事：顶栏与菜单消费同一个数组，
+ * 目录型入口的子项挂在入口自己的 `branch` 上，父级链接不在数据里重复出现。
+ */
+describe('buildNav', () => {
+  it('顺序与 ALL_NAV 一致；首页不在这棵树里（由 HOME_NAV 单独提供）', () => {
+    expect(buildNav().map((entry) => entry.href)).toEqual([
+      '/articles',
+      '/diaries',
+      '/explore',
+      '/friends',
+      '/pages',
+    ])
+    expect(buildNav().some((entry) => entry.href === '/')).toBe(false)
+  })
+
+  it('每个目的地只有一个节点', () => {
+    for (const entry of buildNav()) {
+      expect(buildNav().filter((other) => other.href === entry.href)).toHaveLength(1)
+    }
+  })
+
+  it('目录子项按 href 挂到对应入口上，不携带父级链接', () => {
+    const nav = buildNav({
+      '/articles': {
+        entryLabel: 'nav.allArticles',
+        emptyLabel: 'nav.noCategories',
+        errorLabel: 'nav.categoriesUnavailable',
+        status: 'ok',
+        items: [{ href: '/categories/tech', label: '技术' }],
+      },
+    })
+
+    const articles = nav.find((entry) => entry.href === '/articles')
+    expect(articles?.branch?.items.map((entry) => entry.href)).toEqual(['/categories/tech'])
+    // 子项里不出现 /articles 自己：父级链接从 entry 取
+    expect(articles?.branch?.items.some((entry) => entry.href === '/articles')).toBe(false)
+  })
+
+  it('顶栏 = 首页 + 主导航那一段，都是同一批对象', () => {
+    const nav = buildNav()
+    expect(getQuickNav(nav).map((entry) => entry.href)).toEqual([
+      '/',
+      '/articles',
+      '/diaries',
+      '/explore',
+      '/friends',
+    ])
+    // 除了首页（固定路由、单独一条），其余都是 nav 里的同一个对象
+    expect(getQuickNav(nav)[1]).toBe(nav[0])
+    // 「更多」那一段不在顶栏
+    expect(
+      getQuickNav(nav).some((entry) => nav.some((node) => node === entry && node.section === 'more')),
+    ).toBe(false)
+  })
+
+  it('首页 / 探索 / 友链标了「仅桌面」：手机顶栏只留文章与日记', () => {
+    expect(
+      buildNav()
+        .filter(isDesktopOnly)
+        .map((entry) => entry.href),
+    ).toEqual(['/explore', '/friends'])
+    expect(isDesktopOnly(getQuickNav(buildNav())[0])).toBe(true)
+  })
+
+  it('「更多」由 section 标记，不靠第二份清单', () => {
+    expect(
+      buildNav()
+        .filter((entry) => entry.section === 'more')
+        .map((entry) => entry.href),
+    ).toEqual(['/pages'])
   })
 })
 

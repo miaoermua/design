@@ -7,13 +7,18 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { getSiteTimezone, searchArticles } from '@/lib/api'
 import { sanitizeSnippet } from '@/lib/content/snippet'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { articlePath, diaryPath, pageHref } from '@/lib/routes'
 import { formatCompact } from '@/lib/utils/date'
 
-export const metadata: Metadata = {
-  title: '搜索',
-  description: '按关键词搜索站内文章。',
-  robots: { index: false, follow: true },
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'search.title'),
+    description: t(locale, 'search.pageDescription'),
+    robots: { index: false, follow: true },
+  }
 }
 
 interface SearchPageProps {
@@ -24,6 +29,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   requireFeature('search')
 
   const { q, page: pageParam } = await searchParams
+  const locale = await getLocale()
   const keyword = (q ?? '').trim()
   const page = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
@@ -33,9 +39,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <Container>
       <PageHeader
-        kicker="搜索"
-        title="找一篇文章"
-        description="一次搜索同时覆盖文章与日记。"
+        kicker={t(locale, 'search.kicker')}
+        title={t(locale, 'search.heading')}
+        description={t(locale, 'search.pageIntro')}
       >
         <form
           action="/search"
@@ -44,7 +50,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           className="mt-8 flex max-w-[var(--container-prose)] items-center gap-3 border border-[var(--edge-strong)] bg-[var(--reading-surface)] px-4 py-2.5 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--accent)]"
         >
           <label htmlFor="q" className="sr-only">
-            关键词
+            {t(locale, 'search.keyword')}
           </label>
           <svg
             aria-hidden="true"
@@ -64,17 +70,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             type="search"
             defaultValue={keyword}
             autoComplete="off"
-            placeholder="输入关键词，回车搜索"
-            className="min-w-0 flex-1 bg-transparent py-1 font-serif text-[1.125rem] leading-[1.6] text-[var(--text-heading)] outline-none placeholder:font-sans placeholder:text-[0.9375rem] placeholder:text-[var(--text-tertiary)]"
+            placeholder={t(locale, 'search.placeholderLong')}
+            className="min-w-0 flex-1 bg-transparent py-1 font-serif text-[1.125rem] leading-[1.6] text-[var(--text-heading)] outline-none placeholder:font-sans placeholder:text-[0.9375rem] placeholder:text-[var(--text-secondary)]"
           />
-          <kbd className="meta hidden shrink-0 border border-[var(--edge)] px-1.5 py-0.5 text-[var(--text-tertiary)] sm:block">
+          <kbd className="meta hidden shrink-0 border border-[var(--edge)] px-1.5 py-0.5 text-[var(--text-secondary)] sm:block">
             Enter
           </kbd>
           <button
             type="submit"
             className="meta shrink-0 text-[var(--accent-strong)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]"
           >
-            搜索
+            {t(locale, 'search.submit')}
           </button>
         </form>
       </PageHeader>
@@ -82,10 +88,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {result ? (
         <>
           <p className="text-small text-[var(--text-secondary)]">
-            “<span className="text-[var(--text-heading)]">{keyword}</span>” 命中{' '}
-            <span className="tabular-nums">{result.pagination.total}</span> 条
+            {tf(locale, 'search.hitSummary', {
+              keyword,
+              total: result.pagination.total,
+            })}
             {result.items.length > 0
-              ? ` · 第 ${result.pagination.page} / ${result.pagination.totalPages} 页`
+              ? ` · ${tf(locale, 'pagination.position', {
+                  page: result.pagination.page,
+                  pages: result.pagination.totalPages,
+                })}`
               : null}
           </p>
 
@@ -100,7 +111,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 return (
                   <li key={hit.id} className="group py-6">
                     <p className="meta flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span>{hit.kind === 'post' ? '文章' : '日记'}</span>
+                      <span>
+                        {t(locale, hit.kind === 'post' ? 'search.kindPost' : 'search.kindNote')}
+                      </span>
                       <time className="meta-sep" dateTime={hit.createdAt}>
                         {formatCompact(hit.createdAt, timeZone)}
                       </time>
@@ -127,7 +140,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       />
                     ) : null}
                     {!href ? (
-                      <p className="meta mt-2">这条结果缺少 category/slug，无法生成详情链接。</p>
+                      <p className="meta mt-2">{t(locale, 'search.missingCategory')}</p>
                     ) : null}
                   </li>
                 )
@@ -136,11 +149,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           ) : (
             <div className="mt-8">
               <EmptyState
-                title="没有匹配的文章"
+                title={t(locale, 'search.noMatchTitle')}
                 description={
                   result.pagination.total > 0
-                    ? '这一页超出了结果范围，请回到第 1 页。'
-                    : '没有匹配的内容，换个关键词试试。'
+                    ? t(locale, 'search.outOfRange')
+                    : t(locale, 'search.noMatchHint')
                 }
               />
             </div>
@@ -148,13 +161,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
           <Pagination
             pagination={result.pagination}
+            locale={locale}
             buildHref={(target) => pageHref('/search', target, { q: keyword })}
           />
         </>
       ) : (
         <div className="mt-10 flex items-center gap-3 border-t border-dashed border-[var(--edge)] pt-6">
           <span aria-hidden="true" className="size-1.5 rotate-45 bg-[var(--accent-soft)]" />
-          <p className="meta">输入关键词后回车开始搜索。</p>
+          <p className="meta">{t(locale, 'search.prompt')}</p>
         </div>
       )}
     </Container>

@@ -31,6 +31,8 @@
  */
 
 import type { MarkedExtension, Parser, Token, Tokens } from 'marked'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { escapeAttribute, escapeText } from './escape'
 
 /** 定义起手行：`[^label]: 内容` */
@@ -45,6 +47,8 @@ const CONTINUATION = /^(?: {4}|\t)(.*)$/
 export interface FootnoteState {
   /** 本次渲染的随机令牌：让脚注 id 无法被作者手写的 HTML 猜到 */
   token: string
+  /** 界面语言：脚注的 title / 列表标题由主题生成，需要跟着语言走 */
+  locale: Locale
   /** 标识符 → 定义内容（块级 token）；重复定义只保留第一次 */
   definitions: Map<string, Token[]>
   /** 按正文首次引用顺序排列的标识符 */
@@ -75,9 +79,10 @@ function randomToken(): string {
   return value.toString(36).padStart(6, '0')
 }
 
-export function createFootnoteState(): FootnoteState {
+export function createFootnoteState(locale: Locale = DEFAULT_LOCALE): FootnoteState {
   return {
     token: randomToken(),
+    locale,
     definitions: new Map(),
     order: [],
     numbers: new Map(),
@@ -244,7 +249,9 @@ export function createFootnoteExtension(state: FootnoteState, claimId: ClaimId):
           const itemId = state.itemIds.get(reference.label) ?? ''
           return [
             `<sup class="footnote-ref" id="${escapeAttribute(refId)}">`,
-            `<a href="#${escapeAttribute(itemId)}" title="跳转到脚注 ${number}">${number}</a>`,
+            `<a href="#${escapeAttribute(itemId)}" title="${escapeAttribute(
+              tf(state.locale, 'footnotes.jump', { number }),
+            )}">${number}</a>`,
             '</sup>',
           ].join('')
         },
@@ -262,8 +269,10 @@ function renderBackrefs(state: FootnoteState, label: string): string {
     .map((id, index) => {
       // 多次引用时用可见的「第 N 处」提示，不再引入 aria-* 属性：
       // title 已能说明去向，可见文字对读屏也成立
-      const hint = multiple ? `第 ${index + 1} 处` : ''
-      const title = multiple ? `返回到正文第 ${index + 1} 处引用` : '返回到正文'
+      const hint = multiple ? tf(state.locale, 'footnotes.position', { count: index + 1 }) : ''
+      const title = multiple
+        ? tf(state.locale, 'footnotes.backref', { count: index + 1 })
+        : t(state.locale, 'footnotes.backrefSingle')
       return `<a class="footnote-backref" href="#${escapeAttribute(id)}" title="${title}">↩${hint ? `<span class="footnote-backref__hint">${hint}</span>` : ''}</a>`
     })
     .join('')
@@ -297,7 +306,7 @@ export function renderFootnoteList(state: FootnoteState): string {
 
   return [
     '<div class="footnotes">',
-    '<h2 class="footnotes__title">脚注</h2>',
+    `<h2 class="footnotes__title">${escapeText(t(state.locale, 'footnotes.title'))}</h2>`,
     `<ol class="footnotes__list">${items.join('')}</ol>`,
     '</div>',
   ].join('')

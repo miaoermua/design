@@ -2,6 +2,8 @@
 
 import { useCallback, useId, useRef, useState } from 'react'
 import { languageLabel } from '@/lib/i18n/config'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import type { ArticleSummary as ArticleSummaryModel } from '@/lib/api'
 import { InsightsDialog } from '@/features/ai-insights'
 import type { AiInsightsView } from '@/features/ai-insights'
@@ -29,13 +31,16 @@ export interface AISummaryCardProps {
 }
 
 export function AISummaryCard({ summary, insights }: AISummaryCardProps) {
+  const locale = useLocale()
   const [open, setOpen] = useState(true)
   const [reading, setReading] = useState(false)
   const readButtonRef = useRef<HTMLButtonElement>(null)
   const bodyId = useId()
   const titleId = useId()
 
-  const languageNote = summary.isFallback ? `原文 ${languageLabel(summary.lang)}` : null
+  const languageNote = summary.isFallback
+    ? tf(locale, 'summary.original', { lang: languageLabel(summary.lang) })
+    : null
 
   /**
    * 关闭窗口后把读者送到引用对应的章节。
@@ -55,7 +60,7 @@ export function AISummaryCard({ summary, insights }: AISummaryCardProps) {
   const closeReading = useCallback(() => setReading(false), [])
 
   return (
-    <section aria-label="AI 摘要" className="ai-summary" data-open={open}>
+    <section aria-label={t(locale, 'summary.label')} className="ai-summary" data-open={open}>
       <div className="ai-summary__bar">
         <button
           type="button"
@@ -65,7 +70,7 @@ export function AISummaryCard({ summary, insights }: AISummaryCardProps) {
           onClick={() => setOpen((value) => !value)}
         >
           <AiMark />
-          <span className="ai-summary__label">AI 摘要</span>
+          <span className="ai-summary__label">{t(locale, 'summary.label')}</span>
           {languageNote ? <span className="ai-summary__note">{languageNote}</span> : null}
           <Chevron />
         </button>
@@ -78,7 +83,7 @@ export function AISummaryCard({ summary, insights }: AISummaryCardProps) {
             aria-haspopup="dialog"
             onClick={() => setReading(true)}
           >
-            AI 精读
+            {t(locale, 'summary.openInsights')}
             <ArrowUpRight />
           </button>
         ) : null}

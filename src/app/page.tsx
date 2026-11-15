@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
 import { SocialIcon } from '@/components/ui/social-icon'
+import { HomeMore } from '@/components/home/home-more'
 import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
@@ -45,21 +46,23 @@ export async function generateMetadata(): Promise<Metadata> {
  * 没有把所有内容都堆在首页——归档、标签、页面各有自己的入口。
  */
 export default async function HomePage() {
+  const locale = await getLocale()
+
   if (!isApiConfigured()) {
     return (
       <Container>
         <div className="py-20">
           <ErrorState
-            title="尚未连接 Mix Space 后端"
+            title={t(locale, 'state.backendMissingTitle')}
             error={new ConfigurationError('缺少环境变量 MX_SERVER_URL')}
-            hint="在 .env.local 中设置 MX_SERVER_URL，或设置 MX_MOCK=1 用内置数据离线预览。"
+            hint={t(locale, 'state.backendMissingHint')}
+            locale={locale}
           />
         </div>
       </Container>
     )
   }
 
-  const locale = await getLocale()
   const lang = toContentLang(locale)
   const timeZone = getSiteTimezone()
   const [{ identity }, theme] = await Promise.all([loadSiteContext(), getThemeConfig()])
@@ -196,7 +199,12 @@ export default async function HomePage() {
           {articles.items.length > 0 ? (
             <div className="mt-2 divide-y divide-dashed divide-[var(--edge)]">
               {articles.items.map((article) => (
-                <ArticleRow key={article.id} article={article} timeZone={timeZone} />
+                <ArticleRow
+                  key={article.id}
+                  article={article}
+                  timeZone={timeZone}
+                  locale={locale}
+                />
               ))}
             </div>
           ) : (
@@ -245,6 +253,26 @@ export default async function HomePage() {
               />
             </div>
           )}
+        </section>
+      ) : null}
+
+      {/* ── More ───────────────────────────────────────────────── */}
+      {theme.homepage.more.enabled && theme.homepage.more.items.length > 0 ? (
+        <section
+          className={cn(
+            'motion-fade-in mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10 pb-4',
+            // 延迟：根据前面有几个区块递增
+            showProfile && articles && diaries
+              ? 'motion-delay-3'
+              : (showProfile && articles) || (showProfile && diaries) || (articles && diaries)
+                ? 'motion-delay-2'
+                : (showProfile || articles || diaries) && 'motion-delay-1',
+          )}
+        >
+          <SectionHeading title={t(locale, 'home.more')} />
+          <div className="mt-6">
+            <HomeMore items={theme.homepage.more.items} />
+          </div>
         </section>
       ) : null}
     </Container>

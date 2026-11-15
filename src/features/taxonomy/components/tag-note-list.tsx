@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import type { Tag } from '@/lib/api'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t } from '@/lib/i18n/dictionary'
 import { tagPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 
@@ -32,9 +34,10 @@ function hashTagName(name: string): number {
 interface TagNoteListProps {
   tags: Tag[]
   className?: string
+  locale?: Locale
 }
 
-export function TagNoteList({ tags, className }: TagNoteListProps) {
+export function TagNoteList({ tags, className, locale = DEFAULT_LOCALE }: TagNoteListProps) {
   return (
     <ul className={cn('tag-notes', className)}>
       {tags.map((tag) => {
@@ -47,7 +50,7 @@ export function TagNoteList({ tags, className }: TagNoteListProps) {
                 {tag.count !== null ? (
                   <span className="tag-note__count">
                     · {tag.count}
-                    <span className="sr-only"> 篇文章</span>
+                    <span className="sr-only">{t(locale, 'tags.articleSuffix')}</span>
                   </span>
                 ) : null}
               </span>

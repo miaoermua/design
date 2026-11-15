@@ -107,7 +107,8 @@ describe('status store（错误胶囊）', () => {
     store.setNetworkOnline(true)
     const snapshot = store.getSnapshot()
     expect(snapshot.kind).toBe('recovered')
-    expect(snapshot.message).not.toMatch(/http|stack|error|api/i)
+    // 快照只承载状态：文案由胶囊按 kind 从字典取，这里不复制任何面向读者的句子
+    expect(Object.keys(snapshot)).toEqual(['kind'])
   })
 
   it('状态变化通知订阅者，重复设置相同状态不重复通知', () => {

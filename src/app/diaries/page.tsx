@@ -14,11 +14,16 @@ import {
   listDiaries,
   listDiariesByTopic,
 } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { pageHref } from '@/lib/routes'
 
-export const metadata: Metadata = {
-  title: '日记',
-  description: '以日为单位的时间流：情绪、天气、地点与片段。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'diaries.title'),
+    description: t(locale, 'diaries.description'),
+  }
 }
 
 interface DiariesPageProps {
@@ -31,6 +36,7 @@ export default async function DiariesPage({ searchParams }: DiariesPageProps) {
   const { page: pageParam, topic: topicParam } = await searchParams
   const page = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
+  const locale = await getLocale()
 
   // 专栏来自顶栏选择器：找不到就是找不到，不偷偷退回「全部日记」，
   // 否则用户会以为筛选生效了，看到的却是全量列表。
@@ -58,14 +64,21 @@ export default async function DiariesPage({ searchParams }: DiariesPageProps) {
   return (
     <Container>
       <PageHeader
-        kicker={topic ? '日记专栏' : '日记'}
-        title={topic ? topic.name : '按天记录'}
-        description={topic ? `只看「${topic.name}」里的日记。` : '没有主题，没有结构，只有时间。'}
+        kicker={topic ? t(locale, 'diaries.kickerTopic') : t(locale, 'diaries.kicker')}
+        title={topic ? topic.name : t(locale, 'diaries.heading')}
+        description={
+          topic
+            ? tf(locale, 'diaries.topicIntro', { name: topic.name })
+            : t(locale, 'diaries.intro')
+        }
         meta={
           result ? (
             <p className="meta">
-              共 {result.pagination.total} 篇 · 第 {result.pagination.page} /{' '}
-              {result.pagination.totalPages} 页
+              {tf(locale, 'meta.listSummary', {
+                total: result.pagination.total,
+                page: result.pagination.page,
+                pages: result.pagination.totalPages,
+              })}
             </p>
           ) : null
         }
@@ -74,15 +87,15 @@ export default async function DiariesPage({ searchParams }: DiariesPageProps) {
       {topic ? (
         <p className="mb-8">
           <Link href="/diaries" className="link-quiet text-meta text-[var(--text-secondary)]">
-            ← 查看全部日记
+            {t(locale, 'diaries.viewAll')}
           </Link>
         </p>
       ) : null}
 
       {result === null ? (
         <EmptyState
-          title="没有找到这个专栏"
-          description="它可能已被删除或改名。可以从顶栏的「日记」重新选择。"
+          title={t(locale, 'diaries.topicMissingTitle')}
+          description={t(locale, 'diaries.topicMissingDescription')}
         />
       ) : groups.length > 0 ? (
         <div>
@@ -92,13 +105,13 @@ export default async function DiariesPage({ searchParams }: DiariesPageProps) {
         </div>
       ) : (
         <EmptyState
-          title={topic ? '这个专栏还没有日记' : '这一页没有日记'}
+          title={topic ? t(locale, 'diaries.emptyTopic') : t(locale, 'diaries.emptyPage')}
           description={
             topic
-              ? '专栏存在，但里面暂时没有公开内容。'
+              ? t(locale, 'diaries.emptyTopicHint')
               : result.pagination.total > 0
-                ? '请求的页码超出了范围，请回到第 1 页。'
-                : '还没有发布任何日记。'
+                ? t(locale, 'diaries.emptyOutOfRange')
+                : t(locale, 'diaries.emptyNone')
           }
         />
       )}
@@ -106,9 +119,10 @@ export default async function DiariesPage({ searchParams }: DiariesPageProps) {
       {result ? (
         <Pagination
           pagination={result.pagination}
+          locale={locale}
           buildHref={(target) => pageHref('/diaries', target, { topic: topic?.id })}
-          prevLabel="更新的一页"
-          nextLabel="更早的一页"
+          prevLabel={t(locale, 'pagination.newer')}
+          nextLabel={t(locale, 'pagination.older')}
         />
       ) : null}
     </Container>

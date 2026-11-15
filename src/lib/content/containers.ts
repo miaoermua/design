@@ -30,6 +30,7 @@
 
 import type { MarkedExtension, Token, Tokens } from 'marked'
 import { isCalloutType, renderDetailsHtml, renderNoticeHtml, type CalloutType } from './notice'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
 
 /** 任意 `:::` 行：第一个捕获组是容器名（可能为空 = 闭合行） */
 const FENCE = /^ {0,3}:::[ \t]*(.*?)[ \t]*$/
@@ -135,7 +136,7 @@ interface ContainerToken extends Tokens.Generic {
   tokens: Token[]
 }
 
-export function createContainerExtension(): MarkedExtension {
+export function createContainerExtension(locale: Locale = DEFAULT_LOCALE): MarkedExtension {
   return {
     extensions: [
       {
@@ -166,8 +167,8 @@ export function createContainerExtension(): MarkedExtension {
           const body = container.tokens.length ? this.parser.parse(container.tokens) : ''
           const { header } = container
 
-          if (header.kind === 'details') return renderDetailsHtml(header.title, body)
-          return renderNoticeHtml(header.kind, header.type, header.title, body)
+          if (header.kind === 'details') return renderDetailsHtml(header.title, body, locale)
+          return renderNoticeHtml(header.kind, header.type, header.title, body, locale)
         },
       },
     ],

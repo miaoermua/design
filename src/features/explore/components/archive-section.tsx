@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { Article, Diary } from '@/lib/api'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf, type MessageKey } from '@/lib/i18n/dictionary'
 import { articlePath, diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 import { formatMonthLabel, toDateTimeAttr } from '@/lib/utils/date'
@@ -15,7 +17,8 @@ import { formatMonthLabel, toDateTimeAttr } from '@/lib/utils/date'
 
 interface ArchiveEntry {
   key: string
-  kind: '文章' | '日记'
+  /** 存字典键而不是成品文案：语言在渲染处才确定 */
+  kind: MessageKey
   title: string
   date: string
   href: string | null
@@ -45,7 +48,7 @@ export function buildYears(articles: Article[], diaries: Diary[], timeZone: stri
       const attr = toDateTimeAttr(article.createdAt, timeZone)
       return {
         key: `post-${article.id}`,
-        kind: '文章' as const,
+        kind: 'archive.kindPost' as const,
         title: article.title,
         date: article.createdAt,
         href: articlePath(article.category?.slug, article.slug),
@@ -56,7 +59,7 @@ export function buildYears(articles: Article[], diaries: Diary[], timeZone: stri
       const attr = toDateTimeAttr(diary.publishedAt, timeZone)
       return {
         key: `note-${diary.id}`,
-        kind: '日记' as const,
+        kind: 'archive.kindNote' as const,
         title: diary.title,
         date: diary.publishedAt,
         href: diaryPath(diary.id),
@@ -102,19 +105,35 @@ interface ArchiveSectionProps {
   total: number
   /** 年份锚点前缀：同一页面上有多个区块时避免 id 冲突 */
   idPrefix?: string
+  locale?: Locale
 }
 
-export function ArchiveSection({ years, total, idPrefix = 'year' }: ArchiveSectionProps) {
+export function ArchiveSection({
+  years,
+  total,
+  idPrefix = 'year',
+  locale = DEFAULT_LOCALE,
+}: ArchiveSectionProps) {
   if (years.length === 0) {
-    return <EmptyState title="归档还是空的" description="还没有可归档的文章或日记。" />
+    return (
+      <EmptyState
+        title={t(locale, 'archive.emptyTitle')}
+        description={t(locale, 'archive.emptyHint')}
+      />
+    )
   }
 
   return (
     <>
-      <p className="meta">共 {total} 条记录 · {years.length} 个年份</p>
+      <p className="meta">
+        {tf(locale, 'archive.summary', { total, years: years.length })}
+      </p>
 
       {years.length > 1 ? (
-        <nav aria-label="年份索引" className="meta mt-4 flex flex-wrap gap-x-5 gap-y-2">
+        <nav
+          aria-label={t(locale, 'archive.yearIndex')}
+          className="meta mt-4 flex flex-wrap gap-x-5 gap-y-2"
+        >
           {years.map((group) => (
             <a key={group.year} href={`#${idPrefix}-${group.year}`} className="link-quiet">
               {group.year}（{group.count}）
@@ -141,7 +160,7 @@ export function ArchiveSection({ years, total, idPrefix = 'year' }: ArchiveSecti
                     <time className="meta tabular-nums" dateTime={entry.date}>
                       {entry.day}
                     </time>
-                    <span className="text-meta text-[var(--text-tertiary)]">{entry.kind}</span>
+                    <span className="text-meta text-[var(--text-secondary)]">{t(locale, entry.kind)}</span>
                     {entry.href ? (
                       <Link
                         href={entry.href}
@@ -194,7 +213,7 @@ export function TagCluster({ tags, className }: TagClusterProps) {
           >
             #{tag.name}
             {tag.count !== null ? (
-              <span className="ml-1.5 align-middle text-meta tabular-nums text-[var(--text-tertiary)]">
+              <span className="ml-1.5 align-middle text-meta tabular-nums text-[var(--text-secondary)]">
                 {tag.count}
               </span>
             ) : null}

@@ -95,7 +95,7 @@ function createHarness(overrides: Partial<RealtimeClientOptions> = {}): Harness 
 
   const client = createRealtimeClient({
     origin: ORIGIN,
-    lang: 'zh',
+    lang: 'zh-CN',
     createTransport: (config) => {
       const transport = new FakeTransport(config)
       transports.push(transport)
@@ -112,7 +112,7 @@ function createHarness(overrides: Partial<RealtimeClientOptions> = {}): Harness 
 function makeOptions(): RealtimeClientOptions {
   return {
     origin: ORIGIN,
-    lang: 'zh',
+    lang: 'zh-CN',
     onEvent: () => {},
     createTransport: (config) => new FakeTransport(config),
   }
@@ -142,7 +142,7 @@ describe('realtime client 连接管理', () => {
 
   it('工厂拿到的是 API origin 与当前语言，而不是旧 ws 地址', () => {
     const h = createHarness()
-    expect(h.last().config).toEqual({ origin: ORIGIN, lang: 'zh' })
+    expect(h.last().config).toEqual({ origin: ORIGIN, lang: 'zh-CN' })
   })
 
   it('连接成功后状态为 online 且 attempts 归零', () => {
@@ -558,7 +558,7 @@ describe('全站单例 acquireRealtimeClient', () => {
 
   it('语言变化时先停止旧实例，不同时留两条连接', () => {
     const transports: FakeTransport[] = []
-    const options = (lang: 'zh' | 'en'): RealtimeClientOptions => ({
+    const options = (lang: 'zh-CN' | 'en'): RealtimeClientOptions => ({
       ...makeOptions(),
       lang,
       createTransport: (config) => {
@@ -568,7 +568,7 @@ describe('全站单例 acquireRealtimeClient', () => {
       },
     })
 
-    const a = acquireRealtimeClient(options('zh'))
+    const a = acquireRealtimeClient(options('zh-CN'))
     a.client.start()
     const b = acquireRealtimeClient(options('en'))
     expect(transports).toHaveLength(2)

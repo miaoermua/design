@@ -44,6 +44,10 @@ export const featureFlags = {
    * 关掉它会让操作栏的 Like / Subscribe 一起消失，并且不再探测 /subscribe/status。
    */
   interactions: true,
+  /** 一言 / 说说（Mix Space /says）：语录式短内容 */
+  says: true,
+  /** 项目展示（Mix Space /projects）：作品集 */
+  projects: true,
 } as const
 
 export type FeatureKey = keyof typeof featureFlags

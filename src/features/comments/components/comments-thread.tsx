@@ -3,6 +3,8 @@
 import { useCallback, useState } from 'react'
 import { mergeThreadReplies } from '@/lib/api/domain/comment'
 import type { CommentItem, CommentPage } from '@/lib/api/domain/comment'
+import { useLocale } from '@/lib/i18n/client'
+import { t, type MessageKey } from '@/lib/i18n/dictionary'
 import { CommentCard } from './comment-card'
 import { CommentComposer } from './comment-composer'
 
@@ -16,10 +18,11 @@ interface CommentsThreadProps {
 
 type Sort = 'pinned' | 'newest' | 'oldest'
 
-const SORTS: Array<{ value: Sort; label: string }> = [
-  { value: 'pinned', label: '置顶优先' },
-  { value: 'newest', label: '最新' },
-  { value: 'oldest', label: '最早' },
+/** 排序项只存字典键：label 在渲染时按当前 locale 取，不在模块顶部固化中文 */
+const SORTS: Array<{ value: Sort; labelKey: MessageKey }> = [
+  { value: 'pinned', labelKey: 'comments.sortPinned' },
+  { value: 'newest', labelKey: 'comments.sortNewest' },
+  { value: 'oldest', labelKey: 'comments.sortOldest' },
 ]
 
 /**
@@ -38,6 +41,7 @@ const SORTS: Array<{ value: Sort; label: string }> = [
  * 不从 `@/lib/api` 入口导入——那里带着请求层，不该进客户端包。
  */
 export function CommentsThread({ refId, timeZone, allowGuest, initial }: CommentsThreadProps) {
+  const locale = useLocale()
   const [page, setPage] = useState<CommentPage>(initial)
   const [sort, setSort] = useState<Sort>('pinned')
   const [busy, setBusy] = useState<'more' | 'sort' | string | null>(null)
@@ -69,11 +73,11 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
     const fresh = await fetchPage(1, sort)
     setBusy(null)
     if (!fresh) {
-      setError('评论刷新失败，请稍后再试')
+      setError(t(locale, 'comments.refreshFailed'))
       return
     }
     setPage(fresh)
-  }, [fetchPage, sort])
+  }, [fetchPage, locale, sort])
 
   async function loadMore() {
     if (busy) return
@@ -82,7 +86,7 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
     const next = await fetchPage(page.page + 1, sort)
     setBusy(null)
     if (!next) {
-      setError('加载失败，请稍后再试')
+      setError(t(locale, 'comments.loadFailed'))
       return
     }
     setPage((prev) => ({
@@ -99,7 +103,7 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
     void fetchPage(1, next).then((fresh) => {
       setBusy(null)
       if (!fresh) {
-        setError('切换排序失败，请稍后再试')
+        setError(t(locale, 'comments.sortFailed'))
         return
       }
       setPage(fresh)
@@ -142,7 +146,7 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
         }),
       }))
     } catch {
-      setError('回复加载失败，请稍后再试')
+      setError(t(locale, 'comments.repliesFailed'))
     } finally {
       setBusy(null)
     }
@@ -154,12 +158,16 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
     <section aria-labelledby="comments-heading" className="comments">
       <header className="comments__head">
         <h2 id="comments-heading" className="comments__title">
-          评论
+          {t(locale, 'comments.title')}
           {page.total > 0 ? <span className="comments__count">{page.total}</span> : null}
         </h2>
 
         {page.total > 0 ? (
-          <div className="comments__sort" role="group" aria-label="评论排序">
+          <div
+            className="comments__sort"
+            role="group"
+            aria-label={t(locale, 'comments.sortLabel')}
+          >
             {SORTS.map((item) => (
               <button
                 key={item.value}
@@ -168,7 +176,7 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
                 aria-pressed={sort === item.value}
                 className="comments__sort-button"
               >
-                {item.label}
+                {t(locale, item.labelKey)}
               </button>
             ))}
           </div>
@@ -178,13 +186,13 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
       {allowGuest ? (
         <CommentComposer refId={refId} onSuccess={reload} />
       ) : (
-        <p className="comments__notice">本站当前不接受匿名评论，暂时不能在这里留言。</p>
+        <p className="comments__notice">{t(locale, 'comments.anonymousDisabled')}</p>
       )}
 
       <div aria-busy={sorting || undefined}>
         {page.items.length === 0 ? (
           <p className="comments__empty">
-            {page.total > 0 ? '这一页没有评论。' : '还没有评论，留下第一条。'}
+            {page.total > 0 ? t(locale, 'comments.emptyPage') : t(locale, 'comments.empty')}
           </p>
         ) : (
           <ul className="comments__list">
@@ -209,7 +217,7 @@ export function CommentsThread({ refId, timeZone, allowGuest, initial }: Comment
             disabled={busy === 'more'}
             className="comments__more"
           >
-            {busy === 'more' ? '加载中…' : '加载更多评论'}
+            {busy === 'more' ? t(locale, 'comments.loadingMore') : t(locale, 'comments.loadMore')}
           </button>
         ) : null}
 

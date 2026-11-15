@@ -16,6 +16,8 @@ import {
   mockPages,
   mockPostDetail,
   mockPosts,
+  mockProjects,
+  mockSays,
   mockTagSums,
   mockThemeSnippet,
   mockTopics,
@@ -223,6 +225,10 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
     const row = mockPages.find((item) => item.slug === slug)
     return row ? { status: 200, body: row } : notFound(path)
   }
+
+  if (path === '/says') return { status: 200, body: paginate(mockSays, page, size) }
+
+  if (path === '/projects') return { status: 200, body: paginate(mockProjects, page, size) }
 
   return null
 }

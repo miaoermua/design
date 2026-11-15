@@ -8,6 +8,8 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
 import { getCategoryBySlug, getSiteTimezone, listArticles } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { categoryPath, pageHref } from '@/lib/routes'
 
 interface CategoryPageProps {
@@ -25,10 +27,16 @@ function decodeParam(value: string): string {
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params
-  const category = await getCategoryBySlug(decodeParam(slug))
+  const [category, locale] = await Promise.all([
+    getCategoryBySlug(decodeParam(slug)),
+    getLocale(),
+  ])
   // 404 要在 metadata 阶段抛：根布局是流式的，等正文再抛时状态码已是 200
   if (!category) notFound()
-  return { title: category.name, description: `${category.name} 分类下的文章。` }
+  return {
+    title: category.name,
+    description: tf(locale, 'category.description', { name: category.name }),
+  }
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
@@ -37,6 +45,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const [{ slug }, query] = await Promise.all([params, searchParams])
   const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
+  const locale = await getLocale()
 
   const category = await getCategoryBySlug(decodeParam(slug))
   if (!category) notFound()
@@ -49,17 +58,20 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   return (
     <Container>
       <PageHeader
-        kicker="分类"
+        kicker={t(locale, 'categories.kicker')}
         title={category.name}
         description={
           pagination.total > 0
-            ? `该分类下的文章，共 ${pagination.total} 篇。`
-            : '这个分类下还没有文章。'
+            ? tf(locale, 'category.summary', { total: pagination.total })
+            : t(locale, 'category.empty')
         }
         meta={
           category.count !== null && category.count !== pagination.total ? (
             <p className="meta">
-              后端统计：{category.count} 篇；分页合计：{pagination.total} 篇
+              {tf(locale, 'category.stats', {
+                count: category.count,
+                total: pagination.total,
+              })}
             </p>
           ) : null
         }
@@ -68,29 +80,30 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       {items.length > 0 ? (
         <div className="divide-y divide-dashed divide-[var(--edge)] border-t border-dashed border-[var(--edge-strong)]">
           {items.map((article) => (
-            <ArticleRow key={article.id} article={article} timeZone={timeZone} />
+            <ArticleRow key={article.id} article={article} timeZone={timeZone} locale={locale} />
           ))}
         </div>
       ) : (
         <EmptyState
-          title={page > 1 ? '这一页没有文章' : '这个分类下还没有文章'}
+          title={page > 1 ? t(locale, 'category.emptyPage') : t(locale, 'category.empty')}
           description={
-            page > 1 ? '页码超出了结果范围，请回到第 1 页。' : '后端分页接口返回了空数组。'
+            page > 1 ? t(locale, 'category.emptyOutOfRange') : t(locale, 'category.emptyBackend')
           }
         />
       )}
 
       <Pagination
         pagination={pagination}
+        locale={locale}
         buildHref={(target) => pageHref(categoryPath(category.slug), target)}
       />
 
       <div className="mt-10 flex gap-6">
         <Link href="/categories" className="link-quiet meta">
-          ← 全部分类
+          {t(locale, 'category.backAll')}
         </Link>
         <Link href="/tags" className="link-quiet meta">
-          所有标签 →
+          {t(locale, 'category.allTags')}
         </Link>
       </div>
     </Container>

@@ -11,7 +11,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
     <div className="border-line flex flex-col items-start gap-3 border border-dashed px-6 py-12">
       <p className="font-serif text-[1.0625rem] text-[var(--text-secondary)]">{title}</p>
       {description ? (
-        <p className="text-meta text-[var(--text-tertiary)]">{description}</p>
+        <p className="text-meta text-[var(--text-secondary)]">{description}</p>
       ) : null}
       {action}
     </div>

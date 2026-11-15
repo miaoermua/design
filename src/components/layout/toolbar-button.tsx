@@ -12,12 +12,14 @@ interface ToolbarButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * 顶栏工具按钮
+ * 悬浮工具条按钮
  *
- * 「气泡」的落地方式不是四个独立风格的按钮，而是同一枚尺寸的圆形按钮：
- * 统一 40px 点击区域、统一圆角、统一冰面材质。材质来自 `.glass-control`
- * （material.css），组件只负责尺寸与状态——工具组未来要换位置或换组合，
- * 改的是工具组的排布，不是四个按钮各自的样式。
+ * 外观不再是「三个独立冰面小圆」：材质已经上移到外面的 `.toolbar-dock`
+ * 一整块玻璃上（与顶栏同一个 `.glass-nav` + 光斑层），这里只负责格子本身——
+ * 尺寸、圆角、悬停浅底、激活洗底。三个按钮共用一套，不各自维护。
+ *
+ * 悬停/激活用的也是导航的语义 Token（`--nav-item-hover` / `--nav-item-active`），
+ * 所以两块玻璃在鼠标经过时的反馈是同一个颜色，不出现「顶栏偏蓝、浮标偏灰」。
  *
  * Tooltip 用 CSS 实现（group-hover / group-focus-visible），
  * 不引入 JS 定位库：它只需要在桌面端显示一行文字，且必须能被键盘触达
@@ -38,12 +40,12 @@ export function ToolbarButton({
       title={label}
       data-active={active ? 'true' : undefined}
       className={cn(
-        'group/tt glass-control relative flex size-10 items-center justify-center rounded-full',
+        'group/tt relative flex size-10 items-center justify-center rounded-[var(--radius-pill)]',
         'transition-colors duration-[var(--duration-fast)]',
         'outline-none focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]',
         active
-          ? 'text-[var(--accent-strong)]'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
+          ? 'bg-[var(--nav-item-active)] text-[var(--nav-item-active-ink)]'
+          : 'text-[var(--nav-ink)] hover:bg-[var(--nav-item-hover)] hover:text-[var(--nav-ink-strong)]',
         'disabled:cursor-not-allowed disabled:opacity-55',
         className,
       )}
@@ -67,10 +69,19 @@ export function ToolbarButton({
   )
 }
 
-/** 工具组容器：间距与竖向排列在这里定义，按钮本身不关心相邻元素 */
-export function ToolbarGroup({ children }: { children: ReactNode }) {
+/**
+ * 工具组容器：三个格子竖排在玻璃胶囊里。
+ *
+ * `relative z-[1]` 是必须的：玻璃层是 `inset: 0` 的定位元素，会盖住同一
+ * 层叠上下文里未定位的内容，按钮必须抬到它上面才点得到。
+ */
+export function ToolbarGroup({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <div className="flex flex-col items-center gap-2" role="group" aria-label="站点工具">
+    <div
+      className="relative z-[1] flex flex-col items-center gap-1"
+      role="group"
+      aria-label={label}
+    >
       {children}
     </div>
   )

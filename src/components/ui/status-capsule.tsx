@@ -11,29 +11,23 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useStatusSnapshot } from '@/lib/status/use-status'
-import type { Locale } from '@/lib/i18n/config'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf, type MessageKey } from '@/lib/i18n/dictionary'
 import type { StatusSnapshot } from '@/lib/status/store'
 
 export interface StatusCapsuleProps {
   locale?: Locale
 }
 
-const MESSAGES: Record<Locale, Record<'offline' | 'realtime' | 'api' | 'recovered', string>> = {
-  zh: {
-    offline: '网络不可用，正在等待恢复连接',
-    realtime: '实时连接已断开，正在重试',
-    api: '未能获取最新内容，页面显示的是稍早的版本',
-    recovered: '连接已恢复',
-  },
-  en: {
-    offline: 'You are offline. Waiting for the connection to come back.',
-    realtime: 'Live updates disconnected. Retrying.',
-    api: 'Could not load the latest version. Showing an earlier copy.',
-    recovered: 'Connection restored.',
-  },
+/** 每种连接状态对应一条字典文案；文案本身不在这里维护 */
+const MESSAGE_KEY: Record<Exclude<StatusSnapshot['kind'], null>, MessageKey> = {
+  offline: 'status.offline',
+  realtime: 'status.realtime',
+  api: 'status.api',
+  recovered: 'status.recovered',
 }
 
-export function StatusCapsule({ locale = 'zh' }: StatusCapsuleProps) {
+export function StatusCapsule({ locale = DEFAULT_LOCALE }: StatusCapsuleProps) {
   const status = useStatusSnapshot()
   const [dismissedStatus, setDismissedStatus] = useState<StatusSnapshot | null>(null)
   const pointerStartX = useRef<number | null>(null)
@@ -41,12 +35,10 @@ export function StatusCapsule({ locale = 'zh' }: StatusCapsuleProps) {
   if (status.kind === null || dismissedStatus === status) return null
 
   const recovered = status.kind === 'recovered'
-  const base = MESSAGES[locale][status.kind]
+  const base = t(locale, MESSAGE_KEY[status.kind])
   const retrying = status.kind === 'realtime' && status.attempt && status.attempt > 1
   const message = retrying
-    ? locale === 'en'
-      ? `${base} (attempt ${status.attempt})`
-      : `${base}（第 ${status.attempt} 次）`
+    ? tf(locale, 'status.attempt', { base, count: status.attempt ?? 1 })
     : base
   const dismiss = () => setDismissedStatus(status)
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -78,15 +70,15 @@ export function StatusCapsule({ locale = 'zh' }: StatusCapsuleProps) {
         aria-hidden="true"
         className="size-1.5 shrink-0 rounded-[var(--radius-pill)]"
         style={{
-          backgroundColor: recovered ? 'var(--color-success)' : 'var(--color-warning)',
+          backgroundColor: recovered ? 'var(--state-success)' : 'var(--state-warning)',
         }}
       />
       <span className="text-meta min-w-0 truncate">{message}</span>
       <button
         type="button"
         onClick={dismiss}
-        aria-label={locale === 'en' ? 'Dismiss status notification' : '关闭状态通知'}
-        className="text-meta shrink-0 rounded-full px-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        aria-label={t(locale, 'status.dismiss')}
+        className="text-meta shrink-0 rounded-full px-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
       >
         ×
       </button>

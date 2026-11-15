@@ -44,10 +44,10 @@ afterEach(() => {
 
 describe('RealtimeRuntime', () => {
   it('挂载时获取连接、挂上会话并启动一次', () => {
-    render(<RealtimeRuntime origin={ORIGIN} lang="zh" />)
+    render(<RealtimeRuntime origin={ORIGIN} lang="zh-CN" />)
 
     expect(harness.acquire).toHaveBeenCalledTimes(1)
-    expect(harness.acquire.mock.calls[0]![0]).toMatchObject({ origin: ORIGIN, lang: 'zh' })
+    expect(harness.acquire.mock.calls[0]![0]).toMatchObject({ origin: ORIGIN, lang: 'zh-CN' })
     expect(harness.client.start).toHaveBeenCalledTimes(1)
 
     realtimeBus.joinArticle('post-1')
@@ -55,7 +55,7 @@ describe('RealtimeRuntime', () => {
   })
 
   it('语言变化只改握手 query，不重建连接实例（房间订阅不丢）', () => {
-    const { rerender } = render(<RealtimeRuntime origin={ORIGIN} lang="zh" />)
+    const { rerender } = render(<RealtimeRuntime origin={ORIGIN} lang="zh-CN" />)
 
     rerender(<RealtimeRuntime origin={ORIGIN} lang="en" />)
 
@@ -70,7 +70,7 @@ describe('RealtimeRuntime', () => {
   })
 
   it('浏览器 offline 暂停、online 恢复：这是当前唯一的自动恢复入口', () => {
-    render(<RealtimeRuntime origin={ORIGIN} lang="zh" />)
+    render(<RealtimeRuntime origin={ORIGIN} lang="zh-CN" />)
 
     window.dispatchEvent(new Event('offline'))
     expect(harness.client.pause).toHaveBeenCalledTimes(1)
@@ -80,13 +80,13 @@ describe('RealtimeRuntime', () => {
   })
 
   it('origin 为 null 时不建立连接，把状态同步为 idle', () => {
-    render(<RealtimeRuntime origin={null} lang="zh" />)
+    render(<RealtimeRuntime origin={null} lang="zh-CN" />)
     expect(harness.acquire).not.toHaveBeenCalled()
     expect(harness.client.start).not.toHaveBeenCalled()
   })
 
   it('卸载时释放引用，连接停止后摘掉会话', () => {
-    const { unmount } = render(<RealtimeRuntime origin={ORIGIN} lang="zh" />)
+    const { unmount } = render(<RealtimeRuntime origin={ORIGIN} lang="zh-CN" />)
     unmount()
 
     expect(harness.release).toHaveBeenCalledTimes(1)

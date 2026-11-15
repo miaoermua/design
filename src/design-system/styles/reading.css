@@ -338,21 +338,25 @@
 }
 
 .comments__sort-button {
-  padding: 0.15rem 0;
-  border-bottom: 1px solid transparent;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
   color: var(--text-secondary);
   transition:
     color var(--duration-fast) var(--ease-out-soft),
-    border-color var(--duration-fast) var(--ease-out-soft);
+    border-color var(--duration-fast) var(--ease-out-soft),
+    background var(--duration-fast) var(--ease-out-soft);
 }
 
 .comments__sort-button:hover {
+  border-color: var(--edge);
   color: var(--accent-strong);
 }
 
 .comments__sort-button[aria-pressed='true'] {
-  color: var(--text-heading);
-  border-bottom-color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  color: var(--accent-strong);
 }
 
 .comments__notice {
@@ -395,7 +399,7 @@
   align-items: center;
   padding: 0.42rem 1rem;
   border: 1px solid var(--edge-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: var(--text-meta);
   color: var(--text-secondary);
@@ -417,7 +421,7 @@
   margin-top: 0.75rem;
   font-family: var(--font-sans);
   font-size: var(--text-meta);
-  color: var(--color-danger);
+  color: var(--state-danger);
 }
 
 /* ── 单条评论 ── */
@@ -544,7 +548,7 @@
   margin-top: 1.5rem;
   padding: 1rem 1.05rem 1.05rem;
   border: 1px solid var(--edge);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: color-mix(in oklab, var(--surface-lift) 55%, var(--reading-surface));
 }
 
@@ -620,7 +624,7 @@
 
 .comment-composer__input::placeholder,
 .comment-composer__textarea::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .comment-composer__input:focus,
@@ -646,12 +650,18 @@
   display: inline-flex;
   align-items: center;
   padding: 0.42rem 1rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-small);
   color: var(--surface-raised);
-  transition: opacity var(--duration-fast) var(--ease-out-soft);
+  transition:
+    opacity var(--duration-fast) var(--ease-out-soft),
+    background var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment-composer__submit:hover:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 .comment-composer__submit:disabled {
@@ -681,7 +691,48 @@
 }
 
 .comment-composer__message--error {
-  color: var(--color-danger);
+  color: var(--state-danger);
+}
+
+/* ── 悄悄话 toggle ── */
+
+.comment-composer__whisper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-out-soft);
+}
+
+.comment-composer__whisper:hover {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.comment-composer__whisper-check {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.comment-composer__whisper-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.comment-composer__whisper-hint {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  flex-basis: 100%;
 }
 
 @media (max-width: 640px) {

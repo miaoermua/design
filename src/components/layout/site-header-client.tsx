@@ -2,23 +2,34 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
-import { isNavItemActive, type NavGroup, type NavItem } from '@/core/navigation'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { getQuickNav, HOME_NAV, isNavItemActive, type NavEntry } from '@/core/navigation'
 import type { Locale } from '@/lib/i18n/config'
 import type { MessageKey } from '@/lib/i18n/dictionary'
-import { cn } from '@/lib/utils/cn'
+import { CoverImage } from '@/components/ui/cover-image'
 import { LanguageButton } from './language-button'
-import { NavSelector } from './nav-selector'
 import { SearchPanel } from './search-panel'
+import { SiteNavMenu } from './site-nav-menu'
 import { ThemeToggle } from './theme-toggle'
 import { ToolbarButton, ToolbarGroup } from './toolbar-button'
 import { useHeaderScroll } from './use-header-scroll'
 
+/** 收起动画时长：与 globals.css 的 `--nav-exit-duration` 必须一致 */
+const EXIT_MS = 200
+
+const MENU_ID = 'site-nav-menu'
+
 interface SiteHeaderClientProps {
-  /** 目录型入口：Blog 分类 / Note 专栏 / Pages */
-  groups: NavGroup[]
-  /** 普通链接入口：探索 / 友链 */
-  links: NavItem[]
+  /**
+   * 导航树（`core/navigation` 的 `buildNav()` 结果）。
+   *
+   * 顶栏与菜单消费的都是这一棵树：顶栏取 `getQuickNav()` 的投影，
+   * 菜单按 `section` 分成两段。上一版的 `quickNav` / `menuNav` / `moreNav` /
+   * `groups` 四个 props 是同一份 `ALL_NAV` 的四次重新描述，已合并。
+   */
+  nav: NavEntry[]
+  siteName: string
+  avatarUrl: string | null
   locale: Locale
   messages: Record<MessageKey, string>
   /** 是否有搜索模块；关闭时不渲染搜索按钮 */
@@ -26,35 +37,133 @@ interface SiteHeaderClientProps {
 }
 
 /**
- * 悬浮顶栏
+ * 悬浮导航
  *
- * 形态：整行顶栏 → 收在版心内的圆角浮条。
- * 它不再是页面的「顶边」，而是一块浮在纸面上的薄片：
- *   - 外侧留出边距，滚动时正文从浮条两侧与下方穿过；
- *   - 圆角 + 细边 + 投影建立独立层级，不靠整行实色块压迫版面；
- *   - 玻璃参数沿用现有材质层，没有新增材质（见 material.css）。
+ * 形态：一块浮在纸面上的微圆角卡片（`--radius-md`，不是药丸）。
+ *   - ≥48rem：贴顶悬浮，滚动向下隐藏、向上回来；
+ *   - <48rem：贴底悬浮（让出 `env(safe-area-inset-bottom)`），**不随滚动隐藏**
+ *     —— 手机上它是唯一的导航，滑走就等于没有导航。
  *
- * 滚动行为在 useHeaderScroll：向下累计 96px 隐藏、向上累计 40px 显示，
- * 页首恒显。搜索面板打开或输入聚焦时锁定为显示——顶栏不能从操作中途滑走。
+ * 两端共用一棵 DOM 与同一份导航数据，但**布局是两套**（globals.css 的
+ * 桌面断点段落）：桌面按内容定宽铺开成一整条（入口在左、菜单在右，
+ * 间距按桌面给），移动是内容宽度的紧凑胶囊（项与项之间留出可点击的间隔）。
+ * 上一条「手机精简」的尺寸只在移动断点里成立，不会再压到桌面。
  *
- * 布局约束：工具组是独立组件，不写死在导航里。未来换位置或换组合，
- * 改的是这个文件里的一处挂载点。
+ * 信息架构：桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链，
+ * 文章与日记悬停即展开下级；页面与设置收进菜单。手机只留文章与日记
+ * （头像承担首页），其余走菜单按钮。两端消费的是同一棵树。
+ *
+ * 为什么状态用「在哪个路由上打开的」而不是布尔值：路由一变 `open` 自然
+ * 变 false，不需要在 effect 里 setState 同步，也不会在浏览器后退回到
+ * 原路由时把菜单重新弹开。
  */
 export function SiteHeaderClient({
-  groups,
-  links,
+  nav,
+  siteName,
+  avatarUrl,
   locale,
   messages,
   searchEnabled,
 }: SiteHeaderClientProps) {
   const pathname = usePathname()
-  const homeGroup = groups.find((group) => group.href === '/')
+  // 顶栏直接可见的高频入口：同一棵树上的投影，不另存一份清单
+  const quickNav = getQuickNav(nav)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [openAt, setOpenAt] = useState<string | null>(null)
+  const [closing, setClosing] = useState(false)
 
-  // 搜索面板打开时锁定顶栏（不允许隐藏）
-  const { hidden, detached } = useHeaderScroll(searchOpen)
+  /**
+   * 路由一变，立刻作废「在哪个路由上打开的」。
+   *
+   * 这是「随输入变化调整 state」而不是同步外部系统，所以在渲染期直接改状态，
+   * 不用 effect（effect 里 setState 会多一次提交，还会让菜单在新页面上闪一下）。
+   * 只隐藏不清理的话，浏览器后退回到原路由会把菜单重新弹开。
+   */
+  const [routeOfState, setRouteOfState] = useState(pathname)
+  if (routeOfState !== pathname) {
+    setRouteOfState(pathname)
+    setOpenAt(null)
+    setClosing(false)
+  }
 
-  const closeSearch = useCallback(() => setSearchOpen(false), [])
+  const open = openAt === pathname
+  const mounted = open || closing
+
+  // 搜索面板或菜单打开时锁定导航（不允许滑走：面板跟着卡片，卡片不能先消失）
+  const { hidden } = useHeaderScroll(searchOpen || open)
+
+  const rootRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const exitTimer = useRef<number | null>(null)
+
+  const clearExitTimer = useCallback(() => {
+    if (exitTimer.current !== null) {
+      window.clearTimeout(exitTimer.current)
+      exitTimer.current = null
+    }
+  }, [])
+
+  useEffect(() => () => clearExitTimer(), [clearExitTimer])
+
+  const closeMenu = useCallback(
+    (restoreFocus: boolean) => {
+      clearExitTimer()
+      setOpenAt(null)
+      // 关闭动画：面板在 DOM 里多留一帧时长做反向收起；减弱动效时直接卸载
+      if (prefersReducedMotion()) {
+        setClosing(false)
+      } else {
+        setClosing(true)
+        exitTimer.current = window.setTimeout(() => {
+          exitTimer.current = null
+          setClosing(false)
+        }, EXIT_MS)
+      }
+      if (restoreFocus) triggerRef.current?.focus()
+    },
+    [clearExitTimer],
+  )
+
+  const openMenu = useCallback(
+    (focusFirst: boolean) => {
+      clearExitTimer()
+      setClosing(false)
+      setOpenAt(pathname)
+      if (focusFirst) {
+        // 等面板挂载后再取焦点，否则查询到的是上一帧的空节点
+        window.requestAnimationFrame(() => {
+          const first = panelRef.current?.querySelector<HTMLElement>('a, button, summary')
+          first?.focus()
+        })
+      }
+    },
+    [clearExitTimer, pathname],
+  )
+
+  // 点击菜单外部收起；Escape 收起并把焦点还给触发按钮
+  useEffect(() => {
+    if (!mounted) return
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) closeMenu(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        closeMenu(true)
+      }
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mounted, closeMenu])
 
   // ⌘K / Ctrl+K 打开搜索，Esc 关闭；不拦截输入框里的普通输入
   useEffect(() => {
@@ -64,7 +173,7 @@ export function SiteHeaderClient({
       const isK = event.key.toLowerCase() === 'k'
       if (isK && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
-        setSearchOpen((open) => !open)
+        setSearchOpen((value) => !value)
         return
       }
       // Escape 只在面板由本组件打开时处理；面板内部也有自己的处理
@@ -75,109 +184,256 @@ export function SiteHeaderClient({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [searchEnabled])
 
+  const closeSearch = useCallback(() => setSearchOpen(false), [])
+
   /**
-   * 隐藏状态用内联 transform 而不是 Tailwind 任意值类。
+   * Spotlight：鼠标在卡片内移动时把指针位置写进两个 CSS 变量。
    *
-   * 原因：`-translate-y-[calc(100%+0.75rem)]` 在 Tailwind v4 的任意值里
-   * 需要把 `+` 写成空格，容易失效且构建时不报错——实测该类没有被生成，
-   * 导致 state 正确但 transform 仍是 none。这里直接写 transform，
-   * 位移量用 CSS 变量拼出来，语义清楚也不依赖工具类解析。
+   * 刻意**不进 React 状态**：pointermove 每秒几十次，setState 会让整棵导航
+   * 反复重渲染（还带上菜单子树）。这里只在 rAF 里改自身 style，
+   * 由 CSS 的 radial-gradient 消费，React 完全不参与。
+   * 只在「有精确指针 + 未要求减弱动效」时挂监听：触屏与键盘用户不会残留光斑。
+   *
+   * 右下工具胶囊用的是同一个 hook、同一套变量：两处是同一块玻璃的两种尺寸，
+   * 光斑逻辑没有第二份实现。
    */
-  const HIDDEN_TRANSFORM = 'translate3d(0, calc(-100% - 0.75rem), 0)'
+  useSpotlight(cardRef)
+  useSpotlight(dockRef)
 
   return (
     <>
-      <header
-        style={{ transform: hidden ? HIDDEN_TRANSFORM : 'translate3d(0, 0, 0)' }}
-        className={cn('site-header-bar fixed inset-x-0 top-0 z-40 pt-3 sm:pt-4')}
-      >
-        <div className="mx-auto w-full max-w-[var(--container-wide)] px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]">
-          <div
-            className={cn(
-              'glass-bar mx-auto flex h-14 w-full max-w-full items-center gap-3 rounded-[var(--radius-pill)] px-2 sm:h-[3.75rem] sm:px-3 md:w-fit',
-              // 脱离页首后才显示投影：在顶部时它与纸面是一体的
-              detached ? 'shadow-[var(--shadow-pop)]' : undefined,
-            )}
-          >
-            {/* 目录型入口收进选择器，避免把 Pages / 分类 / 专栏条目铺满顶栏。 */}
-            <nav aria-label="主导航" className="hidden min-w-0 md:block">
-              <ul className="flex items-center gap-1">
-                {groups.map((group) => (
-                  <li key={group.key}>
-                    <NavSelector group={group} messages={messages} />
-                  </li>
-                ))}
+      <header ref={rootRef} data-hidden={hidden ? 'true' : undefined} className="site-nav">
+        <div className="nav-shell">
+          <div ref={cardRef} className="nav-card">
+            {/*
+             * 玻璃单独一层：不能直接给 .nav-card 加 backdrop-filter ——
+             * 滤镜会让卡片成为 position: fixed 后代的包含块，
+             * 移动端菜单面板会被缩进卡片内部而不是横跨视口。
+             */}
+            <span aria-hidden="true" className="nav-glass glass-nav" />
+            {/* 光斑层：永远在内容之下、不接收指针事件 */}
+            <span aria-hidden="true" className="nav-spotlight" />
 
-                {links.map((item) => {
+            {/* 快捷栏：桌面为 首页 / 文章 / 日记 / 探索 / 友链；手机上头像承担首页 */}
+            <nav aria-label={messages['nav.quick']} className="nav-quick">
+              <ul className="nav-quick__list">
+                {/*
+                 * 头像回首页，两端都在：它是站点身份，也是最快的一条回首页
+                 * 路径。桌面同时还有「首页」文字入口（旧版就是这样并存的）：
+                 * 头像认身份、文字认导航。
+                 */}
+                <li className="nav-home">
+                  <Link
+                    href={HOME_NAV.href}
+                    aria-current={pathname === HOME_NAV.href ? 'page' : undefined}
+                    aria-label={messages[HOME_NAV.label]}
+                    title={siteName}
+                    className="nav-avatar"
+                  >
+                    {avatarUrl ? (
+                      <CoverImage
+                        src={avatarUrl}
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="nav-avatar__image"
+                      />
+                    ) : (
+                      <span aria-hidden="true" className="nav-avatar__fallback">
+                        {siteName.trim().charAt(0) || '·'}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+
+                {quickNav.map((item) => {
                   const active = isNavItemActive(item, pathname)
+                  // 只在桌面顶栏出现的入口：手机断点由 CSS 收起
+                  const compact = item.inBar === 'desktop' ? 'hide' : undefined
+                  const branch = item.branch
+
+                  // 没有下级的入口就是一条普通链接
+                  if (!branch) {
+                    return (
+                      <li key={item.href} data-compact={compact}>
+                        <Link
+                          href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          data-active={active ? 'true' : undefined}
+                          // 手机断点收起：手机上的首页入口是头像
+                          data-compact={compact}
+                          className="nav-link"
+                        >
+                          {messages[item.label]}
+                        </Link>
+                      </li>
+                    )
+                  }
+
+                  /*
+                   * 桌面用悬停下拉展示下级：鼠标移到入口上就看得见分类，
+                   * 不必先打开菜单。移动端没有 hover，这一段由 CSS 收掉，
+                   * 仍然走菜单按钮（`SiteNavMenu` 里同一份 `branch`）。
+                   * 焦点进入时同样展开（`:focus-within`），键盘用户不必点开。
+                   *
+                   * 顶栏刻意**不加任何箭头或 more 图标**：入口读起来就是一条
+                   * 普通导航链接，是否还有一层只在鼠标停上去（或菜单抽屉里）
+                   * 才显现，不靠装饰性符号暗示。
+                   */
                   return (
-                    <li key={item.href}>
+                    <li key={item.href} className="nav-flyout" data-compact={compact}>
                       <Link
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
-                        className={cn(
-                          'nav-label rounded-full px-3 py-1.5 transition-colors duration-[var(--duration-fast)]',
-                          active
-                            ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                            : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
-                        )}
+                        data-active={active ? 'true' : undefined}
+                        className="nav-link"
                       >
                         {messages[item.label]}
                       </Link>
+
+                      <div className="nav-flyout__panel">
+                        <div className="nav-flyout__card">
+                          <ul className="nav-flyout__list">
+                            <li>
+                              <Link
+                                href={item.href}
+                                aria-current={pathname === item.href ? 'page' : undefined}
+                                className="nav-row nav-row--child"
+                              >
+                                {messages[branch.entryLabel]}
+                              </Link>
+                            </li>
+
+                            {branch.status === 'ok' ? (
+                              branch.items.map((child) => (
+                                <li key={child.href}>
+                                  <Link
+                                    href={child.href}
+                                    aria-current={child.href === pathname ? 'page' : undefined}
+                                    title={child.label}
+                                    className="nav-row nav-row--child"
+                                  >
+                                    {child.label}
+                                  </Link>
+                                </li>
+                              ))
+                            ) : (
+                              <li className="nav-flyout__empty">
+                                {
+                                  messages[
+                                    branch.status === 'error'
+                                      ? branch.errorLabel
+                                      : branch.emptyLabel
+                                  ]
+                                }
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
                     </li>
                   )
                 })}
               </ul>
             </nav>
 
-            <div className="ml-auto flex flex-1 items-center justify-between md:hidden">
-              {homeGroup ? (
-                <NavSelector group={homeGroup} messages={messages} />
-              ) : (
-                <Link
-                  href="/"
-                  aria-current={pathname === '/' ? 'page' : undefined}
-                  className="nav-label rounded-full px-3 py-1.5 text-[var(--text-secondary)]"
+            {/*
+              右侧动作区：分隔线 + 菜单按钮。
+              单独成组是为了让桌面端能把「身份与入口」和「菜单」分别贴在
+              卡片两端（space-between），不必为此改动快捷栏的 DOM。
+            */}
+            <div className="nav-actions">
+              <span aria-hidden="true" className="nav-rule" />
+
+              <button
+                ref={triggerRef}
+                type="button"
+                aria-expanded={open}
+                aria-controls={MENU_ID}
+                aria-label={messages['action.menu']}
+                title={messages['action.menu']}
+                data-open={open ? 'true' : undefined}
+                className="nav-menu-trigger"
+                onClick={(event) => {
+                  // detail === 0：键盘触发的 click（Enter / Space），把焦点带进菜单
+                  if (open) closeMenu(false)
+                  else openMenu(event.detail === 0)
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="nav-menu-glyph"
+                  data-open={open ? 'true' : undefined}
                 >
-                  {messages['nav.home']}
-                </Link>
-              )}
-              {/*
-                换路由就重挂载：MobileMenu 用「在哪个路由打开的」记住开关状态，
-                只隐藏不卸载的话，浏览器返回到原路由会把这个菜单重新打开。
-              */}
-              <MobileMenu
-                key={pathname}
-                groups={groups.filter((group) => group.href !== '/')}
-                links={links}
-                messages={messages}
-              />
+                  <span />
+                  <span />
+                </span>
+              </button>
             </div>
+
+            {mounted ? (
+              <SiteNavMenu
+                id={MENU_ID}
+                closing={closing}
+                nav={nav}
+                locale={locale}
+                messages={messages}
+                siteName={siteName}
+                avatarUrl={avatarUrl}
+                onNavigate={() => closeMenu(false)}
+                panelRef={panelRef}
+              />
+            ) : null}
           </div>
         </div>
+
+        {/*
+          无 JS 兜底：菜单按钮需要 JS 才能展开，因此把完整入口在这里以普通链接
+          给出来。它只在脚本不可用时显示，有 JS 时不占空间、也不会被读成第二份导航。
+          清单同样来自 `nav`（父级 + 它自己的子项），不再手抄一份 href。
+        */}
+        <noscript>
+          <div className="nav-noscript">
+            <a href={HOME_NAV.href}>{messages[HOME_NAV.label]}</a>
+            {nav.map((entry) => (
+              <a key={entry.href} href={entry.href}>
+                {messages[entry.label]}
+              </a>
+            ))}
+            {nav.flatMap((entry) =>
+              (entry.branch?.items ?? []).map((item) => (
+                <a key={item.href} href={item.href}>
+                  {item.label}
+                </a>
+              )),
+            )}
+            {searchEnabled ? <a href="/search">{messages['action.search']}</a> : null}
+          </div>
+        </noscript>
       </header>
 
-      {/* 固定顶栏不占文档流：占位块保证正文不被浮条盖住 */}
-      <div aria-hidden="true" className="h-[calc(3.5rem+0.75rem)] sm:h-[calc(3.75rem+1rem)]" />
+      {/* 固定顶栏不占文档流：≥48rem 时用占位块让正文不被卡片盖住（移动端贴底，不需要） */}
+      <div aria-hidden="true" className="site-nav-spacer" />
 
-      <div className="toolbar-dock">
+      {/* 菜单展开时工具浮标让位：面板在移动端几乎满宽，浮标会压在菜单项上 */}
+      <div ref={dockRef} className="toolbar-dock" data-nav-open={open ? 'true' : undefined}>
+        {/*
+         * 与顶栏同一块玻璃：材质层 `.glass-nav` 与光斑层 `.nav-spotlight` 都是
+         * 导航卡片那两个类，这里只是换了个尺寸更小的宿主（竖排三格）。
+         * 不复制一套参数——顶栏将来换模糊半径或遮罩浓度，这里自动跟上。
+         */}
+        <span aria-hidden="true" className="nav-glass glass-nav" />
+        <span aria-hidden="true" className="nav-spotlight" />
+
         {/* 无 JS 时的搜索出口：搜索面板不可用时仍保留普通链接。 */}
         <noscript
           dangerouslySetInnerHTML={{
-            __html: `<a href="/search" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
+            __html: `<a href="/search" style="position:relative;z-index:1" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
           }}
         />
-        <ToolbarGroup>
-          {searchEnabled ? (
-            <ToolbarButton
-              label={messages['action.search']}
-              onClick={() => setSearchOpen(true)}
-              active={searchOpen}
-            >
-              <SearchIcon />
-            </ToolbarButton>
-          ) : null}
-
+        {/* 搜索不在这里：面板仍由 ⌘K / Ctrl+K 与 /search 页承担，
+            右下角只保留「主题 / 语言 / 回顶」三个全站级开关。 */}
+        <ToolbarGroup label={messages['toolbar.group']}>
           <ThemeToggle label={messages['action.mode']} />
 
           <LanguageButton current={locale} label={messages['action.language']} />
@@ -207,6 +463,8 @@ export function SiteHeaderClient({
             failed: messages['search.failed'],
             hint: messages['search.hint'],
             openFull: messages['search.openFull'],
+            kindPost: messages['search.kindPost'],
+            kindNote: messages['search.kindNote'],
           }}
         />
       ) : null}
@@ -215,112 +473,48 @@ export function SiteHeaderClient({
 }
 
 /**
- * 移动端菜单：仅此一处客户端状态，随路由变化自动收起。
+ * 把指针坐标写进宿主自身的 `--nav-pointer-x/y`，供 `.nav-spotlight` 消费。
  *
- * 目录型入口在菜单里直接展开成小列表——触屏没有「悬停」可用，
- * 再套一层折叠只会让用户多点两次。列表超出可视高度时在面板内滚动。
+ * 宿主可以是导航卡片，也可以是右下工具胶囊：光斑层按 `inset: 0` 铺满宿主，
+ * 坐标相对宿主的 border box 计算，所以尺寸无关。
  */
-function MobileMenu({
-  groups,
-  links,
-  messages,
-  className,
-}: {
-  groups: NavGroup[]
-  links: NavItem[]
-  messages: Record<MessageKey, string>
-  className?: string
-}) {
-  const pathname = usePathname()
-  // 记录「菜单是在哪个路由上打开的」：路由一变 open 自然变 false，
-  // 不需要再用 effect 去 setState（react-hooks/set-state-in-effect）。
-  const [openAt, setOpenAt] = useState<string | null>(null)
-  const open = openAt === pathname
+function useSpotlight(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const host = ref.current
+    if (!host || typeof window.matchMedia !== 'function') return
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-  return (
-    <div className={cn('relative', className)}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="site-mobile-nav"
-        aria-label={messages['action.menu']}
-        onClick={() => setOpenAt((value) => (value === pathname ? null : pathname))}
-        className="flex size-10 items-center justify-center rounded-full border border-[var(--edge)] bg-[var(--surface-raised)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--surface-sunk)] hover:text-[var(--text-heading)]"
-      >
-        {open ? <CloseIcon /> : <MenuIcon />}
-      </button>
+    let frame = 0
+    let clientX = 0
+    let clientY = 0
 
-      {open ? (
-        <div
-          id="site-mobile-nav"
-          className="motion-panel-in glass-panel absolute top-[calc(100%+0.5rem)] right-0 max-h-[min(70dvh,32rem)] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto"
-        >
-          <ul className="flex flex-col p-1.5">
-            {groups.map((group) => (
-              <li key={group.key}>
-                <p className="text-meta px-3 pt-2 pb-1 text-[var(--text-tertiary)]">
-                  {messages[group.label]}
-                </p>
-                {group.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpenAt(null)}
-                    className="nav-panel-link block truncate rounded-[var(--radius-sm)] py-1.5 pr-3 pl-6 text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--text-heading)]"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                {group.status !== 'ok' ? (
-                  <p className="text-meta px-3 py-1.5 text-[var(--text-tertiary)]">
-                    {messages[group.status === 'error' ? group.errorLabel : group.emptyLabel]}
-                  </p>
-                ) : null}
-              </li>
-            ))}
+    const apply = () => {
+      frame = 0
+      const rect = host.getBoundingClientRect()
+      host.style.setProperty('--nav-pointer-x', `${clientX - rect.left}px`)
+      host.style.setProperty('--nav-pointer-y', `${clientY - rect.top}px`)
+    }
 
-            {links.map((item) => {
-              const active = isNavItemActive(item, pathname)
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => setOpenAt(null)}
-                    className={cn(
-                      'nav-label mt-1 block rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-[var(--duration-fast)]',
-                      active
-                        ? 'bg-[var(--accent-wash)] text-[var(--text-heading)]'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]',
-                    )}
-                  >
-                    {messages[item.label]}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      ) : null}
-    </div>
-  )
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return
+      clientX = event.clientX
+      clientY = event.clientY
+      if (!frame) frame = window.requestAnimationFrame(apply)
+    }
+
+    host.addEventListener('pointermove', onMove, { passive: true })
+    return () => {
+      host.removeEventListener('pointermove', onMove)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [ref])
 }
 
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    >
-      <circle cx="11" cy="11" r="6.5" />
-      <path d="m16 16 4 4" />
-    </svg>
-  )
+/** `prefers-reduced-motion` 只影响关闭动画，不影响启停本身 */
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 function ArrowUpIcon() {
@@ -336,38 +530,6 @@ function ArrowUpIcon() {
       strokeLinejoin="round"
     >
       <path d="M12 19V5M6 11l6-6 6 6" />
-    </svg>
-  )
-}
-
-function MenuIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.15rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    >
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.15rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   )
 }

@@ -104,6 +104,28 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
               </>
             ) : null}
           </p>
+
+          {theme.footer.links.length > 0 ? (
+            <p className="text-meta text-[var(--text-secondary)]">
+              {theme.footer.links.map((link, index) => (
+                <span key={link.url}>
+                  {index > 0 ? (
+                    <span aria-hidden="true" className="footer-sep">
+                      ｜
+                    </span>
+                  ) : null}
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="link-quiet whitespace-nowrap"
+                  >
+                    {link.title}
+                  </a>
+                </span>
+              ))}
+            </p>
+          ) : null}
         </div>
       </Container>
     </footer>

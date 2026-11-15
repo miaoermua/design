@@ -79,7 +79,7 @@
   font-size: var(--text-caption);
   line-height: 1.5;
   letter-spacing: 0.08em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-transform: uppercase;
 }
 
@@ -148,7 +148,7 @@
 
 /* 成功：换成对勾并染成功色，1.8s 后由脚本摘掉状态 */
 .code-block__copy[data-state='copied'] {
-  color: var(--color-success);
+  color: var(--state-success);
 }
 
 .code-block__copy[data-state='copied'] .code-block__copy-icon,
@@ -163,8 +163,8 @@
 
 /* 失败：警告色 + 描边，和成功状态区分开，不靠颜色单独表达 */
 .code-block__copy[data-state='failed'] {
-  color: var(--color-danger);
-  background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--state-danger);
+  background-color: color-mix(in srgb, var(--state-danger) 10%, transparent);
 }
 
 /* ── 主体：行号槽 + 代码 ───────────────────────────────────── */
@@ -205,7 +205,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-code);
   line-height: var(--text-code--line-height);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-align: right;
   user-select: none;
   /* 数字等宽，位数变化时不会左右跳动 */
@@ -305,24 +305,24 @@
 }
 
 .code-block .line.diff.add {
-  background-color: color-mix(in srgb, var(--color-success) 13%, transparent);
+  background-color: color-mix(in srgb, var(--state-success) 13%, transparent);
 }
 
 .code-block .line.diff.add::before {
-  background-color: var(--color-success);
+  background-color: var(--state-success);
 }
 
 .code-block .line.diff.remove {
-  background-color: color-mix(in srgb, var(--color-danger) 13%, transparent);
+  background-color: color-mix(in srgb, var(--state-danger) 13%, transparent);
 }
 
 .code-block .line.diff.remove::before {
-  background-color: var(--color-danger);
+  background-color: var(--state-danger);
 }
 
 /* diff 的文件头（`@@ … @@`）：只做压暗，不参与增删配色 */
 .code-block .line.diff-hunk {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   background-color: color-mix(in srgb, var(--text-primary) 4%, transparent);
 }
 

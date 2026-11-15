@@ -11,6 +11,8 @@ export * from './domain/comment'
 export * from './domain/diary'
 export * from './domain/taxonomy'
 export * from './domain/common'
+export * from './domain/say'
+export * from './domain/project'
 
 export * from './errors'
 
@@ -45,5 +47,7 @@ export {
   subscribeEmail,
   type SubscribeCapability,
 } from './repositories/interactions'
+export { listSays } from './repositories/says'
+export { listProjects } from './repositories/projects'
 
 export { API_VERSION, getSiteTimezone, getSiteUrl, isApiConfigured } from './config'

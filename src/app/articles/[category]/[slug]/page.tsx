@@ -27,6 +27,7 @@ import {
 import { renderMarkdown } from '@/lib/content/markdown'
 import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { toContentLang } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { articlePath, categoryPath } from '@/lib/routes'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
@@ -67,7 +68,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // 在 metadata 阶段就抛 404：根布局是流式的（app/loading.tsx），
     // 等页面正文再 notFound() 时状态码已经以 200 发出去了（软 404）。
     if (isNotFound(error)) notFound()
-    return { title: '文章' }
+    const locale = await getLocale()
+    return { title: t(locale, 'article.breadcrumb') }
   }
 }
 
@@ -117,13 +119,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     ? { label: donateConfig.label, qrcodes: donateConfig.qrcodes }
     : null
 
+  const locale = await getLocale()
   const isMarkdown = article.contentFormat === 'markdown'
   const rendered =
-    isMarkdown && article.content.trim() ? await renderMarkdown(article.content) : null
+    isMarkdown && article.content.trim() ? await renderMarkdown(article.content, locale) : null
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
 
   // AI 资源与相邻文章都是附加信息：并行取，任一失败都只影响自己那一块
-  const locale = await getLocale()
   const contentLang = toContentLang(locale)
   const [neighbors, summary, insights] = await Promise.all([
     findNeighbors(article),
@@ -134,6 +136,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           lang: contentLang,
           source: article.content,
           toc: rendered.toc,
+          locale,
         })
       : Promise.resolve(null),
   ])
@@ -181,13 +184,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <article id="article-content" className="pb-[var(--spacing-section)]">
         {/* 桌面：左操作栏 / 中间正文 / 右阅读辅助；移动：正文在前，操作栏跟在文末 */}
         <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
-          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1">
+          <div className="mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1">
             <header className="pt-10 sm:pt-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--accent-line)]" />
-                <nav aria-label="面包屑" className="meta flex items-center gap-2">
+                <nav
+                  aria-label={t(locale, 'article.breadcrumb')}
+                  className="meta flex items-center gap-2"
+                >
                   <Link href="/articles" className="link-quiet">
-                    文章
+                    {t(locale, 'article.breadcrumb')}
                   </Link>
                   {article.category ? (
                     <>
@@ -201,7 +207,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   ) : null}
                 </nav>
                 {article.isPinned ? (
-                  <span className="meta meta-sep text-[var(--accent-strong)]">置顶</span>
+                  <span className="meta meta-sep text-[var(--accent-strong)]">
+                    {t(locale, 'article.pinned')}
+                  </span>
                 ) : null}
               </div>
 
@@ -236,18 +244,30 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   这里再放一个赞赏入口会让同一动作出现两次。 */}
               <div className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 <time dateTime={article.createdAt}>{formatDate(article.createdAt, timeZone)}</time>
-                {estimate ? <span className="meta-sep">约 {estimate} 分钟</span> : null}
+                {estimate ? (
+                  <span className="meta-sep">
+                    {tf(locale, 'article.readingMinutes', { count: estimate })}
+                  </span>
+                ) : null}
                 {article.readCount !== null ? (
-                  <span className="meta-sep">{article.readCount.toLocaleString('zh-CN')} 次阅读</span>
+                  <span className="meta-sep">
+                    {tf(locale, 'meta.readCount', {
+                      count: article.readCount.toLocaleString('zh-CN'),
+                    })}
+                  </span>
                 ) : null}
                 {article.likeCount !== null ? (
                   <span className="meta-sep">
-                    {article.likeCount.toLocaleString('zh-CN')} 次喜欢
+                    {tf(locale, 'meta.likeCount', {
+                      count: article.likeCount.toLocaleString('zh-CN'),
+                    })}
                   </span>
                 ) : null}
                 {article.modifiedAt && article.modifiedAt !== article.createdAt ? (
                   <span className="meta-sep">
-                    更新于 {formatDate(article.modifiedAt, timeZone)}
+                    {tf(locale, 'meta.updated', {
+                      date: formatDate(article.modifiedAt, timeZone),
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -279,10 +299,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               ) : (
                 <div className="border border-dashed border-[var(--edge)] px-5 py-6">
                   <p className="text-small text-[var(--text-heading)]">
-                    这篇正文的 contentFormat 是「{article.contentFormat}」。
+                    {tf(locale, 'article.unsupportedFormat', { format: article.contentFormat })}
                   </p>
                   <p className="text-caption mt-2 text-[var(--text-secondary)]">
-                    Folio 目前只渲染 Markdown。为避免把结构化 JSON 当成正文展示，这里不做降级渲染。
+                    {t(locale, 'article.unsupportedFormatHint')}
                   </p>
                 </div>
               )}
@@ -297,18 +317,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <footer className="mt-10">
               {article.copyright ? (
                 <p className="text-caption text-[var(--text-secondary)]">
-                  本文版权归作者所有，转载请注明出处并保留原文链接。
+                  {t(locale, 'article.copyright')}
                 </p>
               ) : null}
 
-              <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} />
+              <ArticleNeighbors newer={neighbors.newer} older={neighbors.older} locale={locale} />
 
               <div className="mt-10 flex items-center justify-between border-t border-dashed border-[var(--edge)] pt-6">
                 <Link
                   href="/articles"
                   className="link-quiet text-small text-[var(--text-secondary)]"
                 >
-                  ← 返回文章列表
+                  {t(locale, 'article.backToList')}
                 </Link>
               </div>
             </footer>
@@ -329,15 +349,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               />
             }
           />
+
+          {/* 评论区在 grid 内左列：ReadingAside 侧栏空间自然延伸至旁边 */}
+          <div className="xl:col-start-1">
+            <CommentsSection refId={article.id} timeZone={timeZone} />
+          </div>
         </div>
       </article>
 
-      {/* 评论区在 #article-content 之外：阅读进度的口径是正文，不该把评论算进去 */}
-      <CommentsSection refId={article.id} timeZone={timeZone} />
-
       {article.related.length > 0 ? (
         <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">
-          <SectionHeading title="相关阅读" />
+          <SectionHeading title={t(locale, 'article.related')} />
           <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {article.related.map((item) => (
               <ArticleCard key={item.id} article={item} timeZone={timeZone} />

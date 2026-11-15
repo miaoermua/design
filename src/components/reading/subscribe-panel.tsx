@@ -4,11 +4,14 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { SubscribeType } from '@/lib/api/contracts/v2/interaction'
 import type { SubscribeChannel } from '@/features/interactions'
 import { SocialIcon } from '@/components/ui/social-icon'
+import { useLocale } from '@/lib/i18n/client'
+import { t, type MessageKey } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
 
-const TYPE_LABEL: Record<SubscribeType, string> = {
-  post_c: '新文章',
-  note_c: '新日记',
+/** 只存字典键：文案在渲染时按当前 locale 取 */
+const TYPE_LABEL: Record<SubscribeType, MessageKey> = {
+  post_c: 'subscribe.post',
+  note_c: 'subscribe.note',
 }
 
 type Status = 'idle' | 'submitting' | 'sent' | 'failed'
@@ -34,6 +37,7 @@ interface SubscribePanelProps {
  *   - 频道：纯跳转，站内不记录任何订阅状态。
  */
 export function SubscribePanel({ types, channels, className }: SubscribePanelProps) {
+  const locale = useLocale()
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -83,7 +87,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
 
     if (selected.length === 0) {
       setStatus('failed')
-      setMessage('至少选择一种订阅内容。')
+      setMessage(t(locale, 'subscribe.errorChoose'))
       return
     }
 
@@ -99,11 +103,11 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
       if (!response.ok) throw new Error(String(response.status))
 
       setStatus('sent')
-      setMessage('确认邮件已发送，请查收后完成订阅。')
+      setMessage(t(locale, 'subscribe.success'))
       form.reset()
     } catch {
       setStatus('failed')
-      setMessage('订阅请求失败，请稍后再试。')
+      setMessage(t(locale, 'subscribe.failed'))
     }
   }
 
@@ -130,7 +134,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
           <path d="M4 6h16v12H4z" />
           <path d="m4 7 8 6 8-6" />
         </svg>
-        <span>订阅</span>
+        <span>{t(locale, 'subscribe.button')}</span>
       </button>
 
       {open ? (
@@ -138,21 +142,23 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
           ref={panelRef}
           id={panelId}
           role="dialog"
-          aria-label="订阅方式"
+          aria-label={t(locale, 'subscribe.methodsLabel')}
           tabIndex={-1}
           className="absolute top-full left-1/2 z-30 mt-2 w-[min(19rem,calc(100vw-2.5rem))] -translate-x-1/2 border border-[var(--edge)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow-pop)] outline-none xl:top-0 xl:left-full xl:mt-0 xl:ml-3 xl:translate-x-0"
         >
-          <p className="text-small text-[var(--text-heading)]">订阅更新</p>
-          <p className="text-meta mt-1 text-[var(--text-secondary)]">选一种跟得上更新的方式。</p>
+          <p className="text-small text-[var(--text-heading)]">{t(locale, 'subscribe.heading')}</p>
+          <p className="text-meta mt-1 text-[var(--text-secondary)]">
+            {t(locale, 'subscribe.intro')}
+          </p>
 
           {types.length > 0 ? (
             <form
               onSubmit={handleSubmit}
               className="mt-3 border-t border-dashed border-[var(--edge)] pt-3"
             >
-              <p className="text-meta text-[var(--text-secondary)]">邮件</p>
+              <p className="text-meta text-[var(--text-secondary)]">{t(locale, 'subscribe.emailLabel')}</p>
               <label htmlFor={`${panelId}-email`} className="sr-only">
-                邮箱地址
+                {t(locale, 'subscribe.emailPlaceholder')}
               </label>
               <input
                 ref={inputRef}
@@ -167,7 +173,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
               />
 
               <fieldset className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-                <legend className="sr-only">订阅内容</legend>
+                <legend className="sr-only">{t(locale, 'subscribe.contentLabel')}</legend>
                 {types.map((type) => (
                   <label
                     key={type}
@@ -179,7 +185,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
                       defaultChecked
                       className="size-3.5 accent-[var(--accent)]"
                     />
-                    {TYPE_LABEL[type]}
+                    {t(locale, TYPE_LABEL[type])}
                   </label>
                 ))}
               </fieldset>
@@ -190,10 +196,10 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
                 className="text-meta mt-3 w-full border border-[var(--text-primary)] bg-[var(--text-primary)] px-3 py-2 text-[var(--surface)] transition-opacity disabled:opacity-60"
               >
                 {status === 'submitting'
-                  ? '发送中…'
+                  ? t(locale, 'subscribe.sending')
                   : status === 'sent'
-                    ? '已发送'
-                    : '发送确认邮件'}
+                    ? t(locale, 'subscribe.sent')
+                    : t(locale, 'subscribe.send')}
               </button>
 
               {message ? (
@@ -202,7 +208,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
                   className={cn(
                     'text-meta mt-3 leading-relaxed',
                     status === 'failed'
-                      ? 'text-[var(--color-danger)]'
+                      ? 'text-[var(--state-danger)]'
                       : 'text-[var(--text-secondary)]',
                   )}
                 >
@@ -223,14 +229,16 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
               /feed.xml
               <span aria-hidden="true">↗</span>
             </a>
-            <p className="text-meta mt-1 text-[var(--text-tertiary)]">
-              用阅读器主动拉取，不需要留下邮箱。
+            <p className="text-meta mt-1 text-[var(--text-secondary)]">
+              {t(locale, 'subscribe.rssHint')}
             </p>
           </div>
 
           {channels.length > 0 ? (
             <div className="mt-3 border-t border-dashed border-[var(--edge)] pt-3">
-              <p className="text-meta text-[var(--text-secondary)]">频道订阅</p>
+              <p className="text-meta text-[var(--text-secondary)]">
+                {t(locale, 'subscribe.channelsLabel')}
+              </p>
               <ul className="mt-1 space-y-px">
                 {channels.map((channel) => (
                   <li key={channel.id}>
@@ -250,8 +258,8 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
                   </li>
                 ))}
               </ul>
-              <p className="text-meta mt-1 text-[var(--text-tertiary)]">
-                跳转到外部频道，站内不记录订阅状态。
+              <p className="text-meta mt-1 text-[var(--text-secondary)]">
+                {t(locale, 'subscribe.channelNote')}
               </p>
             </div>
           ) : null}

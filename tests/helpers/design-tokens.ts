@@ -23,13 +23,15 @@ export const EXTERNAL_PREFIXES = ['--tw-', '--shiki', '--katex', '--mermaid', '-
  * 这是一份**白名单式的债务登记**，不是认可：
  *   - 新出现的死别名会让测试失败，逼你在同一批里补文档或补消费；
  *   - 一旦某个 Token 被真正使用，它必须从这份名单里消失。
+ * 当前为空：Phase「颜色系统收敛」已删除唯一登记的 `--surface-glass`（预留的玻璃基色，
+ * 冰面实际由 --material-glass-* 驱动）；新增别名必须自带消费者。
  *
  * 判定口径见 `isDeadAlias`：别名层不生成 Tailwind 工具类，唯一消费方式是 var()。
  * 只被 tokens.css 内部其它 Token 引用的（如 --focus-ring-color、--shadow-color）
  * 属于定义链，**不算死 Token**；调色板层可能通过工具类被消费，静态扫描无法可靠判定，
  * 因此不在这份名单里断言。
  */
-export const KNOWN_DEAD_ALIASES = ['--surface-glass'] as const
+export const KNOWN_DEAD_ALIASES = [] as const
 
 /** 由 @theme 生成、当前源码里既无 var() 也无同名工具类的动效 Token */
 export const KNOWN_UNUSED_MOTION_TOKENS = ['--ease-in-out-soft'] as const
@@ -141,6 +143,88 @@ export function themeValues(): Map<string, string> {
     map.set(match[1], match[2].replace(/\s+/g, ' ').trim())
   }
   return map
+}
+
+/* ── 颜色合成（供对比度矩阵测试使用） ──────────────────────────────
+ *
+ * CSS `color-mix(in oklab, …)` 与浏览器一致的做法：sRGB → 线性 sRGB → LMS →
+ * OKLab，按权重插值，再逆变换回 sRGB。用 sRGB 逐通道近似冒充 OKLab 结果会让
+ * 8% 底纹这类混合产生可见误差，因此这里单独实现，不做近似。
+ *
+ * 只支持本项目实际出现的两种形状：
+ *   color-mix(in oklab, A p%, B)              → mixOklab(A, B, p/100)
+ *   color-mix(in srgb,  A p%, transparent)    → composite(A, p/100, 背后底色)
+ *
+ * 与浏览器的已知差异：这里在每一步末尾量化到 8bit，浏览器在合成末端才量化；
+ * 单通道可能有 ±1 的差，对比度末尾约 ±0.01。断言都用 ≥4.5/≥3 且留出余量。
+ */
+export type Rgb = [number, number, number] // 每通道 0..1
+
+export function hexToRgb(hex: string): Rgb {
+  const h = hex.replace('#', '')
+  return [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255) as Rgb
+}
+
+export function rgbToHex(rgb: Rgb): string {
+  return (
+    '#' +
+    rgb
+      .map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0'))
+      .join('')
+  )
+}
+
+const toLinear = (c: number): number =>
+  c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+const toSrgb = (c: number): number =>
+  c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055
+
+function srgbToOklab(rgb: Rgb): Rgb {
+  const [r, g, b] = rgb.map(toLinear)
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
+  const [l_, m_, s_] = [l, m, s].map((v) => Math.cbrt(v)) as Rgb
+  return [
+    0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
+    1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
+    0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+  ]
+}
+
+function oklabToSrgb(lab: Rgb): Rgb {
+  const [L, a, b] = lab
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b
+  const [l, m, s] = [l_ ** 3, m_ ** 3, s_ ** 3]
+  const channels = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ]
+  return channels.map((c) => toSrgb(Math.max(0, Math.min(1, c)))) as Rgb
+}
+
+/** color-mix(in oklab, A weightA, B 1-weightA) */
+export function mixOklab(a: string, b: string, weightA: number): string {
+  const la = srgbToOklab(hexToRgb(a))
+  const lb = srgbToOklab(hexToRgb(b))
+  return rgbToHex(oklabToSrgb(la.map((v, i) => v * weightA + lb[i] * (1 - weightA)) as Rgb))
+}
+
+/** color-mix(in srgb, A weightA, B 1-weightA) */
+export function mixSrgb(a: string, b: string, weightA: number): string {
+  const ca = hexToRgb(a)
+  const cb = hexToRgb(b)
+  return rgbToHex(ca.map((v, i) => v * weightA + cb[i] * (1 - weightA)) as Rgb)
+}
+
+/** 半透明前景叠加到不透明背景（浏览器默认的 sRGB 合成） */
+export function composite(fg: string, alpha: number, bg: string): string {
+  const f = hexToRgb(fg)
+  const b = hexToRgb(bg)
+  return rgbToHex(f.map((v, i) => v * alpha + b[i] * (1 - alpha)) as Rgb)
 }
 
 export function luminance(hex: string): number {

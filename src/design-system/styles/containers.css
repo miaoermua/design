@@ -23,30 +23,30 @@
 .md-callout--info,
 .md-callout--important,
 .md-banner--info {
-  --notice-tone: var(--color-info);
-  --notice-ink: var(--color-info);
+  --notice-tone: var(--state-info);
+  --notice-ink: var(--state-info);
 }
 
 .md-callout--success,
 .md-callout--tip,
 .md-banner--success {
-  --notice-tone: var(--color-success);
-  --notice-ink: var(--color-success);
+  --notice-tone: var(--state-success);
+  --notice-ink: var(--state-success);
 }
 
 .md-callout--warning,
 .md-callout--caution,
 .md-banner--warning {
-  --notice-tone: var(--color-warning);
-  --notice-ink: var(--color-warning);
+  --notice-tone: var(--state-warning);
+  --notice-ink: var(--state-warning);
 }
 
 .md-callout--error,
 .md-callout--danger,
 .md-banner--error,
 .md-banner--danger {
-  --notice-tone: var(--color-danger);
-  --notice-ink: var(--color-danger);
+  --notice-tone: var(--state-danger);
+  --notice-ink: var(--state-danger);
 }
 
 /* ── 2. Callout / GitHub Alerts ─────────────────────────────── */
@@ -141,11 +141,11 @@
 }
 
 .md-details__summary::marker {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .md-details__summary:hover {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .md-details__summary:focus-visible {
@@ -171,8 +171,8 @@
 
 .prose ins {
   padding-inline: 0.15em;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-success) 55%, transparent);
-  background: color-mix(in oklab, var(--color-success) 12%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--state-success) 55%, transparent);
+  background: color-mix(in oklab, var(--state-success) 12%, transparent);
   text-decoration: none;
 }
 

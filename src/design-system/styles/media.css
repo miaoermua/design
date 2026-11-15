@@ -127,7 +127,7 @@
   border: 1px dashed var(--edge-strong);
   border-radius: var(--radius-sm);
   background: var(--surface-sunk);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   text-align: center;
@@ -141,7 +141,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-meta);
   font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .md-gallery__dots {
@@ -192,7 +192,7 @@
   line-height: 1;
   cursor: pointer;
   /* 组件专属：2.25rem 翻页按钮压在图片上，只需轻微虚化让箭头可读。
-     不是玻璃材质，不复用 --material-glass-blur（14px / 暗色 16px 是顶栏参数）。 */
+     不是玻璃材质，不复用 --material-glass-blur（14px 是唯一存活的 .glass-control 参数）。 */
   backdrop-filter: blur(6px);
   transition:
     color var(--duration-fast) var(--ease-out-soft),
@@ -200,8 +200,8 @@
 }
 
 .md-gallery__nav:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .md-gallery__nav:focus-visible {

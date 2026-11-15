@@ -7,6 +7,10 @@
  *
  * 刻意不保存任何请求细节（URL、状态码、堆栈）：胶囊是给读者的提示，
  * 不是调试面板。
+ *
+ * 快照只承载状态（kind + attempt），**不承载文案**：面向读者的句子由
+ * components/ui/status-capsule.tsx 按 kind 从字典取，这样同一份状态
+ * 在三种语言下都有对应说法，不会把中文漏到英文界面。
  */
 
 import type { RealtimeState } from '@/lib/realtime/client'
@@ -15,8 +19,6 @@ export type StatusKind = 'offline' | 'realtime' | 'api' | 'recovered'
 
 export interface StatusSnapshot {
   kind: StatusKind | null
-  /** 面向读者的短句，不含任何内部信息 */
-  message: string
   /** 重试次数（实时连接），用于文案「第 N 次重试」 */
   attempt?: number
 }
@@ -46,7 +48,7 @@ export interface StatusStore {
   reset(): void
 }
 
-const HIDDEN: StatusSnapshot = { kind: null, message: '' }
+const HIDDEN: StatusSnapshot = { kind: null }
 
 export function createStatusStore(options: StatusStoreOptions = {}): StatusStore {
   const { recoveredMs = 4_000, realtimeGraceAttempts = 2 } = options
@@ -73,25 +75,17 @@ export function createStatusStore(options: StatusStoreOptions = {}): StatusStore
   }
 
   function compute(): StatusSnapshot {
-    if (!online) return { kind: 'offline', message: '网络不可用，正在等待恢复连接' }
-    if (realtimeDown) {
-      return {
-        kind: 'realtime',
-        message: '实时连接已断开，正在重试',
-        attempt: realtimeAttempt,
-      }
-    }
-    if (apiFailed) return { kind: 'api', message: '未能获取最新内容，页面显示的是稍早的版本' }
-    if (hadProblem) return { kind: 'recovered', message: '连接已恢复' }
+    if (!online) return { kind: 'offline' }
+    if (realtimeDown) return { kind: 'realtime', attempt: realtimeAttempt }
+    if (apiFailed) return { kind: 'api' }
+    if (hadProblem) return { kind: 'recovered' }
     return HIDDEN
   }
 
   function publish(): void {
     const next = compute()
-    const same =
-      next.kind === snapshot.kind &&
-      next.message === snapshot.message &&
-      next.attempt === snapshot.attempt
+    // 文案不在这里比较：快照只承载状态，同一状态不重复通知订阅者
+    const same = next.kind === snapshot.kind && next.attempt === snapshot.attempt
     if (same) return
     snapshot = next
     for (const listener of listeners) listener()

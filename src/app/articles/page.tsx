@@ -6,12 +6,17 @@ import { Pagination } from '@/components/ui/pagination'
 import { LIST_PAGE_SIZE } from '@/core/config/site'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { getSiteTimezone, listArticles } from '@/lib/api'
 import { pageHref } from '@/lib/routes'
 
-export const metadata: Metadata = {
-  title: '文章',
-  description: '按发布时间排列的全部文章。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'articles.title'),
+    description: t(locale, 'articles.description'),
+  }
 }
 
 interface ArticlesPageProps {
@@ -24,6 +29,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const { page: pageParam } = await searchParams
   const page = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
+  const locale = await getLocale()
 
   const result = await listArticles({
     page,
@@ -35,37 +41,48 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   return (
     <Container>
       <PageHeader
-        kicker="文章"
-        title="全部文章"
-        description="长文与笔记，按发布时间从新到旧排列。"
+        kicker={t(locale, 'articles.kicker')}
+        title={t(locale, 'articles.heading')}
+        description={t(locale, 'articles.description')}
         meta={
           <p className="meta">
-            共 {result.pagination.total} 篇 · 第 {result.pagination.page} /{' '}
-            {result.pagination.totalPages} 页
+            {tf(locale, 'meta.listSummary', {
+              total: result.pagination.total,
+              page: result.pagination.page,
+              pages: result.pagination.totalPages,
+            })}
           </p>
         }
       />
 
       {result.items.length > 0 ? (
-        <div className="border-t border-dashed border-[var(--edge-strong)]">
-          <div className="divide-y divide-dashed divide-[var(--edge)]">
-            {result.items.map((article) => (
-              <ArticleRow key={article.id} article={article} timeZone={timeZone} withExcerpt />
-            ))}
-          </div>
+        <div className="flex flex-col gap-4">
+          {result.items.map((article) => (
+            <ArticleRow
+              key={article.id}
+              article={article}
+              timeZone={timeZone}
+              withExcerpt
+              locale={locale}
+            />
+          ))}
         </div>
       ) : (
         <EmptyState
-          title="这一页没有文章"
+          title={t(locale, 'articles.emptyTitle')}
           description={
             result.pagination.total > 0
-              ? '请求的页码超出了范围，请回到第 1 页。'
-              : '还没有发布任何文章。'
+              ? t(locale, 'articles.emptyOutOfRange')
+              : t(locale, 'articles.emptyNone')
           }
         />
       )}
 
-      <Pagination pagination={result.pagination} buildHref={(target) => pageHref('/articles', target)} />
+      <Pagination
+        pagination={result.pagination}
+        locale={locale}
+        buildHref={(target) => pageHref('/articles', target)}
+      />
     </Container>
   )
 }

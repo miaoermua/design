@@ -5,15 +5,18 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { listPages } from '@/lib/api'
-import { t } from '@/lib/i18n/dictionary'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { toContentLang } from '@/lib/i18n/config'
 import { getLocale } from '@/lib/i18n/server'
 import { pagePath } from '@/lib/routes'
 import { formatDate } from '@/lib/utils/date'
 
-export const metadata: Metadata = {
-  title: '页面',
-  description: '不进入时间轴的常驻页面。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'pages.title'),
+    description: t(locale, 'pages.description'),
+  }
 }
 
 /**
@@ -43,7 +46,11 @@ export default async function PagesListPage() {
         kicker={t(locale, 'pages.kicker')}
         title={t(locale, 'pages.title')}
         description={t(locale, 'pages.description')}
-        meta={pages.length > 0 ? <p className="meta">共 {pages.length} 个页面</p> : null}
+        meta={
+          pages.length > 0 ? (
+            <p className="meta">{tf(locale, 'pages.count', { count: pages.length })}</p>
+          ) : null
+        }
       />
 
       {pages.length > 0 ? (
@@ -74,7 +81,7 @@ export default async function PagesListPage() {
       ) : (
         <EmptyState
           title={t(locale, 'pages.empty')}
-          description="后端 /pages 返回了空列表（不是加载失败）。"
+          description={t(locale, 'pages.emptyHint')}
         />
       )}
     </Container>

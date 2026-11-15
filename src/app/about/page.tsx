@@ -8,15 +8,19 @@ import { requireFeature } from '@/core/registry/guard'
 import { getPageBySlug, isNotFound } from '@/lib/api'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { loadSiteContext } from '@/lib/site'
 import { getThemeConfig } from '@/core/config/theme'
 import { toSocialItems } from '@/lib/social'
 import { formatDate } from '@/lib/utils/date'
 
-export const metadata: Metadata = {
-  title: '关于',
-  description: '关于这个站点与它的作者。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'about.title'),
+    description: t(locale, 'about.description'),
+  }
 }
 
 export default async function AboutPage() {
@@ -40,18 +44,22 @@ export default async function AboutPage() {
     ? toSocialItems(owner?.socialIds, { theme: theme.social })
     : []
   const isMarkdown = page.contentFormat === 'markdown'
-  const rendered = isMarkdown && page.content.trim() ? await renderMarkdown(page.content) : null
+  const rendered = isMarkdown && page.content.trim() ? await renderMarkdown(page.content, locale) : null
 
   return (
     <Container width="wide">
       <PageHeader
-        kicker="关于"
+        kicker={t(locale, 'about.kicker')}
         title={page.title}
         description={page.subtitle}
         meta={
           page.updatedAt ? (
             <p className="meta">
-              <time dateTime={page.updatedAt}>更新于 {formatDate(page.updatedAt, 'Asia/Shanghai')}</time>
+              <time dateTime={page.updatedAt}>
+                {tf(locale, 'meta.updated', {
+                  date: formatDate(page.updatedAt, 'Asia/Shanghai'),
+                })}
+              </time>
             </p>
           ) : null
         }
@@ -65,7 +73,7 @@ export default async function AboutPage() {
               {owner.avatar ? (
                 <CoverImage
                   src={owner.avatar}
-                  alt={owner.name ?? '作者头像'}
+                  alt={owner.name ?? t(locale, 'about.avatarAlt')}
                   width={96}
                   height={96}
                   className="size-16 shrink-0 border border-[var(--edge)] object-cover lg:size-24"
@@ -115,10 +123,10 @@ export default async function AboutPage() {
           ) : (
             <div className="border border-dashed border-[var(--edge)] px-5 py-6">
               <p className="text-small text-[var(--text-heading)]">
-                这个页面的正文格式是「{page.contentFormat}」。
+                {tf(locale, 'page.unsupportedFormat', { format: page.contentFormat })}
               </p>
               <p className="mt-2 text-caption text-[var(--text-secondary)]">
-                Folio 目前只渲染 Markdown 正文。
+                {t(locale, 'page.unsupportedFormatHint')}
               </p>
             </div>
           )}

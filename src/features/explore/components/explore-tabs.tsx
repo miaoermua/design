@@ -10,6 +10,8 @@ export type ExploreTab = 'archives' | 'tags'
 interface ExploreTabsProps {
   /** 当前激活的 Tab（由服务端按查询参数决定，避免首帧跳变） */
   active: ExploreTab
+  /** 分区列表的无障碍名称 */
+  label: string
   labels: { archives: string; tags: string }
   archives: ReactNode
   tags: ReactNode
@@ -26,7 +28,7 @@ interface ExploreTabsProps {
  * 代价是切换会走一次路由（一次 RSC 往返）。对只有两个 Tabs 的页面，
  * 这个代价换来的是「无 JS 也能切换」，值得。
  */
-export function ExploreTabs({ active, labels, archives, tags }: ExploreTabsProps) {
+export function ExploreTabs({ active, label, labels, archives, tags }: ExploreTabsProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -50,7 +52,7 @@ export function ExploreTabs({ active, labels, archives, tags }: ExploreTabsProps
     <div>
       <div
         role="tablist"
-        aria-label="探索方式"
+        aria-label={label}
         className="flex gap-7 border-b border-[var(--edge)]"
       >
         <Link

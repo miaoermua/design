@@ -214,7 +214,7 @@ describe('图片预览与材质边界', () => {
     const material = cssText.get('material.css') as string
     // 材质层仍以 --material-glass-* 参数驱动，且没有把组件专属数值写进来
     expect(material).toContain('var(--material-glass-blur)')
-    expect(selectorsIn(material).some((s) => s.includes('.glass-bar'))).toBe(true)
+    expect(selectorsIn(material).some((s) => s.includes('.glass-control'))).toBe(true)
     expect(selectorsIn(material).some((s) => s.includes('.glass-panel'))).toBe(true)
     expect(material, '材质层混入了组件专属 blur 数值').not.toMatch(/blur\((?:6|8)px\)/)
   })

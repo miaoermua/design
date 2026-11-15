@@ -2,14 +2,18 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { TocItem } from '@/lib/content/markdown'
 import { BackToTop } from '@/components/ui/back-to-top'
+import { ReadingProgressBar } from '@/components/ui/reading-progress'
 import { ReadingProgressRing } from '@/components/ui/reading-progress'
 import { Toc } from '@/components/ui/toc'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t } from '@/lib/i18n/dictionary'
 
 interface ReadingToolsProps {
   items: TocItem[]
   /** 正文元素 id，进度环以此为口径 */
   targetId: string
   backToTopLabel?: string
+  locale?: Locale
 }
 
 interface ReadingAsideProps extends ReadingToolsProps {
@@ -20,41 +24,47 @@ interface ReadingAsideProps extends ReadingToolsProps {
 /**
  * 阅读辅助区（Blog 与 Note 共用）
  *
- * 桌面：右栏常驻 —— 标题行（目录 ｜ 环形进度）→ 目录列表 → 操作栏 → 回到顶部。
+ * 桌面：右栏常驻 —— 目录列表（带竖线高亮）→ 阅读进度条 → 操作按钮 → 回到顶部。
  * 移动：目录折叠在正文里（标题行同样带进度环），这里只剩文末的操作栏与回到顶部。
  *
- * 进度不再单独占一行：它是目录标题的附属信息，压在标题行右侧；
- * 操作栏也不再是独立竖栏，而是目录列表下方的一排。
- * 回到顶部是次级操作，留在操作栏之外，避免和四个主操作抢点击区。
+ * 参考 Shiro 的侧栏做法：目录 accent 色竖线高亮、操作按钮纯图标竖排、
+ * 阅读进度作为竖向进度条集成在侧栏底部，去掉虚线分隔改用间距。
  */
-export function ReadingAside({ items, targetId, backToTopLabel, actions }: ReadingAsideProps) {
+export function ReadingAside({
+  items,
+  targetId,
+  backToTopLabel,
+  locale = DEFAULT_LOCALE,
+  actions,
+}: ReadingAsideProps) {
   const hasToc = items.length >= 2
 
   return (
     <aside className="min-w-0 xl:col-start-2 xl:row-start-1">
-      <div className="mt-8 border-t border-dashed border-[var(--edge)] pt-4 xl:sticky xl:top-28 xl:mt-0 xl:border-t-0 xl:pt-0">
+      <div className="mt-8 pt-4 xl:sticky xl:top-28 xl:mt-0 xl:pt-0">
         <div className="hidden xl:block">
           {hasToc ? (
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <p className="meta text-[var(--text-tertiary)]">目录</p>
-              <ReadingProgressRing targetId={targetId} />
-            </div>
-          ) : (
-            // 短正文没有目录，进度环仍然保留：它是这页唯一的「读到哪」提示
-            <div className="mb-2 flex justify-end">
-              <ReadingProgressRing targetId={targetId} />
-            </div>
-          )}
+            <>
+              <p className="text-meta font-medium tracking-[0.06em] uppercase text-[var(--text-secondary)]">
+                {t(locale, 'toc.title')}
+              </p>
+              <div className="mt-3">
+                <Toc items={items} variant="rail" label={t(locale, 'toc.label')} />
+              </div>
+            </>
+          ) : null}
 
-          <Toc items={items} variant="rail" />
+          <div className="mt-4">
+            <ReadingProgressBar targetId={targetId} />
+          </div>
         </div>
 
-        {/* 平板宽度下不让四项被拉成满屏：收在 26rem 内，间距仍然均匀 */}
-        <div className="w-full max-w-[26rem] xl:mt-4 xl:border-t xl:border-dashed xl:border-[var(--edge)] xl:pt-4">
+        {/* 操作按钮：桌面端纯图标竖排；移动端保持横排带文字 */}
+        <div className="w-full max-w-[26rem] xl:mt-5">
           {actions}
         </div>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex xl:mt-4">
           <BackToTop label={backToTopLabel} />
         </div>
       </div>
@@ -62,7 +72,7 @@ export function ReadingAside({ items, targetId, backToTopLabel, actions }: Readi
   )
 }
 
-export function ReadingInline({ items, targetId }: ReadingToolsProps) {
+export function ReadingInline({ items, targetId, locale = DEFAULT_LOCALE }: ReadingToolsProps) {
   const hasToc = items.length >= 2
 
   return (
@@ -70,7 +80,7 @@ export function ReadingInline({ items, targetId }: ReadingToolsProps) {
       {hasToc ? (
         <details className="border-t border-dashed border-[var(--edge)] pt-4">
           <summary className="toc-summary meta flex cursor-pointer items-center justify-between gap-3 select-none">
-            <span>目录</span>
+            <span>{t(locale, 'toc.title')}</span>
             <span className="flex items-center gap-2">
               <ReadingProgressRing targetId={targetId} />
               <span aria-hidden="true" className="toc-chevron text-[var(--text-tertiary)]">
@@ -79,7 +89,7 @@ export function ReadingInline({ items, targetId }: ReadingToolsProps) {
             </span>
           </summary>
           <div className="mt-1">
-            <Toc items={items} variant="inline" />
+            <Toc items={items} variant="inline" label={t(locale, 'toc.label')} />
           </div>
         </details>
       ) : (

@@ -277,7 +277,7 @@
   justify-content: center;
   border-radius: var(--radius-pill);
   background-color: var(--surface-sunk);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-serif);
   font-size: 1rem;
 }

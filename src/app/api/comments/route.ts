@@ -3,6 +3,7 @@ import { createGuestComment, listComments, type CommentSort } from '@/lib/api'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { toCommentFailureReason } from '@/features/comments/errors'
 import { validateCommentDraft } from '@/features/comments/validation'
+import { getLocale } from '@/lib/i18n/server'
 import { isSafeId } from '@/lib/realtime/protocol'
 
 /**
@@ -68,7 +69,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'error', reason: 'invalid' }, { status: 400 })
   }
 
-  const draft = validateCommentDraft(record)
+  // 字段级提示是给读者看的：跟随请求方当前语言，不让中文文案漏到英文界面
+  const locale = await getLocale()
+  const draft = validateCommentDraft(record, locale)
   if (!draft.ok) {
     return NextResponse.json(
       { status: 'error', reason: 'invalid', field: draft.field, message: draft.message },
@@ -77,7 +80,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    await createGuestComment(refId, draft.value)
+    const isWhispers = record.isWhispers === true
+    await createGuestComment(refId, { ...draft.value, ...(isWhispers ? { isWhispers: true } : {}) })
     // 只承诺「已提交」：审核与否由 Core 的策略决定，前端无从得知，也不该猜
     return NextResponse.json({ status: 'ok' })
   } catch (error) {

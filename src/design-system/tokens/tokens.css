@@ -8,13 +8,23 @@
  * 分层：
  *   1. @theme   — 调色板 / 字体 / 字号 / 容器 / 间距 / 圆角 / 阴影 / 动效
  *                 （同时生成 Tailwind 工具类）
- *   2. 语义别名 — --surface-* / --text-* / --edge-* / --accent-* / --focus-ring-*
- *   3. 材质     — --material-*（颗粒、环境光、冰面参数），由 material.css 消费
+ *   2. 语义别名 — --surface-* / --text-* / --edge-* / --accent-* / --state-* / --focus-ring-*
+ *   3. 组件专属 — --nav-* / --note-*（只在各自组件族内消费）
+ *   4. 材质     — --material-*（颗粒、环境光、冰面参数），由 material.css 消费
  *
  * 铁律：
  *   - 组件层不出现 HEX / rgb() 字面量（tests/design-tokens.test.ts 守护）。
- *   - 暗色只覆盖第 1、2 层变量，组件层零 dark: 变体。
+ *   - 组件层不直接引用 --color-* 调色板变量：只能经第 2/3 层转引（
+ *     tests/design-color-system.test.ts 守护，media.css 与 reading.css 的反色浮层是受控例外）。
+ *   - 暗色只覆盖第 1、2、3 层变量，组件层零 dark: 变体。
  *   - 视觉比例：暖纸 70% · 编辑排版 20% · 冰面 10%。
+ *
+ * 跨主题值轮转（有意为之，不是笔误）：
+ *   暗色 --color-accent-strong（#a8c1c4）目前**等于**亮色 --color-accent-soft。
+ *   暗色 --color-accent-soft（#6d9298）历史上等于亮色 --color-accent；
+ *   本轮把亮色 accent 压暗到 #63888e（非文本对比 3:1）之后两者已解耦，
+ *   不再有字面量重合 —— 这是有意的：暗色的「弱」是更暗，亮色的「弱」是更浅。
+ * 教训：这三个角色在任何主题里都不是独立品牌色，改一个必须同时验证另一主题的同名角色。
  */
 
 @theme {
@@ -27,26 +37,38 @@
   --color-paper-sunk: #e9e5d9;
   --color-paper-deep: #dfd9c9;
 
-  /* 冰：仅用于覆盖层（不与纸色混用为底色） */
+  /* 冰：只服务材质层（--edge-frost / --material-glass-tint），不作页面底色。
+     它和 --accent-wash 视觉很近（ΔE 2.6）但职责不同：冰是「冷材质」，
+     wash 是「主题色的浅底」，不要互换。 */
   --color-frost: #dce5e5;
 
-  /* 墨：正文、次级、辅助、标题 */
+  /* 墨：正文、次级、辅助、标题。
+     muted 与 faint 不是「同一支灰的两个深浅」，而是**两种职责**：
+     - muted 承载一切需要被读的文字（含 12px meta），因此在 paper / raised / lift /
+       sunk / reading-surface / accent-wash 上都必须 ≥ 4.5:1；
+     - faint 是**装饰色**：图标、分隔点、图表线条、非活动控件。它不承担阅读任务，
+       因此只要求非文本对比 ≥ 3:1，禁止用于 ≤ 18.66px 的普通正文（含 meta）。 */
   --color-ink: #525650; /* foreground */
   --color-ink-soft: #3f433f;
-  --color-ink-muted: #6b6f67; /* secondary，AA ≥ 4.5:1 */
-  --color-ink-faint: #85877f; /* muted，仅用于 ≥14px 或非文本 */
+  --color-ink-muted: #646760; /* secondary：全表面 AA ≥ 4.5:1（含 paper-sunk 4.57） */
+  --color-ink-faint: #85877f; /* decorative only：图标 / 分隔 / 图表线，禁止当正文 */
   --color-heading: #344f58; /* heading */
 
   /* 线：普通边界与虚线分隔 */
   --color-line: #d8d4c8;
   --color-line-strong: #c9c8bc;
 
-  /* 主题色：Glacier。承担交互识别，不做大面积填充 */
-  --color-accent: #6d9298; /* primary */
-  --color-accent-soft: #a8c1c4; /* primary-soft */
-  --color-accent-strong: #526f75; /* primary-hover，也是唯一可用于小字的强调色 */
+  /* 主题色：Glacier。承担交互识别，不做大面积填充。
+     两组职责必须分清，这是颜色系统里最容易记错的一条：
+     - accent        装饰与交互**边界**（细线、边框、焦点环、指示点、图表描边）
+                     → 只要求非文本对比 3:1，实测 paper 3.39 / sunk 3.06 / wash 3.22
+     - accent-strong 一切**文字**与需要读的图标 → 要求 4.5:1，最差面 sunk 4.67
+     把 accent 当文字色是本轮修掉的主要缺陷（原 #6d9298 在 paper 上只有 2.97）。 */
+  --color-accent: #63888e; /* 装饰 / 边界（≥3:1） */
+  --color-accent-soft: #a8c1c4; /* 柔和次级强调：填充、下划线装饰、光斑 */
+  --color-accent-strong: #4d6970; /* 唯一可用于文字的强调色，全表面 ≥4.5:1 */
   --color-accent-wash: #e4ecec; /* 标签/选中底 */
-  --color-accent-line: #b7cbcd;
+  --color-accent-line: #b7cbcd; /* 强调性细线（装饰，不承担可读性） */
 
   /* 功能色：只服务于状态，不参与装饰 */
   --color-danger: #a4503f;
@@ -107,8 +129,9 @@
   --text-code--line-height: 1.7;
 
   /* ══ 4. 版心：正文 / 页面 / 窄栏 ═══════════════════════════════ */
-  --container-prose: 40rem; /* ≈ 36 汉字/行 @17px */
-  --container-wide: 68rem;
+  --container-prose: 48rem; /* ≈ 44 汉字/行 @17px，与 Shiro max-w-3xl 对齐 */
+  --container-diary: 40rem; /* 日记版心，比文章窄，白纸上约 36 汉字/行 */
+  --container-wide: 72rem;
   --container-narrow: 30rem;
 
   /* ══ 5. 间距：一个水平内边距 + 两个竖向节奏 ═══════════════════ */
@@ -148,14 +171,24 @@
   --surface-raised: var(--color-paper-raised);
   --surface-lift: var(--color-paper-lift);
   --surface-sunk: var(--color-paper-sunk);
-  --surface-glass: var(--color-frost);
 
   /* 文字 */
   --text-primary: var(--color-ink);
   --text-strong: var(--color-ink-soft);
   --text-secondary: var(--color-ink-muted);
+  /* 装饰专用：图标 / 分隔点 / 图表线条 / 未激活控件。
+     禁止用于需要阅读的文字（含 12px meta）—— 见 DESIGN-SYSTEM §4
+ 
+     注意 --text-tertiary 不是一个「更淡的 gray」，它是**非文本层**。 */
   --text-tertiary: var(--color-ink-faint);
   --text-heading: var(--color-heading);
+
+  /* 状态（功能色）：Callout / Banner / Ins / 表单错误等状态的唯一入口。
+     组件消费这一层，不直接取 --color-*，这样功能色换值只改一处。 */
+  --state-danger: var(--color-danger);
+  --state-warning: var(--color-warning);
+  --state-success: var(--color-success);
+  --state-info: var(--color-info);
 
   /* 线 */
   --edge: var(--color-line);
@@ -182,7 +215,38 @@
   /* 代码底：比阅读纸面沉一级，让代码块与正文分开；暗色下比页面更深 */
   --code-surface: var(--color-paper-sunk);
 
-  /* 焦点：14 处重复描边收敛到这里 */
+  /* ── 导航（悬浮栏与菜单共用一层） ────────────────────────────────
+     这一层不引入新色相：卡片是「更白一档的纸」+ 低透明度 Accent，
+     识别点仍是 Frozen Parchment（暖纸 + 冷界面），不是又一个彩色面板。
+     命名按**角色**而不是色值：--nav-item-hover 说明此处是什么，
+     换色时只改这一处，不需要回到组件里找「哪个蓝色」。
+     非选中项用墨色/次级墨色，Accent 只出现在选中、悬停与光斑上。 */
+  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 85%, transparent);
+  --nav-edge: color-mix(in srgb, var(--color-line-strong) 42%, transparent);
+  --nav-shadow:
+    0 1px 2px rgb(var(--shadow-color) / 0.04), 0 18px 42px -26px rgb(var(--shadow-color) / 0.26);
+  --nav-blur: 14px;
+  --nav-saturate: 1.12;
+
+  --nav-ink: var(--color-ink-muted); /* 默认导航文字与图标：次级墨色，不是蓝 */
+  --nav-ink-strong: var(--color-heading); /* 悬停/选中文字 */
+  /* 分组标题 / 空态 / 说明这些 12px meta 曾经走 --nav-ink-muted（= ink-faint），
+     在导航玻璃上只有 3.2:1。它们是需要读的文字，已统一并入 --nav-ink；
+     层级交给字号、字距与大写，不再靠压灰。 */
+
+  --nav-item-hover: color-mix(in srgb, var(--color-accent-soft) 15%, transparent);
+  --nav-item-active: var(--accent-wash);
+  --nav-item-active-ink: var(--color-heading);
+  /* 光斑：极低透明度 Accent，只负责「这块卡片有响应」，不参与识别 */
+  --nav-spotlight: color-mix(in srgb, var(--color-accent-soft) 26%, transparent);
+
+  --nav-divider: color-mix(in srgb, var(--color-line) 68%, transparent);
+  --nav-settings-surface: color-mix(in srgb, var(--color-paper-sunk) 55%, transparent);
+  --nav-focus: var(--accent-strong);
+
+  /* 焦点：14 处重复描边收敛到这里。
+     焦点环属于非文本 UI，下限 3:1；用 accent（#63888e，paper 上 3.39）而不是
+     accent-strong，是为了让焦点环保持轻，不与 hover 文字抢注意力。 */
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   --focus-ring-color: var(--accent);
@@ -207,16 +271,19 @@
       transparent 72%
     );
 
+  /*
+   * 冰面 tint 是 --color-frost 的 RGB 三元组形式。
+   * 必须用三元组是因为下游写作 rgb(var(--material-glass-tint) / α)，
+   * 而 rgb() 吃不了 HEX。两个值必须**逐通道相等**（tests/design-color-system.test.ts
+   * 断言亮暗两套都一致）—— 改 frost 就要同步改这里，反之亦然。
+   */
   --material-glass-tint: 220 229 229;
-  /* 更低的冰色遮罩与更强模糊共同保留玻璃感，同时维持导航文字对比 */
-  --material-glass-alpha-bar: 0.82;
-  --material-glass-blur: 24px;
-  --material-glass-saturate: 1.4;
-  --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
-  /* 小型浮标控件（工具按钮）：面积小，遮罩略实、模糊略轻，避免糊成一团 */
+  /* 小型浮标控件（工具按钮）的遮罩与模糊。面积小，遮罩略实、模糊略轻，避免糊成一团 */
   --material-glass-alpha-control: 0.88;
   --material-glass-alpha-control-hover: 0.94;
-  --material-glass-blur-control: 14px;
+  --material-glass-blur: 14px;
+  --material-glass-saturate: 1.4;
+  --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 62%, transparent);
 
   color-scheme: light;
 }
@@ -240,12 +307,16 @@
   --color-ink: #d9dad2;
   --color-ink-soft: #e9eae2;
   --color-ink-muted: #a3a69d;
+  /* 与亮色 #85877f 的 ΔE 只有 0.8：这是全站唯一「亮色值直接搬到暗色」的墨色。
+     它只做装饰，暗底上 5.02（paper）/ 4.20（lift），仍然满足非文本 3:1。
+     不要在暗色里把它当正文用 —— 语义规则两套主题一致。 */
   --color-ink-faint: #868981;
   --color-heading: #c6d7d9;
 
   --color-line: #2a3032;
   --color-line-strong: #394143;
 
+  /* accent 三兄弟在暗色里方向与亮色相反（越暗越弱），见文件头「跨主题值轮转」 */
   --color-accent: #8fb3b8;
   --color-accent-soft: #6d9298;
   --color-accent-strong: #a8c1c4;
@@ -264,6 +335,31 @@
   --color-success: #86ab92;
   --color-info: #86a9bd;
 
+  /*
+   * 导航层：暗色不是「把亮色反过来」，而是同一套角色换成夜间纸。
+   * - 玻璃底改由暗色 paper-raised 合成，不再有白色玻璃；
+   * - 边界提亮一档，否则卡片在深色页面上会没有轮廓；
+   * - 阴影基色已改为纯黑，这里只调整扩散与不透明度；
+   * - 选中/hover 依旧走 accent-wash，Accent 仍是唯一彩色来源。
+   */
+  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 90%, transparent);
+  --nav-edge: color-mix(in srgb, var(--color-line-strong) 72%, transparent);
+  --nav-shadow:
+    0 1px 2px rgb(var(--shadow-color) / 0.5), 0 22px 48px -28px rgb(var(--shadow-color) / 0.72);
+  --nav-blur: 12px;
+  --nav-saturate: 1.06;
+
+  --nav-ink: var(--color-ink-muted);
+  --nav-ink-strong: var(--color-ink-soft);
+
+  --nav-item-hover: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --nav-item-active: var(--color-accent-wash);
+  --nav-item-active-ink: var(--color-ink-soft);
+  --nav-spotlight: color-mix(in srgb, var(--color-accent) 30%, transparent);
+
+  --nav-divider: color-mix(in srgb, var(--color-line) 82%, transparent);
+  --nav-settings-surface: color-mix(in srgb, var(--color-paper-deep) 62%, transparent);
+
   --shadow-color: 0 0 0;
 
   --material-grain-opacity: 0.4;
@@ -279,9 +375,12 @@
       transparent 74%
     );
 
-  --material-glass-tint: 36 44 47;
+  /* 与 --color-frost 逐通道相等（#2a3436 = 42 52 54）。原值 36 44 47 是独立漂移的
+     深一档，导致「亮色同源、暗色不同源」的隐式硬拷贝；本轮统一回 frost。 */
+  --material-glass-tint: 42 52 54;
 
-  --material-glass-blur: 24px;
+  /* 模糊半径不再按主题分档：唯一存活的冰面是小面积控件，暗色同样用 14px，
+     否则 24px 会把图标边缘糊掉（见 material.css `.glass-control` 注释）。 */
   --material-glass-saturate: 1.25;
   --material-glass-rim: color-mix(in srgb, var(--color-paper-lift) 22%, transparent);
   --material-glass-alpha-control: 0.82;

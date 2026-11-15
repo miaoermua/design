@@ -5,6 +5,8 @@ import { Prose } from '@/components/ui/prose'
 import { getThemeConfig } from '@/core/config/theme'
 import { DonateSlot } from '@/features/donate'
 import { renderMarkdown } from '@/lib/content/markdown'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 import { formatTime } from '@/lib/utils/date'
@@ -16,7 +18,8 @@ interface DiaryEntryProps {
 
 /** 日记条目：以时间为轴，正文沿用同一套排版（紧凑变体） */
 export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
-  const rendered = !diary.hasPassword && diary.content.trim() ? await renderMarkdown(diary.content) : null
+  const locale = await getLocale()
+  const rendered = !diary.hasPassword && diary.content.trim() ? await renderMarkdown(diary.content, locale) : null
   // 与文章页同一个读取入口；getThemeConfig 在单次请求内已去重，列表里逐条调用不会重复取数
   const theme = await getThemeConfig()
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
@@ -37,17 +40,17 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
             </Link>
           </h3>
           {chips.length > 0 ? <p className="meta">{chips.join(' · ')}</p> : null}
-          {diary.bookmark ? <p className="meta">收藏</p> : null}
+          {diary.bookmark ? <p className="meta">{t(locale, 'diary.bookmark')}</p> : null}
         </div>
 
         {diary.hasPassword ? (
           <p className="mt-2 text-small text-[var(--text-secondary)]">
-            这篇日记受密码保护。
+            {t(locale, 'diary.protected')}
             <Link
               href={diaryPath(diary.id)}
-              className="link-quiet underline decoration-[var(--color-accent-soft)] decoration-1 underline-offset-[0.25em]"
+              className="link-quiet underline decoration-[var(--accent-soft)] decoration-1 underline-offset-[0.25em]"
             >
-              输入密码阅读 →
+              {t(locale, 'diary.unlock')}
             </Link>
           </p>
         ) : rendered ? (
@@ -77,7 +80,7 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
                 <CoverImage
                   key={image.src}
                   src={image.src}
-                  alt={`${diary.title} 配图`}
+                  alt={tf(locale, 'diary.coverAlt', { title: diary.title })}
                   width={image.width}
                   height={image.height}
                   className="aspect-[4/3] w-full border border-[var(--edge)]"
@@ -89,10 +92,12 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
 
         <div className="meta mt-3 flex flex-wrap items-center">
           <Link href={diaryPath(diary.id)} className="link-quiet">
-            永久链接
+            {t(locale, 'diary.permalink')}
           </Link>
           {diary.readCount !== null ? (
-            <span className="meta-sep">{diary.readCount.toLocaleString('zh-CN')} 次阅读</span>
+            <span className="meta-sep">
+              {tf(locale, 'meta.readCount', { count: diary.readCount.toLocaleString(locale) })}
+            </span>
           ) : null}
           <DonateSlot theme={theme} className="meta-sep" />
         </div>

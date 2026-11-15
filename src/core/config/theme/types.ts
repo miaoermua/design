@@ -25,6 +25,19 @@ export interface ThemeFooter {
   /** 起始年份，用于页脚 `Since 2021`；null 表示不配置，退回当前年 */
   since: number | null
   icp: ThemeIcp
+  /**
+   * 自定义链接列表，追加在页脚现有内容之后（不覆盖原有内容）。
+   *
+   * 典型用途：友情链接、关于页面、隐私政策等自定义 URL。
+   * 非法条目在解析阶段丢弃，顺序即展示顺序。
+   */
+  links: ThemeFooterLink[]
+}
+
+/** 页脚自定义链接：标题 + 安全 URL */
+export interface ThemeFooterLink {
+  title: string
+  url: string
 }
 
 /**
@@ -117,6 +130,37 @@ export interface ThemeHomepage {
   profile: ThemeHomepageSection
   articles: ThemeHomepageSection
   notes: ThemeHomepageSection
+  /** 首页日记区块下方的「更多」入口行；不配置时默认展示点赞和订阅 */
+  more: ThemeHomepageMore
+}
+
+/**
+ * 首页「更多」区块配置。
+ *
+ * 每一项是一个快捷入口（内部路由或外部链接），可选搭配 CSS / builtin 图标。
+ * 不配置时默认展示「点赞」和「订阅」两个内置入口（`type: 'like'` / `type: 'subscribe'`）。
+ * 内置入口在 items 里通过特殊的 `type` 字段标识，不需要手动填 url。
+ */
+export interface ThemeHomepageMore {
+  enabled: boolean
+  items: ThemeHomepageMoreItem[]
+}
+
+export interface ThemeHomepageMoreItem {
+  title: string
+  /**
+   * 入口类型：
+   * - `'like'`：内置点赞入口（全站点赞）
+   * - `'subscribe'`：内置订阅入口（弹出订阅面板）
+   * - `'link'`：自定义链接，需要配合 `url` 字段
+   */
+  type: 'like' | 'subscribe' | 'link'
+  /** 自定义链接地址；仅 `type: 'link'` 时有效 */
+  url: string | null
+  /** 图标描述（与社交图标共用同一套 builtin / css 体系） */
+  icon: ThemeSocialIcon | null
+  /** 品牌色 / 主题色；null 时用默认色 */
+  color: string | null
 }
 
 /** 单张赞赏二维码：名称只用于展示，地址已校验为 http(s) 绝对地址 */

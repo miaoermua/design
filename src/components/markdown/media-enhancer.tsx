@@ -18,6 +18,8 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import type { GalleryImage, GalleryVariant } from '@/lib/content/gallery'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { locateProseScope } from './content-scope'
 import { Gallery } from './gallery'
 import { openPreview } from './image-preview'
@@ -79,6 +81,7 @@ function markBroken(img: HTMLImageElement): void {
 }
 
 export function MediaEnhancer(): ReactElement {
+  const locale = useLocale()
   const markerRef = useRef<HTMLSpanElement>(null)
   const [hosts, setHosts] = useState<GalleryHost[]>([])
 
@@ -122,7 +125,10 @@ export function MediaEnhancer(): ReactElement {
       img.classList.add('md-image')
       img.tabIndex = 0
       img.setAttribute('role', 'button')
-      img.setAttribute('aria-label', img.alt ? `预览图片：${img.alt}` : '预览图片')
+      img.setAttribute(
+        'aria-label',
+        img.alt ? tf(locale, 'media.previewAlt', { alt: img.alt }) : t(locale, 'media.preview'),
+      )
 
       if (img.complete && img.naturalWidth === 0) markBroken(img)
     }
@@ -170,7 +176,7 @@ export function MediaEnhancer(): ReactElement {
       delete scope.dataset[SCOPE_FLAG]
       setHosts([])
     }
-  }, [])
+  }, [locale])
 
   return (
     <>

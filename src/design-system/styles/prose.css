@@ -88,11 +88,11 @@
 }
 
 .prose :is(del, s) {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .prose mark {
-  background: var(--color-accent-wash);
+  background: var(--accent-wash);
   color: inherit;
   padding: 0.05em 0.22em;
   border-radius: var(--radius-xs);
@@ -129,7 +129,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-accent-soft);
+  background: var(--accent-soft);
 }
 
 .prose ol {
@@ -137,7 +137,7 @@
 }
 
 .prose ol > li::marker {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.85em;
 }
@@ -158,7 +158,7 @@
 .prose blockquote {
   margin-inline: 0;
   padding: 0.15em 0 0.15em 1.35em;
-  border-left: 2px solid var(--color-accent-soft);
+  border-left: 2px solid var(--accent-soft);
   color: var(--text-secondary);
   font-family: var(--font-serif);
   font-size: 1.04em;
@@ -298,7 +298,7 @@
   text-align: center;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .prose .mermaid-block[data-rendered='true'] {
@@ -323,7 +323,7 @@
 /* 标题锚点 */
 .prose .heading-anchor {
   margin-left: 0.4em;
-  color: var(--text-tertiary);
+  color: var(--accent-strong);
   text-decoration: none;
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out-soft);
@@ -404,12 +404,12 @@
 }
 
 .prose .insight-ref__link:hover {
-  color: var(--accent);
+  color: var(--accent-strong);
   text-decoration: underline;
   text-decoration-thickness: 1px;
 }
 
 .prose .insight-ref--plain {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: help;
 }

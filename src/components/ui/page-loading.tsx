@@ -1,4 +1,6 @@
 import { Container } from '@/components/ui/container'
+import { t } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 
 /**
  * 服务端渲染的加载骨架：不使用全局 spinner，保持版面稳定。
@@ -7,11 +9,13 @@ import { Container } from '@/components/ui/container'
  * 根级 loading.tsx 会让整个响应立刻开始流式输出，详情页的 notFound()
  * 就只能在 200 之后才渲染出来，变成软 404。
  */
-export function PageLoading() {
+export async function PageLoading() {
+  const locale = await getLocale()
+
   return (
     <Container>
       <div className="animate-pulse pt-16 pb-8" aria-busy="true" aria-live="polite">
-        <span className="sr-only">正在加载</span>
+        <span className="sr-only">{t(locale, 'state.loading')}</span>
         <div className="h-3 w-16 bg-[var(--surface-sunk)]" />
         <div className="mt-5 h-9 w-2/3 bg-[var(--surface-sunk)]" />
         <div className="mt-3 h-3 w-1/2 bg-[var(--surface-sunk)]" />

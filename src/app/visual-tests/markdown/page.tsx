@@ -43,7 +43,8 @@ export default async function MarkdownVisualTestsPage() {
                 Markdown 视觉验收样张
               </h1>
               <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
-                覆盖 Folio 实际支持的全部 Markdown 扩展。本页不是用户内容，仅用于截图比对。
+                覆盖 Folio 实际支持的全部 Markdown
+                扩展。正文按「喵二」博客的题材重写过，仍是演示样张而不是站上文章，仅用于截图比对。
               </p>
               <p className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 <span>来源 src/visual-tests/fixtures/markdown-full.md</span>
@@ -57,7 +58,7 @@ export default async function MarkdownVisualTestsPage() {
           </div>
 
           <aside className="hidden xl:block">
-            <p className="meta mb-2 text-[var(--text-tertiary)]">目录</p>
+            <p className="meta mb-2 text-[var(--text-secondary)]">目录</p>
             <Toc items={rendered.toc} />
           </aside>
         </div>

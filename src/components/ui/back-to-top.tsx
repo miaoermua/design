@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
 
 interface BackToTopProps {
@@ -14,7 +16,8 @@ interface BackToTopProps {
  * 而「回到顶部」是阅读辅助，不该比正文更抢眼。
  * 平滑滚动只在用户没有要求减少动效时启用。
  */
-export function BackToTop({ label = '回到顶部', className }: BackToTopProps) {
+export function BackToTop({ label, className }: BackToTopProps) {
+  const locale = useLocale()
   const handleClick = () => {
     const reduce =
       typeof window.matchMedia === 'function' &&
@@ -44,7 +47,7 @@ export function BackToTop({ label = '回到顶部', className }: BackToTopProps)
       >
         <path d="M12 19V5M6 11l6-6 6 6" />
       </svg>
-      <span>{label}</span>
+      <span>{label ?? t(locale, 'action.backToTop')}</span>
     </button>
   )
 }

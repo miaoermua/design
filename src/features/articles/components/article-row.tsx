@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import type { Article } from '@/lib/api'
 import { buildArticleExcerpt } from '@/lib/content/excerpt'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { articlePath, categoryPath, tagPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 import { formatCompact } from '@/lib/utils/date'
@@ -16,6 +18,7 @@ interface ArticleRowProps {
    * 新增调用点不会意外多出一行。
    */
   withExcerpt?: boolean
+  locale?: Locale
 }
 
 /** 去重比较：忽略空白差异，避免把同一句话渲染两遍 */
@@ -32,6 +35,7 @@ export function ArticleRow({
   timeZone,
   compact = false,
   withExcerpt = false,
+  locale = DEFAULT_LOCALE,
 }: ArticleRowProps) {
   const href = articlePath(article.category?.slug, article.slug)
 
@@ -44,7 +48,7 @@ export function ArticleRow({
     <article
       className={cn(
         'group grid gap-2',
-        compact ? 'py-5 first:pt-0 last:pb-0' : 'py-8 sm:grid-cols-[7.5rem_1fr] sm:gap-8',
+        compact ? 'py-5 first:pt-0 last:pb-0' : 'py-6 sm:grid-cols-[7.5rem_1fr] sm:gap-8',
       )}
     >
       {compact ? null : (
@@ -65,7 +69,7 @@ export function ArticleRow({
               {article.title}
             </Link>
           ) : (
-            <span title="该文章没有分类，v2 详情路由无法生成链接">{article.title}</span>
+            <span title={t(locale, 'article.noCategory')}>{article.title}</span>
           )}
         </h3>
 
@@ -120,7 +124,9 @@ export function ArticleRow({
             : null}
           {article.readCount !== null ? (
             <span className="text-[var(--text-secondary)]">
-              {article.readCount.toLocaleString('zh-CN')} 次阅读
+              {tf(locale, 'meta.readCount', {
+                count: article.readCount.toLocaleString(locale),
+              })}
             </span>
           ) : null}
         </div>

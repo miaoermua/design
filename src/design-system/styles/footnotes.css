@@ -17,14 +17,14 @@
 
 .prose .footnote-ref > a {
   text-decoration: none;
-  color: var(--accent);
+  color: var(--accent-strong);
   padding-inline: 0.12em;
   border-radius: var(--radius-xs);
   transition: background-color var(--duration-fast) var(--ease-out-soft);
 }
 
 .prose .footnote-ref > a:hover {
-  background: var(--color-accent-wash);
+  background: var(--accent-wash);
 }
 
 .prose .footnote-ref > a:focus-visible {
@@ -35,7 +35,7 @@
 /* 跳转目标短暂高亮：点到返回链接后能立刻看见落在哪一条 */
 .prose .footnote-ref:target,
 .prose .footnote-ref:target > a {
-  background: var(--color-accent-wash);
+  background: var(--accent-wash);
 }
 
 /* ── 2. 脚注列表 ───────────────────────────────────────────── */
@@ -54,7 +54,7 @@
   margin: 0 0 0.75em;
   padding: 0;
   border: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 600;
@@ -74,7 +74,7 @@
 }
 
 .prose .footnote-item::marker {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -96,14 +96,14 @@
 
 .prose .footnote-backref {
   margin-left: 0.35em;
-  color: var(--accent);
+  color: var(--accent-strong);
   text-decoration: none;
   white-space: nowrap;
   border-radius: var(--radius-xs);
 }
 
 .prose .footnote-backref:hover {
-  background: var(--color-accent-wash);
+  background: var(--accent-wash);
 }
 
 .prose .footnote-backref:focus-visible {
@@ -115,7 +115,7 @@
 .prose .footnote-backref__hint {
   margin-left: 0.25em;
   font-size: 0.9em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .prose .footnote-item__back {
