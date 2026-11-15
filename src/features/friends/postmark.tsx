@@ -1,53 +1,38 @@
 import type { CSSProperties } from 'react'
+import { useId } from 'react'
 import { cn } from '@/lib/utils/cn'
 
 /**
- * 友链邮戳（原型）
+ * 友链邮戳
  *
- * 装饰性 SVG：外圈快印、内圈虚线、弧形字与中央邮政符号。
- * 所有变化来自 `seed` 的稳定哈希（FNV-1a），同一友链在刷新与重渲染后保持同一枚邮戳，
- * 渲染期不调用 Math.random()，也不生成任何图片资源。
+ * 装饰性 SVG：外圈快印、内圈虚线、弧形字与中央信封符号。
+ * 所有卡片共用同一枚邮戳图案，唯一的差异是旋转角度（由 `seed` 确定性派生，
+ * 不引入 SVG filter 也不增加合成层）。
+ *
+ * 旋转是纯 CSS transform，在 GPU 合成阶段完成，不触发重排也不触发重绘，
+ * 65 个不同角度和 65 个相同角度的性能开销完全一致。
  */
 
-/** 三种墨色都从语义 Token 混出，明暗主题自动跟随；不用功能色做装饰。 */
-const INK_MIXES = [
-  'color-mix(in srgb, var(--accent-strong) 82%, var(--text-heading))',
-  'color-mix(in srgb, var(--text-heading) 86%, var(--accent))',
-  'color-mix(in srgb, var(--text-secondary) 70%, var(--accent-strong))',
-] as const
+const INK = 'color-mix(in srgb, var(--accent-strong) 82%, var(--text-heading))'
 
-const DASH_PATTERNS = ['0.5 3.4', '1.2 3.8', '2 3.2'] as const
+const RING = 1.8
+const DASH = '1.2 3.8'
 
-export function hashSeed(seed: string): number {
-  let hash = 0x811c9dc5
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return hash >>> 0
+/** 从字符串派生 -7° ~ +7° 的确定性旋转角，同一 seed 永远同一角度 */
+function seedRotation(seed: string): number {
+  let sum = 0
+  for (let i = 0; i < seed.length; i++) sum += seed.charCodeAt(i)
+  return -7 + (sum % 15)
 }
 
 interface PostmarkProps {
-  seed: string
+  seed?: string
   className?: string
 }
 
 export function Postmark({ seed, className }: PostmarkProps) {
-  const hash = hashSeed(seed)
-  const rotation = -7 + (hash % 15)
-  const ink = INK_MIXES[(hash >>> 4) % INK_MIXES.length]
-  const opacity = 0.54 + ((hash >>> 6) % 5) * 0.04
-  const ring = 1.5 + ((hash >>> 9) % 4) * 0.24
-  const dash = DASH_PATTERNS[(hash >>> 12) % DASH_PATTERNS.length]
-  const symbol = (hash >>> 17) % 3
-  const seedValue = ((hash >>> 21) % 89) + 10
-  const uid = `pm-${hash.toString(36)}`
-
-  const style = {
-    color: ink,
-    '--postmark-rotate': `${rotation}deg`,
-    '--postmark-opacity': opacity.toFixed(3),
-  } as CSSProperties
+  const uid = useId()
+  const rotation = seed ? seedRotation(seed) : -3
 
   return (
     <svg
@@ -55,64 +40,34 @@ export function Postmark({ seed, className }: PostmarkProps) {
       aria-hidden="true"
       focusable="false"
       className={cn('friend-postmark block', className)}
-      style={style}
+      style={{ color: INK, '--postmark-rotate': `${rotation}deg` } as CSSProperties}
     >
       <defs>
         <path id={`${uid}-top`} d="M 34 100 A 66 66 0 0 1 166 100" fill="none" />
-        <path id={`${uid}-bottom`} d="M 38 100 A 62 62 0 0 0 162 100" fill="none" />
-        {/* 极轻的位移噪点：让圆环边缘像真实印泥一样略微毛糙 */}
-        <filter id={`${uid}-ink`} x="-12%" y="-12%" width="124%" height="124%">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.9"
-            numOctaves="2"
-            seed={seedValue}
-            result="noise"
-          />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="noise"
-            scale="1.1"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
+        <path id={`${uid}-btm`} d="M 38 100 A 62 62 0 0 0 162 100" fill="none" />
       </defs>
 
-      <g filter={`url(#${uid}-ink)`} fill="none" stroke="currentColor" strokeLinecap="round">
-        {/* 外层双圈：一实一虚，虚圈承担齿孔感 */}
-        <circle cx="100" cy="100" r="93" strokeWidth={ring} opacity="0.85" />
+      <g fill="none" stroke="currentColor" strokeLinecap="round">
+        {/* 外层双圈：一实一虚 */}
+        <circle cx="100" cy="100" r="93" strokeWidth={RING} opacity="0.85" />
         <circle cx="100" cy="100" r="86" strokeWidth="0.9" opacity="0.55" strokeDasharray="1.5 7" />
-        {/* 轻微重影：模拟一次压印不齐 */}
-        <circle cx="100.7" cy="99.3" r="93" strokeWidth={ring * 0.5} opacity="0.28" />
+        {/* 轻微重影 */}
+        <circle cx="100.7" cy="99.3" r="93" strokeWidth={RING * 0.5} opacity="0.28" />
         <circle
           cx="100"
           cy="100"
           r="78"
-          strokeWidth={ring * 0.8}
+          strokeWidth={RING * 0.8}
           opacity="0.7"
-          strokeDasharray={dash}
+          strokeDasharray={DASH}
         />
         <circle cx="100" cy="100" r="46" strokeWidth="0.7" opacity="0.4" />
 
-        {symbol === 0 ? (
-          <g strokeWidth={ring * 0.7} opacity="0.9">
-            <rect x="78" y="84" width="44" height="32" rx="2" />
-            <path d="M 78 86 L 100 101 L 122 86" />
-          </g>
-        ) : symbol === 1 ? (
-          <g strokeWidth={ring * 0.65} opacity="0.9">
-            <path d="M 100 80 V 120" />
-            <path d="M 80 90 L 120 110" />
-            <path d="M 80 110 L 120 90" />
-          </g>
-        ) : (
-          <g strokeWidth={ring * 0.65} opacity="0.9">
-            <path d="M 76 92 q 6 -5 12 0 t 12 0 t 12 0 t 12 0" />
-            <path d="M 76 100 q 6 -5 12 0 t 12 0 t 12 0 t 12 0" />
-            <path d="M 76 108 q 6 -5 12 0 t 12 0 t 12 0 t 12 0" />
-          </g>
-        )}
+        {/* 中央信封符号 */}
+        <g strokeWidth={RING * 0.7} opacity="0.9">
+          <rect x="78" y="84" width="44" height="32" rx="2" />
+          <path d="M 78 86 L 100 101 L 122 86" />
+        </g>
       </g>
 
       <g fill="currentColor">
@@ -122,7 +77,7 @@ export function Postmark({ seed, className }: PostmarkProps) {
           </textPath>
         </text>
         <text>
-          <textPath href={`#${uid}-bottom`} startOffset="50%" textAnchor="middle">
+          <textPath href={`#${uid}-btm`} startOffset="50%" textAnchor="middle">
             POSTMARK · FRIENDS
           </textPath>
         </text>

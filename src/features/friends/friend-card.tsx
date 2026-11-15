@@ -71,7 +71,7 @@ export function FriendCard({ link }: { link: FriendLink }) {
       </span>
 
       <span aria-hidden="true" className="friend-postcard__mark">
-        <Postmark seed={`${link.id}|${link.url}`} />
+        <Postmark seed={link.id} />
       </span>
 
       <div className="friend-postcard__body">
