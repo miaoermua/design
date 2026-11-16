@@ -34,7 +34,7 @@ export default function ErrorBoundary({
         <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
           {t(locale, 'error.title')}
         </h1>
-        <p className="mt-4 max-w-[var(--container-prose)] font-mono text-caption break-words text-[var(--text-secondary)]">
+        <p className="mt-4 max-w-[var(--measure-copy)] font-mono text-caption break-words text-[var(--text-secondary)]">
           {describeError(error)}
         </p>
         {error.digest ? <p className="meta mt-2">digest: {error.digest}</p> : null}

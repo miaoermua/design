@@ -19,7 +19,7 @@ export default async function NotFound() {
         <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
           {t(locale, 'notFound.title')}
         </h1>
-        <p className="mt-3 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]">
+        <p className="mt-3 max-w-[var(--measure-copy)] text-small text-[var(--text-secondary)]">
           {t(locale, 'notFound.description')}
         </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2">

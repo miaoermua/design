@@ -61,7 +61,7 @@
  * 阅读纸面：文章/日记详情专用的一张「纸」。
  * - 窄屏不铺底色，正文直接落在页面纸上，避免整块卡片感；
  * - ≥640px 起铺 --reading-surface，用发丝边与极轻投影把它从页面纸上抬起一层；
- * - 内边距在 ≥1024px 恰好等于 3.5rem，使正文回到 40rem 版心。
+ * - 内边距连续响应：--pad-paper-inline / --pad-paper-block-*
  */
 .reading-sheet {
   padding-block: 0.5rem;
@@ -70,17 +70,11 @@
 
 @media (min-width: 40rem) {
   .reading-sheet {
-    padding: 2.75rem 2.5rem 3rem;
+    padding: var(--pad-paper-block-start) var(--pad-paper-inline) var(--pad-paper-block-end);
     background-color: var(--reading-surface);
     border: var(--border-hairline) solid var(--edge-frost);
     border-radius: var(--radius-xs);
     box-shadow: var(--shadow-raise);
-  }
-}
-
-@media (min-width: 64rem) {
-  .reading-sheet {
-    padding: 3.5rem 3.5rem 4rem;
   }
 }
 

@@ -87,8 +87,10 @@ function bundle(theme: Theme): Bundle {
   const wash = c('--color-accent-wash')
   const primary = c('--color-ink')
 
-  // 阅读纸面：tokens.css 的 --reading-surface 用 oklab 94/6 混合
-  const reading = mixOklab(raised, paper, 0.94)
+  // 阅读纸面：亮色直接取 --color-paper-lift（v2 起不再混合，页纸已到 L* 98.3，
+  // raised 撑不出可读的层次）；暗色仍是 oklab 94/6 配方。这里必须与 tokens.css 一致，
+  // 否则「阅读纸面上的文字对比度」这一整组断言测的就不是真实底色。
+  const reading = theme === 'light' ? lift : mixOklab(raised, paper, 0.94)
 
   const states = Object.fromEntries(
     STATE_NAMES.map((name) => [name, c(`--color-${name}`)]),
@@ -193,13 +195,7 @@ describe('颜色对比度矩阵（OKLab 混色，亮暗两套）', () => {
       const b = bundle(theme)
       const problems: string[] = []
       for (const name of STATE_NAMES) {
-        assertMin(
-          problems,
-          `${theme}/callout-${name}/title`,
-          b.states[name],
-          b.callout[name],
-          4.5,
-        )
+        assertMin(problems, `${theme}/callout-${name}/title`, b.states[name], b.callout[name], 4.5)
         assertMin(
           problems,
           `${theme}/banner-${name}/secondary`,
@@ -236,7 +232,10 @@ describe('颜色对比度矩阵（OKLab 混色，亮暗两套）', () => {
   })
 
   it('测试里写死的配方与 CSS 源码保持一致（防止配方漂移后矩阵空转）', () => {
-    expect(rootBlock).toContain(
+    // 阅读纸面：亮色是纯白别名、暗色是 94/6 混合 —— 两条都要钉住，
+    // 否则上面 `reading` 的推导会在某一边悄悄测错底色。
+    expect(rootBlock).toMatch(/--reading-surface:\s*var\(--color-paper-lift\)/)
+    expect(darkBlock).toContain(
       'color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper))',
     )
     const containers = readFileSync(`${SRC}/design-system/styles/containers.css`, 'utf8')
@@ -342,7 +341,10 @@ describe('Token 架构：调色板不得被组件绕过', () => {
     }
     // 反向：功能色不允许再从调色板被直接取用（例外已关闭）
     const direct = occurrences(/var\(--color-(?:danger|warning|success|info)\)/)
-    expect(direct.map((d) => `${d.file}:${d.line}`), '功能色仍绕过语义状态层').toEqual([])
+    expect(
+      direct.map((d) => `${d.file}:${d.line}`),
+      '功能色仍绕过语义状态层',
+    ).toEqual([])
   })
 
   it('已删除的 Token 不允许复活（定义链与 var() 都没有）', () => {
@@ -365,7 +367,10 @@ describe('Token 架构：调色板不得被组件绕过', () => {
       expect(tokensText, `${name} 仍被 tokens.css 引用`).not.toContain(`var(${name})`)
     }
     const refs = occurrences(new RegExp(`var\\(${deleted.join('|')}\\)`))
-    expect(refs.map((r) => `${r.file}:${r.line}`), '已删除 Token 仍被组件引用').toEqual([])
+    expect(
+      refs.map((r) => `${r.file}:${r.line}`),
+      '已删除 Token 仍被组件引用',
+    ).toEqual([])
   })
 
   it('.glass-bar 与 .glass-control 死 CSS 已删除，且没有把它们并进导航', () => {
@@ -394,7 +399,7 @@ describe('Token 架构：调色板不得被组件绕过', () => {
 
   it('--color-paper-deep 因暗色环境光而保留，不得因亮色零消费者删除', () => {
     expect(darkBlock).toContain('var(--color-paper-deep)')
-    expect(color('light', '--color-paper-deep')).toBe('#dfd9c9')
+    expect(color('light', '--color-paper-deep')).toBe('#e7e4da')
   })
 })
 
@@ -407,16 +412,48 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
    */
   const DECORATIVE: { file: string; match: string; reason: string }[] = [
     { file: 'src/app/globals.css', match: '.meta-sep::before', reason: '分隔符「·」，纯装饰' },
-    { file: 'src/design-system/styles/reading.css', match: '.ai-gen__list li + li::before', reason: 'AI 参与声明的项目分隔符「·」，纯装饰' },
+    {
+      file: 'src/design-system/styles/reading.css',
+      match: '.ai-gen__list li + li::before',
+      reason: 'AI 参与声明的项目分隔符「·」，纯装饰',
+    },
     { file: 'src/app/globals.css', match: '.footer-sep', reason: '页脚分隔符，纯装饰' },
-    { file: 'src/app/about/page.tsx', match: 'group-hover:translate-x-0.5', reason: '链接尾部箭头图标' },
+    {
+      file: 'src/app/about/page.tsx',
+      match: 'group-hover:translate-x-0.5',
+      reason: '链接尾部箭头图标',
+    },
     { file: 'src/app/search/page.tsx', match: 'size-[1.15rem]', reason: '搜索框放大镜图标' },
-    { file: 'src/components/layout/search-panel.tsx', match: 'size-[1.05rem]', reason: '搜索面板放大镜图标' },
-    { file: 'src/app/articles/[category]/[slug]/page.tsx', match: 'aria-hidden="true"', reason: '面包屑箭头，aria-hidden' },
-    { file: 'src/components/reading/reading-tools.tsx', match: 'toc-chevron', reason: '目录折叠箭头，aria-hidden' },
-    { file: 'src/components/reading/subscribe-panel.tsx', match: 'aria-hidden="true"', reason: '箭头图标，aria-hidden' },
-    { file: 'src/components/ui/pagination.tsx', match: 'disabledClass', reason: '未激活控件（WCAG 1.4.3 对 inactive component 豁免）' },
-    { file: 'src/components/ui/mermaid-hydrator.tsx', match: "'lineColor'", reason: 'Mermaid 图表连线，非文本图形' },
+    {
+      file: 'src/components/layout/search-panel.tsx',
+      match: 'size-[1.05rem]',
+      reason: '搜索面板放大镜图标',
+    },
+    {
+      file: 'src/app/articles/[category]/[slug]/page.tsx',
+      match: 'aria-hidden="true"',
+      reason: '面包屑箭头，aria-hidden',
+    },
+    {
+      file: 'src/components/reading/reading-tools.tsx',
+      match: 'toc-chevron',
+      reason: '目录折叠箭头，aria-hidden',
+    },
+    {
+      file: 'src/components/reading/subscribe-panel.tsx',
+      match: 'aria-hidden="true"',
+      reason: '箭头图标，aria-hidden',
+    },
+    {
+      file: 'src/components/ui/pagination.tsx',
+      match: 'disabledClass',
+      reason: '未激活控件（WCAG 1.4.3 对 inactive component 豁免）',
+    },
+    {
+      file: 'src/components/ui/mermaid-hydrator.tsx',
+      match: "'lineColor'",
+      reason: 'Mermaid 图表连线，非文本图形',
+    },
   ]
 
   it('--text-tertiary 的每一处使用都在装饰白名单里，且白名单无失效项', () => {
@@ -439,17 +476,21 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
   })
 
   it('--accent 不再作为文字色（color: / text-[...]）', () => {
-    const offenders = occurrences(/(?:^|[\s;{])color:\s*var\(--accent\)|text-\[var\(--accent\)\]/).map(
-      (hit) => `${hit.file}:${hit.line} → ${hit.text}`,
-    )
-    expect(offenders, `accent 被当成文字色（应改用 --accent-strong）:\n${offenders.join('\n')}`).toEqual([])
+    const offenders = occurrences(
+      /(?:^|[\s;{])color:\s*var\(--accent\)|text-\[var\(--accent\)\]/,
+    ).map((hit) => `${hit.file}:${hit.line} → ${hit.text}`)
+    expect(
+      offenders,
+      `accent 被当成文字色（应改用 --accent-strong）:\n${offenders.join('\n')}`,
+    ).toEqual([])
     // 装饰性用途仍应存在，否则说明扫描器空转
     expect(occurrences(/var\(--accent\)/).length, 'accent 装饰用途不应全部消失').toBeGreaterThan(5)
   })
 
   it('CSS 里 ≤13px 的文字规则不搭配弱对比颜色', () => {
     const problems: string[] = []
-    const smallSize = /font-size:\s*(?:var\(--text-(?:meta|caption|small)\)|0\.(?:75|8125|9375)rem|1[0-3]px)\b/
+    const smallSize =
+      /font-size:\s*(?:var\(--text-(?:meta|caption|small)\)|0\.(?:75|8125|9375)rem|1[0-3]px)\b/
     const weak = /color:\s*var\(--(?:text-tertiary|accent)\)/
     for (const file of cssFiles) {
       const text = stripCssComments(readFileSync(file, 'utf8'))
@@ -457,7 +498,9 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       for (const block of text.matchAll(/\{([^{}]*)\}/g)) {
         const body = block[1]
         if (smallSize.test(body) && weak.test(body)) {
-          problems.push(`${relative(ROOT, file)} → ${body.replace(/\s+/g, ' ').trim().slice(0, 160)}`)
+          problems.push(
+            `${relative(ROOT, file)} → ${body.replace(/\s+/g, ' ').trim().slice(0, 160)}`,
+          )
         }
       }
     }

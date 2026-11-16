@@ -66,7 +66,7 @@ export function SayGrid({ items, locale }: SayGridProps) {
                       ? say.author
                       : t(locale, 'says.ownerSays')}
               </p>
-              <time dateTime={say.createdAt} className="text-meta text-[var(--text-tertiary)]">
+              <time dateTime={say.createdAt} className="text-meta text-[var(--text-secondary)]">
                 {formatRelativeDate(say.createdAt)}
               </time>
             </footer>

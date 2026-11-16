@@ -78,7 +78,7 @@ export function ArticleRow({
              只占一行：summary 长度不可控，用 line-clamp-1 而不是 JS 截断。 */
           <p
             data-excerpt="summary"
-            className="mt-2.5 line-clamp-1 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]"
+            className="mt-2.5 line-clamp-1 max-w-[var(--measure-copy)] text-small text-[var(--text-secondary)]"
           >
             {article.summary}
           </p>
@@ -90,7 +90,7 @@ export function ArticleRow({
              CSS line-clamp-1，中英文与标点都由浏览器排版后省略。 */
           <p
             data-excerpt="text"
-            className="mt-2.5 line-clamp-1 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]"
+            className="mt-2.5 line-clamp-1 max-w-[var(--measure-copy)] text-small text-[var(--text-secondary)]"
           >
             {excerpt}
           </p>

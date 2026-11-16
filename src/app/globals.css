@@ -202,7 +202,7 @@
 
 @media (min-width: 40rem) {
   .site-nav {
-    padding-inline: var(--spacing-gutter-lg);
+    padding-inline: var(--spacing-gutter);
   }
 }
 
@@ -778,13 +778,6 @@
   scrollbar-width: thin;
 }
 
-.nav-panel__settings {
-  flex: none;
-  padding: 0.6rem;
-  border-top: var(--border-hairline) solid var(--nav-divider);
-  background-color: var(--nav-settings-surface);
-}
-
 .nav-identity {
   display: flex;
   align-items: center;
@@ -840,21 +833,6 @@
   flex-direction: column;
   gap: 0.125rem;
   padding-top: 0.25rem;
-}
-
-.nav-section--more {
-  margin-top: 0.25rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed var(--nav-divider);
-}
-
-.nav-section__title {
-  padding: 0.25rem 0.6rem;
-  font-size: var(--text-meta);
-  line-height: 1.5;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--nav-ink);
 }
 
 .nav-list {
@@ -957,117 +935,6 @@ details[open] > .nav-group__summary .nav-group__chevron {
   font-size: var(--text-meta);
   line-height: 1.5;
   color: var(--nav-ink);
-}
-
-/* ── Settings ─────────────────────────────────────────────────── */
-
-.nav-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.nav-setting {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.nav-setting__label {
-  padding: 0;
-  font-size: var(--text-meta);
-  line-height: 1.5;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--nav-ink);
-}
-
-.nav-seg {
-  display: flex;
-  gap: 0.25rem;
-}
-
-/*
- * 图标化的单行选择器：没有文字撑高度，所以显式给足触控面积（2.5rem ≈ 40px）。
- * 三格等宽（flex: 1 1 0），保证每个选项的点击区域完全一致。
- */
-.nav-seg__option {
-  position: relative;
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  min-width: 0;
-  min-height: 2.5rem;
-  padding: 0.35rem 0.25rem;
-  border: var(--border-hairline) solid transparent;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-meta);
-  line-height: 1.4;
-  color: var(--nav-ink);
-  cursor: pointer;
-  transition:
-    color var(--duration-fast) var(--ease-out-soft),
-    background-color var(--duration-fast) var(--ease-out-soft);
-}
-
-.nav-seg__option:hover {
-  color: var(--nav-ink-strong);
-  background-color: var(--nav-item-hover);
-}
-
-.nav-seg__option:active {
-  background-color: var(--nav-item-active);
-}
-
-.nav-seg__option[data-active='true'] {
-  border-color: var(--nav-edge);
-  color: var(--nav-item-active-ink);
-  background-color: var(--nav-item-active);
-}
-
-/*
- * 选中态不能只靠颜色：底色之外再画一个底部圆点。
- * 灰度环境、色觉差异、或 `--nav-item-active` 恰好接近背景时，形状仍然可辨。
- */
-.nav-seg__option[data-active='true']::after {
-  content: '';
-  position: absolute;
-  bottom: 0.3rem;
-  left: 50%;
-  width: 0.25rem;
-  height: 0.25rem;
-  margin-left: -0.125rem;
-  border-radius: 999px;
-  background-color: currentColor;
-}
-
-/* 原生 radio 被视觉隐藏，焦点环落到整格上 */
-.nav-seg__option:has(input:focus-visible) {
-  outline: var(--focus-ring-width) solid var(--nav-focus);
-  outline-offset: var(--focus-ring-offset);
-}
-
-/* 图标独占一格，尺寸比之前「图标 + 文字」时更大一号 */
-.nav-seg__option svg {
-  flex: none;
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-/* 语言用短标识（中 / EN），是全组唯一的可见文字 */
-.nav-seg__text {
-  overflow: hidden;
-  font-size: var(--text-small);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 无 JS：菜单按钮不可用，这里给出完整入口（只在脚本禁用时出现） */
@@ -1236,6 +1103,230 @@ details[open] > .toc-summary .toc-chevron {
   color: var(--text-tertiary);
   font-size: var(--text-meta);
   font-weight: 300;
+}
+
+/* ── Footer settings ───────────────────────────────────────────
+   全站唯一的设置区：语言与三态主题紧挨成一组，靠左排。
+   两者是同一个「偏好」概念的两个维度，中间不插别的东西；
+   右下角浮标只剩「回到顶部」，导航菜单里的 Settings 已删除，
+   所以这里不需要与别处争夺层级，也不新增任何颜色——全部走语义 Token。 */
+
+.footer-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* 两者是一组的两个控件，不是同一个控件：间距要够读出「这是两个」，
+     又不能大到像分居两处 */
+  gap: 0.625rem 1.25rem;
+}
+
+/*
+ * 给右下角的回顶浮标让位：它是 fixed 且贴右，滚到页底时会正好压在
+ * 主题胶囊上（1024 / 768 实测横向重叠 40px，390 宽更明显——浮标盖住月亮）。
+ * 这里在**所有断点**预留「浮标宽度 + 边距」，而不是把浮标挪走：
+ * 那个位置属于全站导航，不该因为页脚多了一行而变。
+ */
+.footer-settings {
+  padding-right: 4.5rem;
+}
+
+/*
+ * 移动端底部空间：回顶浮标（bottom 7rem）与底部导航条都贴在视口下沿，
+ * 滚到页底时会压在「Powered by / 备案」那一行上。页脚自己让出这段高度，
+ * 而不是去动那两个固定元素的定位。
+ */
+@media (max-width: 39.999rem) {
+  .site-footer__inner {
+    padding-bottom: 6rem;
+  }
+}
+
+.footer-lang {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+/*
+ * 触发器：透明底、无完整胶囊边框，只有 hover 时铺一层很浅的沉面。
+ * 高度给到 2.5rem：文字只有 13px，点击区域必须自己撑起来。
+ */
+.footer-lang__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.5rem;
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  line-height: 1.3;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-lang__trigger:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__trigger[aria-expanded='true'] {
+  color: var(--text-heading);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__trigger:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* 空间紧张时先截断语言名，但始终保留一个可辨识的后缀宽度 */
+.footer-lang__name {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-lang__icon,
+.footer-lang__chevron {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.85;
+}
+
+.footer-lang__chevron {
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 展开时箭头朝上：菜单本来就是向上弹的 */
+.footer-lang__chevron[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+/*
+ * 菜单向上展开：页脚在文档末尾，向下弹会被视口裁掉。
+ * 浮层用 lift（比页面高一级）+ edge 细边 + 纸感阴影，不用大面积品牌色。
+ */
+.footer-lang__menu {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 10.5rem;
+  max-width: min(18rem, calc(100vw - 2.5rem));
+  padding: 0.25rem;
+  border: var(--border-hairline) solid var(--edge);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-lift);
+  box-shadow: var(--shadow-pop);
+}
+
+.footer-lang__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  background-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-lang__option:hover {
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__option[data-active='true'] {
+  color: var(--text-heading);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__option:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+/* 勾选标记：品牌色是这里唯一出现强调色的地方。
+   用 accent-strong 而不是 accent —— 设计系统规定 accent 只做边界与装饰，
+   任何「画出来的颜色」都走 strong（图标也算）。 */
+.footer-lang__check {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--accent-strong);
+}
+
+/*
+ * 三态主题：一枚横向胶囊装三个圆形格子。
+ * 选中项浮起成一张小纸片（lift + 细边 + 轻投影），未选中只有灰图标——
+ * 选中与否是「形状 + 表面」的差别，不只是颜色差别。
+ */
+.footer-theme {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.2rem;
+  border: var(--border-hairline) solid var(--edge);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-raised);
+}
+
+.footer-theme__option {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft),
+    box-shadow var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-theme__option:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunk);
+}
+
+.footer-theme__option[data-active='true'] {
+  color: var(--accent-strong);
+  background-color: var(--surface-lift);
+  box-shadow:
+    0 1px 2px rgb(var(--shadow-color) / 0.22),
+    inset 0 0 0 1px var(--edge);
+}
+
+/* 原生 radio 被视觉隐藏，焦点环落到圆形格子上 */
+.footer-theme__option:has(input:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.footer-theme__option svg {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 /* 阅读操作栏按钮

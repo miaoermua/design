@@ -160,10 +160,10 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   return (
     <Container width="wide">
-      <div className="mx-auto mt-10 grid max-w-[calc(var(--container-diary)+7rem)] gap-10 sm:mt-14 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-diary)+7rem))_13rem] xl:gap-x-9">
+      <div className="mx-auto mt-10 grid max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] gap-10 sm:mt-14 xl:max-w-[var(--shell-note)] xl:grid-cols-[minmax(0,calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline)))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
         <article
           id="diary-content"
-          className="reading-sheet mx-auto w-full max-w-[calc(var(--container-diary)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1"
+          className="reading-sheet mx-auto w-full max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] min-w-0 xl:col-start-1 xl:row-start-1"
         >
           <header>
             <p className="meta flex flex-wrap items-center gap-x-1">
@@ -177,9 +177,7 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
               <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
             </p>
 
-            <h1 className="text-title mt-4 font-serif leading-[1.28] text-[var(--text-heading)]">
-              {diary.title}
-            </h1>
+            <h1 className="text-title mt-4 font-serif text-[var(--text-heading)]">{diary.title}</h1>
 
             <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
               {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}

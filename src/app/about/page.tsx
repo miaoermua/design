@@ -65,18 +65,18 @@ export default async function AboutPage() {
         }
       />
 
-      <div className="grid gap-10 border-t border-dashed border-[var(--edge-strong)] pt-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-16">
+      <div className="grid gap-10 border-t border-dashed border-[var(--edge-strong)] pt-10 min-[69rem]:grid-cols-[var(--rail-side)_minmax(0,1fr)] min-[69rem]:gap-[var(--gap-side)]">
         {/* 身份卡靠左、随页面滚动停留，正文保持在阅读宽度内 */}
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside className="min-[69rem]:sticky min-[69rem]:top-28 min-[69rem]:self-start">
           {owner ? (
-            <div className="flex items-start gap-4 lg:flex-col lg:items-start lg:gap-5">
+            <div className="flex items-start gap-4 min-[69rem]:flex-col min-[69rem]:items-start min-[69rem]:gap-5">
               {owner.avatar ? (
                 <CoverImage
                   src={owner.avatar}
                   alt={owner.name ?? t(locale, 'about.avatarAlt')}
                   width={96}
                   height={96}
-                  className="size-16 shrink-0 border border-[var(--edge)] object-cover lg:size-24"
+                  className="size-16 shrink-0 border border-[var(--edge)] object-cover min-[69rem]:size-24"
                 />
               ) : null}
               <div className="min-w-0">
@@ -117,7 +117,7 @@ export default async function AboutPage() {
           ) : null}
         </aside>
 
-        <div className="min-w-0 max-w-[var(--container-prose)]">
+        <div className="min-w-0 max-w-[var(--measure-page)]">
           {rendered ? (
             <Prose html={rendered.html} />
           ) : (

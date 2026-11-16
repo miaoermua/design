@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 /**
- * 悬浮导航的信息架构与菜单 Settings
+ * 悬浮导航的信息架构
  *
- * 这一组固化三件事：
+ * 这一组固化两件事：
  *   1. 快捷栏只有四条（头像 / 博客 / 日记 / 菜单），探索与更多不在里面；
- *   2. 菜单是唯一承载完整导航的地方，顺序为 身份 → 主导航 → 更多 → Settings；
- *   3. Settings 不是第二套状态管理——它写的就是既有的 `folio-theme`
- *      与 `folio-lang`，语义（system = 删除键）与工具按钮完全一致。
+ *   2. 菜单是唯一承载完整导航的地方，顺序为 身份 → 主导航 → 更多。
+ *
+ * 设置（语言 / 主题）已迁到页脚，菜单里不再有第二份入口 ——
+ * 这条契约由「设置已迁到页脚」那条用例钉住。
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -14,7 +15,6 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildNav } from '@/core/navigation'
-import { LOCALE_COOKIE } from '@/lib/i18n/config'
 import { dictionary } from '@/lib/i18n/dictionary'
 
 const state = vi.hoisted(() => ({ pathname: '/articles' }))
@@ -66,6 +66,17 @@ const nav = buildNav({
     status: 'ok',
     items: [{ href: '/categories/tech', label: '技术' }],
   },
+  /*
+   * 「页面」也要有：桌面顶栏不单独放它，它的目录挂到首页入口上。
+   * 注意**没有** `entryLabel`——独立页面没有索引页，抽屉里不该出现
+   * 「全部页面」那一行。这正是这一组要钉住的差别。
+   */
+  '/pages': {
+    emptyLabel: 'nav.noPages',
+    errorLabel: 'nav.pagesUnavailable',
+    status: 'ok',
+    items: [{ href: '/pages/site', label: '站点' }],
+  },
 })
 
 function renderHeader() {
@@ -74,7 +85,6 @@ function renderHeader() {
       nav={nav}
       siteName="Folio"
       avatarUrl={null}
-      locale="zh-CN"
       messages={messages}
       searchEnabled={false}
     />,
@@ -142,9 +152,10 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
 
     for (const href of ['/', '/explore', '/friends']) {
       const link = barLinks().find((entry) => entry.getAttribute('href') === href)
-      // 收起靠断点规则；标记写在元素上，组件里不做视口判断
+      // 收起靠断点规则；标记写在元素上，组件里不做视口判断。
+      // `<li>` 上一定有（有下级的入口 Link 自身不重复标一次，收起由 li 承担），
+      // 所以这里只认 li。
       expect(link?.closest('li')?.getAttribute('data-compact')).toBe('hide')
-      expect(link?.getAttribute('data-compact')).toBe('hide')
     }
     for (const href of ['/articles', '/diaries']) {
       expect(barLinks().find((link) => link.getAttribute('href') === href)?.dataset.compact).toBe(
@@ -178,35 +189,70 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
 })
 
 describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
-  it('有下级的入口带一个下拉面板，第一项回到入口自身', () => {
+  it('下拉只列分类，不再重复「全部文章」——入口本身就是那个目的地', () => {
     renderHeader()
-    const flyout = document.querySelector('.nav-flyout') as HTMLElement
+    // 首页也带下拉（页面目录），所以按 href 定位，不能取第一个
+    const flyout = [...document.querySelectorAll('.nav-flyout')].find(
+      (node) => node.querySelector('.nav-link')?.getAttribute('href') === '/articles',
+    ) as HTMLElement
 
     expect(flyout).toBeTruthy()
+    // 入口自身仍然是一条链接，点一下就进列表页
     expect(flyout.querySelector('.nav-link')?.getAttribute('href')).toBe('/articles')
 
     const links = [...flyout.querySelectorAll('.nav-flyout__panel a')].map((link) =>
       link.getAttribute('href'),
     )
-    // 子项来自 entry.branch，父级链接取自 entry 本身，没有第三份数据
-    expect(links).toEqual(['/articles', '/categories/tech'])
-    expect(flyout.querySelector('.nav-flyout__panel')?.textContent).toContain(
+    // 只剩子项：有鼠标时不需要在下拉里再列一遍同一个地址
+    expect(links).toEqual(['/categories/tech'])
+    expect(flyout.querySelector('.nav-flyout__panel')?.textContent).not.toContain(
       messages['nav.allArticles'],
     )
   })
 
-  it('下拉与菜单里是同一批子项（不是两套配置）', () => {
+  it('首页下拉列出各独立页面：这是「页面」在 PC 端的入口', () => {
+    renderHeader()
+    const homeFlyout = [...document.querySelectorAll('.nav-flyout')].find(
+      (flyout) => flyout.querySelector('.nav-link')?.getAttribute('href') === '/',
+    ) as HTMLElement
+
+    expect(homeFlyout).toBeTruthy()
+    expect(
+      [...homeFlyout.querySelectorAll('.nav-flyout__list a')].map((link) =>
+        link.getAttribute('href'),
+      ),
+    ).toEqual(['/pages/site'])
+    // 页面没有自己的索引页，下拉里也就没有「全部页面」这一行
+    expect(homeFlyout.textContent).not.toContain('全部页面')
+    // `/pages` 本身不是可去的目的地，不该出现在任何链接里
+    expect(
+      [...document.querySelectorAll('.nav-flyout__panel a')].map((link) =>
+        link.getAttribute('href'),
+      ),
+    ).not.toContain('/pages')
+  })
+
+  it('下拉是抽屉的子集：抽屉多出的正是二次确认行与「更多」的子项', () => {
     renderHeader()
     const flyoutHrefs = [...document.querySelectorAll('.nav-flyout__panel a')].map((link) =>
       link.getAttribute('href'),
     )
 
     const node = openMenu()
-    const menuHrefs = [...node.querySelectorAll('details a')].map((link) =>
+    const menuHrefs = [...node.querySelectorAll('nav details a')].map((link) =>
       link.getAttribute('href'),
     )
 
-    expect(flyoutHrefs).toEqual(menuHrefs)
+    // 同一份 branch：下拉里的每一项都能在抽屉里找到
+    for (const href of flyoutHrefs) expect(menuHrefs).toContain(href)
+    // 抽屉多出来的是两类东西，都不是第二套配置：
+    //   1. 目录入口自己列表页的二次确认行（/articles）
+    //   2. 「更多」的折叠子项——它们没有桌面下拉，只在抽屉里
+    expect(menuHrefs.filter((href) => !flyoutHrefs.includes(href))).toEqual([
+      '/articles',
+      '/says',
+      '/projects',
+    ])
   })
 
   it('顶栏入口不带箭头 / more 图标：折叠箭头只在菜单抽屉里出现', () => {
@@ -230,6 +276,20 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
     // 抽屉里的折叠箭头仍在：它是唯一表示「还有一层」的地方
     const node = openMenu()
     expect(node.querySelector('.nav-group__chevron')).not.toBeNull()
+  })
+
+  it('下拉里一律没有「全部 X」：入口本身就是那个目的地', () => {
+    renderHeader()
+    const panels = [...document.querySelectorAll('.nav-flyout__panel')] as HTMLElement[]
+    expect(panels.length).toBeGreaterThan(0)
+
+    for (const panel of panels) {
+      for (const key of ['nav.allArticles', 'nav.allDiaries'] as const) {
+        expect(panel.textContent).not.toContain(messages[key])
+      }
+    }
+    // 页面下拉里也没有「全部页面」（主题没有 /pages 索引页）
+    expect(document.body.textContent).not.toContain('全部页面')
   })
 
   it('手机断点收起下拉面板，入口本身仍是普通链接', () => {
@@ -283,12 +343,12 @@ describe('桌面顶栏的排布契约', () => {
 })
 
 describe('菜单：完整导航与分区', () => {
-  it('主导航是文章 / 日记 / 探索 / 友链，顺序与 ALL_NAV 一致', () => {
+  it('主导航是文章 / 日记 / 探索 / 友链 / 页面，最后一行是「更多」', () => {
     renderHeader()
     const node = openMenu()
 
     const main = node.querySelector('nav') as HTMLElement
-    // 顶层行（不含折叠区里的子项）：文章折叠 / 日记 / 探索 / 友链
+    // 顶层行（不含折叠区里的子项）：文章折叠 / 日记 / 探索 / 友链 / 页面折叠 / 更多
     const rows = [...main.querySelectorAll(':scope > ul > li')].map((li) =>
       (li.querySelector('summary, a') as HTMLElement).textContent?.trim(),
     )
@@ -298,6 +358,8 @@ describe('菜单：完整导航与分区', () => {
       messages['nav.diaries'],
       messages['nav.explore'],
       messages['nav.friends'],
+      messages['nav.pages'],
+      messages['nav.more'],
     ])
   })
 
@@ -326,21 +388,127 @@ describe('菜单：完整导航与分区', () => {
     const counts = new Map<string, number>()
     for (const href of hrefs) counts.set(href!, (counts.get(href!) ?? 0) + 1)
 
-    for (const href of ['/', '/articles', '/diaries', '/explore', '/friends', '/pages']) {
+    for (const href of ['/', '/articles', '/diaries', '/explore', '/friends']) {
       expect([href, counts.get(href)]).toEqual([href, 1])
     }
+    // 「页面」没有索引页：抽屉里不该有指向 `/pages` 的链接
+    expect(counts.get('/pages')).toBeUndefined()
+    // 但它的子项仍在（PC 由首页下拉承载，手机由抽屉承载）
+    expect(counts.get('/pages/site')).toBe(1)
   })
 
-  it('「更多」只收标了 more 的入口，不重复主导航', () => {
+  it('「页面」抽屉里只有各独立页面：没有「全部页面」这一行', () => {
     renderHeader()
     const node = openMenu()
 
-    const more = node.querySelector(`section[aria-label="${messages['nav.more']}"]`) as HTMLElement
-    expect(more).toBeTruthy()
-    // 友链已经在主导航里，这里只剩页面入口
-    expect([...more.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
-      '/pages',
+    const details = [...node.querySelectorAll('details')].find((el) =>
+      el.querySelector('summary')?.textContent?.includes(messages['nav.pages']),
+    ) as HTMLElement
+    expect(details).toBeTruthy()
+
+    // 折叠区里直接就是子项，第一行不是回列表页的「全部页面」
+    expect([...details.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
+      '/pages/site',
     ])
+    expect(details.textContent).not.toContain('全部页面')
+  })
+
+  it('「更多」是一行菜单，不是分区：和目录型入口同一套折叠结构', () => {
+    renderHeader()
+    const node = openMenu()
+
+    // 不再有带标题的独立分区
+    expect(node.querySelector(`section[aria-label="${messages['nav.more']}"]`)).toBeNull()
+    expect(node.querySelector('.nav-section__title')).toBeNull()
+
+    // 它就是这张列表里的最后一行，折叠头是「更多」
+    const list = node.querySelector('nav > ul') as HTMLElement
+    const lastRow = list.lastElementChild as HTMLElement
+    expect(lastRow.tagName).toBe('LI')
+
+    const details = lastRow.querySelector('details') as HTMLElement
+    expect(details).toBeTruthy()
+    const summary = details.querySelector('summary') as HTMLElement
+    expect(summary.textContent?.trim()).toBe(messages['nav.more'])
+    // 折叠头不是链接：点它只展开，没有「/more」这种落地页
+    expect(summary.querySelector('a')).toBeNull()
+    // 和其它折叠行一样带箭头
+    expect(summary.querySelector('.nav-group__chevron')).not.toBeNull()
+
+    // 子项是标了 more 的入口，且不重复主导航
+    const childHrefs = [...details.querySelectorAll('a')].map((link) => link.getAttribute('href'))
+    expect(childHrefs).toEqual(['/says', '/projects'])
+    for (const href of ['/articles', '/diaries', '/explore', '/friends']) {
+      expect(childHrefs).not.toContain(href)
+    }
+  })
+
+  it('「更多」里没有「全部」那一行：它自己没有列表页', () => {
+    renderHeader()
+    const node = openMenu()
+    const details = [...node.querySelectorAll('details')].pop() as HTMLElement
+
+    const summary = details.querySelector('summary') as HTMLElement
+    const childLinks = [...details.querySelectorAll('a')].map((link) => link.textContent?.trim())
+    // 与文章 / 日记不同，这里不该出现「全部…」的二次确认行
+    expect(summary.textContent).toBe(messages['nav.more'])
+    expect(childLinks).not.toContain(messages['nav.allArticles'])
+    expect(childLinks.every((label) => !label?.startsWith('全部'))).toBe(true)
+  })
+
+  it('子项是当前页时「更多」默认展开，与目录型入口同一判定', () => {
+    state.pathname = '/says'
+    renderHeader()
+    const node = openMenu()
+    const details = [...node.querySelectorAll('details')].pop() as HTMLElement
+
+    expect(details.hasAttribute('open')).toBe(true)
+    const summary = details.querySelector('summary') as HTMLElement
+    expect(summary.getAttribute('data-active')).toBe('true')
+  })
+
+  it('手风琴：展开一组时收起同列的其它组', () => {
+    renderHeader()
+    const node = openMenu()
+    const groups = [...node.querySelectorAll('details')] as HTMLDetailsElement[]
+    expect(groups.length).toBeGreaterThan(1)
+
+    // jsdom 不实现「点 summary → 改 open → 派发 toggle」这条浏览器行为，手动模拟
+    const openGroup = (el: HTMLDetailsElement) => {
+      el.open = true
+      fireEvent(el, new Event('toggle'))
+    }
+
+    openGroup(groups[0])
+    expect(groups[0].open).toBe(true)
+
+    openGroup(groups[1])
+    expect(groups[1].open).toBe(true)
+    // 上一组被收起：面板高度稳定，同时只展开一个
+    expect(groups[0].open).toBe(false)
+
+    // 展开最后一组（更多）时同样收起别的
+    const last = groups[groups.length - 1]
+    openGroup(last)
+    expect(last.open).toBe(true)
+    expect(groups.filter((group) => group.open)).toEqual([last])
+  })
+
+  it('手风琴不越界：收起只发生在同一张列表内', () => {
+    renderHeader()
+    const node = openMenu()
+
+    // 列表外的 details 不该被波及（当前菜单只有一张列表，这条钉住作用域）
+    const outside = document.createElement('details')
+    outside.open = true
+    node.parentElement?.appendChild(outside)
+
+    const first = node.querySelector('details') as HTMLDetailsElement
+    first.open = true
+    fireEvent(first, new Event('toggle'))
+
+    expect(outside.open).toBe(true)
+    outside.remove()
   })
 
   it('没有分类时显示真实空态，且入口本身仍然可达', () => {
@@ -357,7 +525,6 @@ describe('菜单：完整导航与分区', () => {
         })}
         siteName="Folio"
         avatarUrl={null}
-        locale="zh-CN"
         messages={messages}
         searchEnabled={false}
       />,
@@ -368,25 +535,15 @@ describe('菜单：完整导航与分区', () => {
     expect(node.querySelector('a[href="/articles"]')).not.toBeNull()
   })
 
-  it('Settings 在菜单尾部：主题三个图标 + 语言两个短标识', () => {
+  it('设置已迁到页脚：菜单里不再有任何 radio 或设置标题', () => {
     renderHeader()
     const node = openMenu()
 
-    const radios = [...node.querySelectorAll('input[type="radio"]')]
-    expect(radios).toHaveLength(5)
-    expect(node.textContent).toContain(messages['nav.theme'])
-    expect(node.textContent).toContain(messages['nav.language'])
-
-    // 主题只留图标：三个状态名都不再作为可见文字出现
-    for (const key of ['action.modeSystem', 'action.modeLight', 'action.modeDark'] as const) {
-      expect(node.textContent).not.toContain(messages[key])
-    }
-
-    // 语言只留「中」与「EN」，完整语言名不进可见文本
-    const localeText = node.querySelectorAll('.nav-setting')[1]?.querySelectorAll('.nav-seg__text')
-    expect([...(localeText ?? [])].map((span) => span.textContent)).toEqual(['中', 'EN'])
-    expect(node.textContent).not.toContain('简体中文')
-    expect(node.textContent).not.toContain('繁體中文')
+    // 全站唯一入口在页脚，菜单不再挂第二份：一个 radio 都不该出现
+    expect(node.querySelectorAll('input[type="radio"]')).toHaveLength(0)
+    expect(node.textContent).not.toContain(messages['nav.theme'])
+    expect(node.textContent).not.toContain(messages['nav.language'])
+    expect(node.querySelector('.nav-settings')).toBeNull()
   })
 })
 
@@ -434,152 +591,5 @@ describe('结构：玻璃层不能挂在带滤镜的卡片上', () => {
     expect(card?.classList.contains('glass-nav')).toBe(false)
     expect(card?.querySelector(':scope > .nav-glass')).not.toBeNull()
     expect(card?.querySelector(':scope > .nav-spotlight')).not.toBeNull()
-  })
-})
-
-describe('Settings：复用既有主题与语言状态', () => {
-  const themeNames = ['action.modeSystem', 'action.modeLight', 'action.modeDark'] as const
-
-  it('三个主题选项都是纯图标，无障碍名称来自 aria-label', () => {
-    renderHeader()
-    openMenu()
-
-    for (const key of themeNames) {
-      const radio = screen.getByRole('radio', { name: messages[key] }) as HTMLInputElement
-      const label = radio.closest('label')
-      expect(label?.querySelector('svg')).not.toBeNull()
-      // 图标之外没有可见文字
-      expect(label?.textContent?.trim()).toBe('')
-      // 悬停提示与无障碍名称同源
-      expect(label?.getAttribute('title')).toBe(messages[key])
-    }
-  })
-
-  it('语言只有「中」与「EN」两项，无障碍名称是完整语言名', () => {
-    renderHeader()
-    openMenu()
-
-    const radios = screen.getAllByRole('radio')
-    const localeRadios = radios.filter((radio) => radio.getAttribute('name') === 'folio-nav-locale')
-    expect(localeRadios).toHaveLength(2)
-    expect(screen.getByRole('radio', { name: '中文' })).toBeTruthy()
-    expect(screen.getByRole('radio', { name: 'English' })).toBeTruthy()
-    expect(screen.queryByRole('radio', { name: '繁體中文' })).toBeNull()
-  })
-
-  it('选「浅色」写入 folio-theme=light 并立刻改 data-theme', () => {
-    renderHeader()
-    openMenu()
-
-    fireEvent.click(screen.getByRole('radio', { name: messages['action.modeLight'] }))
-
-    expect(window.localStorage.getItem('folio-theme')).toBe('light')
-    expect(document.documentElement.dataset.theme).toBe('light')
-  })
-
-  it('选「深色」写入 folio-theme=dark', () => {
-    renderHeader()
-    openMenu()
-
-    fireEvent.click(screen.getByRole('radio', { name: messages['action.modeDark'] }))
-
-    expect(window.localStorage.getItem('folio-theme')).toBe('dark')
-    expect(document.documentElement.dataset.theme).toBe('dark')
-  })
-
-  it('选「跟随系统」删除键，而不是写入 system', () => {
-    window.localStorage.setItem('folio-theme', 'dark')
-    renderHeader()
-    openMenu()
-
-    fireEvent.click(screen.getByRole('radio', { name: messages['action.modeSystem'] }))
-
-    expect(window.localStorage.getItem('folio-theme')).toBeNull()
-  })
-
-  it('选中态与实际偏好一致：键缺失时勾「跟随系统」', () => {
-    renderHeader()
-    openMenu()
-
-    const system = screen.getByRole('radio', {
-      name: messages['action.modeSystem'],
-    }) as HTMLInputElement
-    expect(system.checked).toBe(true)
-    expect(system.closest('label')?.getAttribute('data-active')).toBe('true')
-  })
-
-  it('选中态与实际偏好一致：键为 dark 时勾「深色」', () => {
-    window.localStorage.setItem('folio-theme', 'dark')
-    renderHeader()
-    openMenu()
-
-    const dark = screen.getByRole('radio', {
-      name: messages['action.modeDark'],
-    }) as HTMLInputElement
-    expect(dark.checked).toBe(true)
-    expect(dark.closest('label')?.getAttribute('data-active')).toBe('true')
-
-    const light = screen.getByRole('radio', {
-      name: messages['action.modeLight'],
-    }) as HTMLInputElement
-    expect(light.checked).toBe(false)
-    expect(light.closest('label')?.getAttribute('data-active')).toBeNull()
-  })
-
-  it('选中态不只靠颜色：CSS 还给 data-active 画了形状标记', () => {
-    const css = readFileSync(join(import.meta.dirname, '../src/app/globals.css'), 'utf8')
-    expect(css).toMatch(/\[data-active='true'\]::after/)
-  })
-
-  it('选语言写入既有 cookie，且菜单不因此关闭', () => {
-    renderHeader()
-    openMenu()
-
-    fireEvent.click(screen.getByRole('radio', { name: 'English' }))
-
-    expect(document.cookie).toContain(`${LOCALE_COOKIE}=en`)
-    expect(panel()).not.toBeNull()
-  })
-
-  it('当前语言就是当前项选中', () => {
-    renderHeader()
-    openMenu()
-
-    const zh = screen.getByRole('radio', { name: '中文' }) as HTMLInputElement
-    expect(zh.checked).toBe(true)
-    expect(zh.closest('label')?.getAttribute('data-active')).toBe('true')
-  })
-
-  it('自动识别成英文时点「中」，手动选择立即落盘', () => {
-    // 没有 cookie = 当前语言来自浏览器首选语言的自动识别（这里识别成了英文）。
-    // 用户点「中」是第一次明确表态，必须写 cookie，从此不再被自动识别左右。
-    render(
-      <SiteHeaderClient
-        nav={nav}
-        siteName="Folio"
-        avatarUrl={null}
-        locale="en"
-        messages={dictionary('en')}
-        searchEnabled={false}
-      />,
-    )
-    const englishMessages = dictionary('en')
-    fireEvent.click(screen.getByRole('button', { name: englishMessages['action.menu'] }))
-    const node = panel() as HTMLElement
-    expect(node.textContent).toContain(englishMessages['nav.language'])
-    fireEvent.click(screen.getByRole('radio', { name: '中文' }))
-
-    expect(document.cookie).toContain(`${LOCALE_COOKIE}=zh-CN`)
-  })
-
-  it('手动选过之后再点同一语言，不重复写 cookie', () => {
-    document.cookie = `${LOCALE_COOKIE}=zh-CN; path=/`
-    renderHeader()
-    openMenu()
-
-    const before = document.cookie
-    const label = screen.getByRole('radio', { name: '中文' }).closest('label') as HTMLElement
-    fireEvent.click(label)
-    expect(document.cookie).toBe(before)
   })
 })

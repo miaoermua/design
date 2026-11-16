@@ -47,7 +47,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           action="/search"
           method="get"
           role="search"
-          className="mt-8 flex max-w-[var(--container-prose)] items-center gap-3 border border-[var(--edge-strong)] bg-[var(--reading-surface)] px-4 py-2.5 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--accent)]"
+          className="mt-8 flex max-w-[var(--measure-copy)] items-center gap-3 border border-[var(--edge-strong)] bg-[var(--reading-surface)] px-4 py-2.5 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--accent)]"
         >
           <label htmlFor="q" className="sr-only">
             {t(locale, 'search.keyword')}
@@ -134,7 +134,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     </h2>
                     {hit.snippet ? (
                       <p
-                        className="search-snippet mt-2 max-w-[var(--container-prose)] text-small text-[var(--text-secondary)]"
+                        className="search-snippet mt-2 max-w-[var(--measure-copy)] text-small text-[var(--text-secondary)]"
                         // 只保留后端插入的 <mark>，其余标签在 sanitizeSnippet 中被剥离
                         dangerouslySetInnerHTML={{ __html: sanitizeSnippet(hit.snippet) }}
                       />

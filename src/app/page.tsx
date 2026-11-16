@@ -22,7 +22,6 @@ import {
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
-import { diaryPath } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
 import { toSocialItems } from '@/lib/social'
 import { cn } from '@/lib/utils/cn'
@@ -132,7 +131,7 @@ export default async function HomePage() {
             <div className="min-w-0 flex-1">
               {/* 作者名是首页最大的字：它是这个空间的身份标识，
                 用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
-              <h1 className="text-display max-w-[22ch] font-serif leading-[1.2] text-balance text-[var(--text-heading)]">
+              <h1 className="text-display max-w-[22ch] font-serif text-balance text-[var(--text-heading)]">
                 {name}
               </h1>
               {(owner?.introduce ?? identity?.description) ? (
@@ -176,11 +175,6 @@ export default async function HomePage() {
                 <span className={articles ? 'meta-sep' : undefined}>
                   {tf(locale, 'home.countDiaries', { count: diaries.pagination.total })}
                 </span>
-              </Link>
-            ) : null}
-            {identity?.latestDiaryId ? (
-              <Link href={diaryPath(identity.latestDiaryId)} className="link-quiet">
-                <span className="meta-sep">{t(locale, 'home.latestDiary')}</span>
               </Link>
             ) : null}
           </div>

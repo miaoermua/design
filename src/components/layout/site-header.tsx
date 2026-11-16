@@ -24,6 +24,10 @@ import { SiteHeaderClient } from './site-header-client'
  * 分类 / 专栏 / 页面的列表在这里取：三个请求都是可缓存的（300s），
  * 失败不阻断页面——`status` 会如实变成 `error`，菜单显示「暂时取不到」，
  * 而不是假装「没有内容」。
+ *
+ * 「页面」这一支没有 `entryLabel`：它列的是各独立页面的链接，自己却
+ * 没有一个索引页（`/pages` 不是主题的路由）。渲染处据 `hasListPage()`
+ * 决定要不要画「全部页面」那一行。
  */
 export async function SiteHeader({ identity }: { identity: SiteIdentity | null }) {
   const locale = await getLocale()
@@ -82,7 +86,8 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
         : []
 
     branches['/pages'] = {
-      entryLabel: 'nav.allPages',
+      // 没有 entryLabel：独立页面没有索引页，抽屉里不画「全部页面」那一行。
+      // 子项就是全部可去的目的地，各自指向 `/pages/:slug`（about 特例走 `/about`）。
       emptyLabel: 'nav.noPages',
       errorLabel: 'nav.pagesUnavailable',
       status: pages.status === 'rejected' ? 'error' : items.length > 0 ? 'ok' : 'empty',
@@ -96,7 +101,6 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
       siteName={siteTitle(identity)}
       // 站点图标优先，其次作者头像：两者都是「这个站点的身份」，不额外取数
       avatarUrl={identity?.icon ?? identity?.owner.avatar ?? null}
-      locale={locale}
       messages={messages}
       searchEnabled={isFeatureEnabled('search')}
     />

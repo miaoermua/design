@@ -14,6 +14,11 @@ const state = vi.hoisted(() => ({
   },
 }))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/',
+}))
+
 vi.mock('@/core/config/theme', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core/config/theme')>()
   return {
@@ -81,8 +86,9 @@ describe('Footer 第一栏', () => {
   it('不渲染头像与社交图标', async () => {
     const { container } = await renderFooter()
     expect(container.querySelector('img')).toBeNull()
-    // 社交图标是内联 SVG；页脚里不该出现任何图标
-    expect(container.querySelector('svg')).toBeNull()
+    // 版权行与链接行不该出现图标（页脚唯一的 SVG 来自设置区：语言/主题图标）
+    expect(container.querySelector('a svg')).toBeNull()
+    expect(container.querySelector('p svg')).toBeNull()
     expect(container.querySelector('a[href*="twitter"], a[href*="mastodon"]')).toBeNull()
   })
 })

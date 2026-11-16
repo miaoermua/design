@@ -1,5 +1,5 @@
 /**
- * Folio — Design Tokens · Frozen Parchment
+ * Folio — Design Tokens · Warm Paper × Lavender Blue
  *
  * 唯一颜色/字体/字号/间距/圆角/阴影/边框/动效/材质来源。
  * 业务组件只允许消费这里的语义类（bg-paper / text-ink-muted / border-line …）
@@ -18,29 +18,37 @@
  *     tests/design-color-system.test.ts 守护，media.css 与 reading.css 的反色浮层是受控例外）。
  *   - 暗色只覆盖第 1、2、3 层变量，组件层零 dark: 变体。
  *   - 视觉比例：暖纸 70% · 编辑排版 20% · 冰面 10%。
+ *   - 全站只有一个冷色（薰衣草蓝族）；纸与墨都不许再带第二个色相倾向。
  *
- * 跨主题值轮转（有意为之，不是笔误）：
- *   暗色 --color-accent-strong（#a8c1c4）目前**等于**亮色 --color-accent-soft。
- *   暗色 --color-accent-soft（#6d9298）历史上等于亮色 --color-accent；
- *   本轮把亮色 accent 压暗到 #63888e（非文本对比 3:1）之后两者已解耦，
- *   不再有字面量重合 —— 这是有意的：暗色的「弱」是更暗，亮色的「弱」是更浅。
- * 教训：这三个角色在任何主题里都不是独立品牌色，改一个必须同时验证另一主题的同名角色。
+ * 主题演进史（改色前先读这段，避免把已修掉的缺陷改回来）：
+ *   v1 Glacier  #63888e —— 饱和度过低（C* 11–13），人眼读不出色相，只看见「某种灰绿」；
+ *                          且暖纸 + 冷青强调 + 青绿标题 + 冷灰墨 = 四种温度互相打架。
+ *   v2 Lavender #586fa8 —— 明度压到 L* 47、彩度提到 C* 34，色相唯一；标题退回中性深灰。
+ *   跨主题值轮转：亮色 accent-strong(#465b91) 与暗色 accent(#a8b8e4) 不同值也不同向
+ *   ——亮色越深越强、暗色越亮越强。改三者中任何一个，都必须同时验证另一主题的同名角色。
  */
 
 @theme {
-  /* ══ 1. 调色板：暖纸 × 冰川 ═════════════════════════════════════ */
+  /* ══ 1. 调色板：暖纸 × 薰衣草蓝（Lavender Blue × Warm Paper）═════════
+   *
+   * 三条轴向，各自只负责一件事，改色时不要串台：
+   *   纸 → 中性微暖（L* 98.3 / b* +1.5，靠色相 h≈97° 取得暖意，不是把颜色调黄）
+   *   墨 → 完全中性（a* 与 b* 都压在 4 以内），不再带青绿倾向
+   *   强调 → 一条薰衣草蓝（h 283° / C* 34），是页面里**唯一**的冷色
+   * 旧方案的问题不是错色，是三种温度同时存在（暖纸 + 冷青强调 + 青绿标题 + 冷灰墨），
+   * 互相打架。现在把温度收敛成「暖纸 + 一点冷」，标题与正文退回中性，冲突消失。 */
 
   /* 纸：从页面底到浮层，四级亮度 */
-  --color-paper: #f3f0e7; /* background */
-  --color-paper-raised: #f8f6ef; /* surface */
+  --color-paper: #fbfaf7; /* background · L* 98.3 / b* +1.5 */
+  --color-paper-raised: #fdfcf9; /* surface · L* 99.0 */
   --color-paper-lift: #ffffff; /* surface elevated */
-  --color-paper-sunk: #e9e5d9;
-  --color-paper-deep: #dfd9c9;
+  --color-paper-sunk: #f3f1ea; /* L* 95.1 */
+  --color-paper-deep: #e7e4da; /* L* 90.6 */
 
   /* 冰：只服务 --edge-frost（阅读纸面外框、浮层边框），不作页面底色。
-     它和 --accent-wash 视觉很近（ΔE 2.6）但职责不同：冰是「冷材质」，
+     它和 --accent-wash 视觉很近（ΔE 2.0）但职责不同：冰是「冷材质」，
      wash 是「主题色的浅底」，不要互换。 */
-  --color-frost: #dce5e5;
+  --color-frost: #e2e8f1;
 
   /* 墨：正文、次级、辅助、标题。
      muted 与 faint 不是「同一支灰的两个深浅」，而是**两种职责**：
@@ -48,27 +56,36 @@
        sunk / reading-surface / accent-wash 上都必须 ≥ 4.5:1；
      - faint 是**装饰色**：图标、分隔点、图表线条、非活动控件。它不承担阅读任务，
        因此只要求非文本对比 ≥ 3:1，禁止用于 ≤ 18.66px 的普通正文（含 meta）。 */
-  --color-ink: #525650; /* foreground */
-  --color-ink-soft: #3f433f;
-  --color-ink-muted: #646760; /* secondary：全表面 AA ≥ 4.5:1（含 paper-sunk 4.57） */
-  --color-ink-faint: #85877f; /* decorative only：图标 / 分隔 / 图表线，禁止当正文 */
-  --color-heading: #344f58; /* heading */
+  --color-ink: #4a4a45; /* foreground · 纸面 8.54 */
+  --color-ink-soft: #35352f; /* · 纸面 11.82 */
+  /* 全表面 AA ≥ 4.5:1，最差是 accent-wash 4.73（比旧方案最差 4.57 更宽裕） */
+  --color-ink-muted: #6b6b64;
+  --color-ink-faint: #85857d; /* decorative only：最差 3.28（accent-wash），禁止当正文 */
+  /* 标题退回中性深灰：旧值 #344f58 是青绿，与旧强调同族，等于让强调失去识别度 */
+  --color-heading: #2c2a26;
 
   /* 线：普通边界与虚线分隔 */
-  --color-line: #d8d4c8;
-  --color-line-strong: #c9c8bc;
+  --color-line: #e0dcd1;
+  --color-line-strong: #cec9bc;
 
-  /* 主题色：Glacier。承担交互识别，不做大面积填充。
+  /* 主题色：Lavender Blue。承担交互识别，不做大面积填充。
      两组职责必须分清，这是颜色系统里最容易记错的一条：
-     - accent        装饰与交互**边界**（细线、边框、焦点环、指示点、图表描边）
-                     → 只要求非文本对比 3:1，实测 paper 3.39 / sunk 3.06 / wash 3.22
-     - accent-strong 一切**文字**与需要读的图标 → 要求 4.5:1，最差面 sunk 4.67
-     把 accent 当文字色是本轮修掉的主要缺陷（原 #6d9298 在 paper 上只有 2.97）。 */
-  --color-accent: #63888e; /* 装饰 / 边界（≥3:1） */
-  --color-accent-soft: #a8c1c4; /* 柔和次级强调：填充、下划线装饰、光斑 */
-  --color-accent-strong: #4d6970; /* 唯一可用于文字的强调色，全表面 ≥4.5:1 */
-  --color-accent-wash: #e4ecec; /* 标签/选中底 */
-  --color-accent-line: #b7cbcd; /* 强调性细线（装饰，不承担可读性） */
+     - accent        装饰与交互**边界**（细线、边框、焦点环、指示点、图表描边、按钮填充）
+                     → 只要求非文本对比 3:1；实测 paper 4.73 / sunk 4.37 / wash 4.35
+                     注意它**仍不是文字色**：4.35 落在 wash 上不够 4.5，文字一律走 accent-strong。
+                     （作填充时纸色文字落在它上面是 4.73，够 4.5，所以「按钮底色」是允许的用法。）
+     - accent-strong 一切**文字**与需要读的图标 → 要求 4.5:1，最差面 wash 5.85
+     旧值 #63888e 的彩度 C* 只有 11–13，落在人眼读不出色相的中性区间 —— 那才是「说不出
+     是什么颜色」的根因；新值的 C* 34 一眼是蓝，但明度压在 L* 47，不会变成网页链接蓝。 */
+  --color-accent: #586fa8; /* 装饰 / 边界 / 填充（≥3:1） */
+  --color-accent-soft: #8296c8; /* 柔和次级强调：填充、下划线装饰、光斑 */
+  --color-accent-strong: #465b91; /* 唯一可用于文字的强调色，全表面 ≥4.5:1 */
+  --color-accent-wash: #eef0fc; /* 标签/选中底 */
+  --color-accent-line: #bbc8e9; /* 强调性细线（装饰，不承担可读性） */
+  /* 按下态预留：与 accent/strong 同族再深一档（L* 33）。
+     现有代码没有任何 `:active` 的颜色规则，因此**没有别名、没有消费者**；
+     调色板层不参与死 Token 检查，先留值以便将来加 pressed 态时不必再调色。 */
+  --color-accent-active: #394b7c;
 
   /* 功能色：只服务于状态，不参与装饰 */
   --color-danger: #a4503f;
@@ -97,10 +114,38 @@
   --font-mono:
     ui-monospace, SFMono-Regular, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-  /* ══ 3. 字号：Display / Heading / Body / Lead / Caption / Meta / Code ══ */
+  /* ══ 3. 字号：Display / Pageheading / Headline / Title / Body / Lead / Caption / Meta / Code ══
+   *
+   * 四个标题档位按「这行字有多长、会不会折行」分层，不是按页面重要性分的：
+   *   display      首页身份名 —— 通常 1 行，允许压到最紧
+   *   pageheading  内页页头（文章 / 标签 / 关于）—— 2–6 字，几乎永远 1 行
+   *   headline     文章标题 —— 长句，常折 2–3 行，是唯一真正吃行高的标题
+   *   title        卡片与日记标题 —— 已在正文语境里，行高接近正文
+   * 越往下、字越小、越可能折行，行高比例就该越大。四个值是连续曲线，
+   * 不再用 `calc(var(--text-display) * 0.78)` 这类「先算字号再手写行高」的写法 ——
+   * 那种写法在 640px 断点换系数时会跳 11.7px，且行高无处可查。 */
+
+  /* display 只有首页身份名一个消费者（page.tsx 的 h1），而身份名是中文、
+     可能折成两行。1.1 是给「永远单行的英文短标题」准备的，实测中文折两行时
+     行间只剩 3.4px，字形几乎贴住；1.2 的间隙 6.8px 才是可读的。
+     这里采用 1.2 而不是把 1.1 硬套上去 —— 少一处任意值，不等于少一处设计判断。 */
   --text-display: clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem);
-  --text-display--line-height: 1.1;
+  --text-display--line-height: 1.2;
   --text-display--letter-spacing: -0.024em;
+
+  /* 内页页头标题。上限 2.99rem 来自原 `display × 0.92` 的桌面终值，
+     下限 1.625rem 与原 `--text-title` 起点一致；中段改成单一斜率，
+     消掉原实现在 640px 从 title(26.4px) 直接跳到 display×0.92(38.1px) 的 11.7px 台阶。 */
+  --text-pageheading: clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem);
+  --text-pageheading--line-height: 1.26;
+  --text-pageheading--letter-spacing: -0.02em;
+
+  /* 文章标题。上下限就是原 `display × 0.78`（移动）与 `display × 0.82`（桌面）
+     的实测终值 26.52 / 42.64px，因此首屏观感不变；行高统一到 1.22
+     —— 原来移动 1.25、桌面 1.2，是同一标题的两套数值，折行时两种密度。 */
+  --text-headline: clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem);
+  --text-headline--line-height: 1.22;
+  --text-headline--letter-spacing: -0.022em;
 
   --text-title: clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem);
   --text-title--line-height: 1.26;
@@ -128,16 +173,44 @@
   --text-code: 0.875rem;
   --text-code--line-height: 1.7;
 
-  /* ══ 4. 版心：正文 / 页面 / 窄栏 ═══════════════════════════════ */
-  --container-prose: 48rem; /* ≈ 44 汉字/行 @17px，与 Shiro max-w-3xl 对齐 */
-  --container-diary: 40rem; /* 日记版心，比文章窄，白纸上约 36 汉字/行 */
+  /* ══ 4. 版心与布局 ═══════════════════════════════════════════════ */
+
+  /* ── 4a. 正文测量宽度（Measure）──────────────────────────────── */
+  /* measure 只管文字行宽，与外部装饰轨道分离。                       */
+  --measure-post: 44rem;  /* 704px · 文章正文 · ≈41 汉字/行 @17px  */
+  --measure-note: 40rem;  /* 640px · 日记正文 · ≈37 汉字/行 @17px  */
+  --measure-page: 44rem;  /* 704px · 普通页面正文                  */
+  --measure-copy: 48rem;  /* 768px · 副标题/摘要/搜索/错误页文案    */
+
+  /* ── 4b. 装饰与辅助轨道 ──────────────────────────────────────── */
+  --rail-toc: 13rem;      /* 208px · 文章/日记右侧目录              */
+  --rail-side: 17rem;     /* 272px · 普通页左侧栏（身份卡）         */
+  --gap-rail: 2.25rem;    /* 36px  · 正文与目录之间                 */
+  --gap-side: 4rem;       /* 64px  · 侧栏与正文之间                 */
+
+  /* ── 4c. 纸张内边距（连续响应式）─────────────────────────────── */
+  /* 640px 时从 ~0 起步，避免纸张出现瞬间大幅挤压正文              */
+  --pad-paper-inline: clamp(0px, 8vw - 3rem, 3.5rem);
+  --pad-paper-block-start: clamp(0.5rem, 3vw, 3.5rem);
+  --pad-paper-block-end: clamp(1rem, 3.5vw, 4rem);
+
+  /* ── 4d. 派生 Shell（布局外壳）───────────────────────────────── */
+  /* shell = measure + 装饰轨道，集中定义，页面不再拼装 calc()。       */
+  /* 文章 shell = measure-post + gap-rail + rail-toc                 */
+  --shell-post: calc(var(--measure-post) + var(--gap-rail) + var(--rail-toc));
+  /* 日记 shell = measure-note + 2×pad-paper + 2×hairline + gap-rail + rail-toc */
+  --shell-note: calc(var(--measure-note) + var(--pad-paper-inline) + var(--pad-paper-inline) + var(--gap-rail) + var(--rail-toc));
+  /* 普通页 shell = rail-side + gap-side + measure-page              */
+  --shell-page: calc(var(--rail-side) + var(--gap-side) + var(--measure-page));
+
+  /* ── 4e. 旧兼容（保持 Container 组件不变）────────────────────── */
   --container-wide: 72rem;
   --container-narrow: 30rem;
 
   /* ══ 5. 间距：一个水平内边距 + 两个竖向节奏 ═══════════════════ */
   /* 变量名参与工具类生成，不能叫 --spacing-block（会撞 display/inline-size）。 */
-  --spacing-gutter: 1.25rem; /* 移动端页边距 */
-  --spacing-gutter-lg: 2rem; /* ≥640px 的页边距 */
+  /* gutter 用 clamp 连续变化：375px→20px, 640px→32px, ≥640px 封顶 32px */
+  --spacing-gutter: clamp(1.25rem, 0.189rem + 4.528vw, 2rem);
   --spacing-section: 5rem; /* 区块之间 */
   --spacing-stack: 2rem; /* 区块内部 */
 
@@ -209,19 +282,27 @@
   --note-ochre: var(--color-note-ochre);
   --note-cream: var(--color-note-cream);
 
-  /* 阅读区：正文永远落在比页面更亮一级的纸上 */
-  --reading-surface: color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper));
+  /* 阅读区：正文永远落在比页面更亮一级的纸上。
+     v2 起亮色直接取 --color-paper-lift（纯白），不再做 94/6 混合。
+     原因是这一轮把页纸提到了 L* 98.3，而 raised 只比它高 0.7 个 L* ——
+     再按 94/6 混出来的纸面与页面底色只差 3 级灰阶（v1 是 6–9 级），
+     实测在 1280×900 截图里已经读不出「一张纸压在桌面上」，只剩一圈发丝边。
+     改用纯白后差值回到 5–9 级，与 v1 的分离度一致；页纸仍是暖的，纸面才是白的，
+     「暖桌 + 白纸」的关系反而比 v1（米黄桌 + 米白纸）更清楚。
+     暗色**不**跟着改（见下方暗色块里的同名声明）：暗色 page→lift 的台阶本来就宽，
+     直接取 lift 会让纸面从 6 级跳到 15–17 级，从「浮起的一张纸」变成「一块亮板」。 */
+  --reading-surface: var(--color-paper-lift);
 
   /* 代码底：比阅读纸面沉一级，让代码块与正文分开；暗色下比页面更深 */
   --code-surface: var(--color-paper-sunk);
 
   /* ── 导航（悬浮栏与菜单共用一层） ────────────────────────────────
      这一层不引入新色相：卡片是「更白一档的纸」+ 低透明度 Accent，
-     识别点仍是 Frozen Parchment（暖纸 + 冷界面），不是又一个彩色面板。
+     识别点仍是 Warm Paper（暖纸 + 单一冷色），不是又一个彩色面板。
      命名按**角色**而不是色值：--nav-item-hover 说明此处是什么，
      换色时只改这一处，不需要回到组件里找「哪个蓝色」。
      非选中项用墨色/次级墨色，Accent 只出现在选中、悬停与光斑上。 */
-  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 85%, transparent);
+  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 82%, transparent);
   --nav-edge: color-mix(in srgb, var(--color-line-strong) 42%, transparent);
   --nav-shadow:
     0 1px 2px rgb(var(--shadow-color) / 0.04), 0 18px 42px -26px rgb(var(--shadow-color) / 0.26);
@@ -241,19 +322,21 @@
   --nav-spotlight: color-mix(in srgb, var(--color-accent-soft) 26%, transparent);
 
   --nav-divider: color-mix(in srgb, var(--color-line) 68%, transparent);
-  --nav-settings-surface: color-mix(in srgb, var(--color-paper-sunk) 55%, transparent);
   --nav-focus: var(--accent-strong);
 
   /* 焦点：14 处重复描边收敛到这里。
-     焦点环属于非文本 UI，下限 3:1；用 accent（#63888e，paper 上 3.39）而不是
+     焦点环属于非文本 UI，下限 3:1；用 accent（#586fa8，paper 上 4.73）而不是
      accent-strong，是为了让焦点环保持轻，不与 hover 文字抢注意力。 */
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   --focus-ring-color: var(--accent);
   --focus-ring: var(--focus-ring-width) solid var(--focus-ring-color);
 
-  /* 阴影基色（暗色覆盖为纯黑） */
-  --shadow-color: 34 40 38;
+  /* 阴影基色（暗色覆盖为纯黑）。
+     旧值 34 40 38 是偏绿的深灰 —— 那是给冰川青配的。品牌色换成薰衣草蓝之后，
+     绿色投影会在暖纸上泛出一层说不出的脏，因此改为中性偏紫的 43 40 48。
+     变化幅度极小（肉眼几乎不可辨），但方向必须与强调色一致。 */
+  --shadow-color: 43 40 48;
 
   /* 材质：颗粒 / 环境光 / 冰面 */
   --material-grain-opacity: 0.5;
@@ -287,32 +370,44 @@
  * 入口在站点头部的 ThemeToggle（写入 <html data-theme>，首帧前由 layout 内联脚本决定）。
  */
 [data-theme='dark'] {
-  --color-paper: #15181a;
-  --color-paper-raised: #1b1f21;
-  --color-paper-lift: #23282a;
-  --color-paper-sunk: #101315;
-  --color-paper-deep: #0c0f11;
+  --color-paper: #141316;
+  --color-paper-raised: #1c1b1f;
+  --color-paper-lift: #252329;
+  /* sunk / deep 是**唯一没有照移植表取值**的两处，理由必须写在这里，否则下一个人会「修正」回去：
+     移植表给的是 #2e2b32 / #39353e —— 比 paper 更亮，是一套「越高越亮」的 Material 阶梯。
+     但这两个 Token 在本仓库里各有硬消费者，按亮色取值会产生两处可见回归：
+       · --code-surface = paper-sunk → 代码块会比页面还亮，且亮过浮层（lift）
+       · 暗色 --material-ambient 用 paper-deep 画右下角环境光 → 角上会发光而不是压暗
+     因此保留移植表的色相与彩度，只把明度方向按角色收回：sunk 比 paper 暗一档、deep 最暗。 */
+  --color-paper-sunk: #0f0e11;
+  --color-paper-deep: #0a090c;
 
-  --color-frost: #2a3436;
+  --color-frost: #2b2a33;
 
-  --color-ink: #d9dad2;
-  --color-ink-soft: #e9eae2;
-  --color-ink-muted: #a3a69d;
-  /* 与亮色 #85877f 的 ΔE 只有 0.8：这是全站唯一「亮色值直接搬到暗色」的墨色。
-     它只做装饰，暗底上 5.02（paper）/ 4.20（lift），仍然满足非文本 3:1。
+  --color-ink: #d0cdd0;
+  --color-ink-soft: #e4e1dd;
+  --color-ink-muted: #a4a0aa;
+  /* 只做装饰，最差面 accent-wash 3.70（≥3:1），仍然满足非文本下限。
      不要在暗色里把它当正文用 —— 语义规则两套主题一致。 */
-  --color-ink-faint: #868981;
-  --color-heading: #c6d7d9;
+  --color-ink-faint: #85818a;
+  --color-heading: #e4e1e8;
 
-  --color-line: #2a3032;
-  --color-line-strong: #394143;
+  --color-line: #39353e;
+  --color-line-strong: #514c57;
 
-  /* accent 三兄弟在暗色里方向与亮色相反（越暗越弱），见文件头「跨主题值轮转」 */
-  --color-accent: #8fb3b8;
-  --color-accent-soft: #6d9298;
-  --color-accent-strong: #a8c1c4;
-  --color-accent-wash: #223030;
-  --color-accent-line: #35504f;
+  /* 阅读纸面：暗色保留 v1 的 94/6 配方（raised 混一点页纸），不跟亮色改成 lift。
+     暗色 L* 12 → 20 的台阶本身就宽，实测分离度 6 级（v1 是 4–5 级，已比 v1 更清楚）；
+     换成 lift 会到 15–17 级，纸面会亮成一块板，抢掉正文的注意力。 */
+  --reading-surface: color-mix(in oklab, var(--color-paper-raised) 94%, var(--color-paper));
+
+  /* 暗色里 accent 族的方向与亮色相反（越亮越强），但三者的职责与亮色完全一致：
+     accent 边界 / accent-strong 文字 / accent-active 按下。 */
+  --color-accent: #a8b8e4;
+  --color-accent-soft: #3d4a6b;
+  --color-accent-strong: #8fa2d5;
+  --color-accent-wash: #252b3b;
+  --color-accent-line: #46516c;
+  --color-accent-active: #7085bd;
 
   --color-danger: #d98b7d;
 
@@ -333,7 +428,7 @@
    * - 阴影基色已改为纯黑，这里只调整扩散与不透明度；
    * - 选中/hover 依旧走 accent-wash，Accent 仍是唯一彩色来源。
    */
-  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 90%, transparent);
+  --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
   --nav-edge: color-mix(in srgb, var(--color-line-strong) 72%, transparent);
   --nav-shadow:
     0 1px 2px rgb(var(--shadow-color) / 0.5), 0 22px 48px -28px rgb(var(--shadow-color) / 0.72);
@@ -349,7 +444,6 @@
   --nav-spotlight: color-mix(in srgb, var(--color-accent) 30%, transparent);
 
   --nav-divider: color-mix(in srgb, var(--color-line) 82%, transparent);
-  --nav-settings-surface: color-mix(in srgb, var(--color-paper-deep) 62%, transparent);
 
   --shadow-color: 0 0 0;
 

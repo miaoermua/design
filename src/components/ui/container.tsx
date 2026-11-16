@@ -10,7 +10,7 @@ interface ContainerProps {
 
 const widthClass = {
   wide: 'max-w-[var(--container-wide)]',
-  prose: 'max-w-[calc(var(--container-prose)+4rem)]',
+  prose: 'max-w-[calc(var(--measure-copy)+4rem)]',
   narrow: 'max-w-[var(--container-narrow)]',
 } as const
 
@@ -18,7 +18,7 @@ export function Container({ children, className, width = 'wide' }: ContainerProp
   return (
     <div
       className={cn(
-        'mx-auto w-full px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-lg)]',
+        'mx-auto w-full px-[var(--spacing-gutter)]',
         widthClass[width],
         className,
       )}

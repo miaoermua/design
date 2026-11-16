@@ -3,12 +3,15 @@
  * 主题三态：跟随系统 / 浅色 / 深色
  *
  * 这一组测试围绕一个容易写错的地方：**`system` 不是存储值**。
- * 「跟随系统」= `localStorage` 里没有这个键。所以循环回到 system 时
+ * 「跟随系统」= `localStorage` 里没有这个键。所以选回 system 时
  * 必须是 removeItem 而不是 setItem('system')；判断当前态也必须是「键不存在」。
  *
  * 第二个重点：同一个标签页的用户操作不能依赖 `storage` 事件。
  * `storage` 只在**其他**标签页触发，本标签页必须直接写 DOM + 存储；
  * 反过来，其他标签页的改动必须被 `storage` 事件接住。
+ *
+ * 控件是页脚的三段单选（Sun → Monitor → Moon），不再是右下角的循环按钮，
+ * 但状态机没变：断言仍然只看 `data-theme`、`localStorage` 与勾选项。
  */
 
 import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
@@ -23,7 +26,12 @@ const media = vi.hoisted(() => ({
   listeners: new Set<() => void>(),
 }))
 
-import { ThemeToggle } from '@/components/layout/theme-toggle'
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/',
+}))
+
+import { FooterSettings } from '@/components/layout/footer-settings'
 
 function installMatchMedia() {
   window.matchMedia = ((query: string) => {
@@ -64,10 +72,16 @@ function storedValue(): string | null {
   return window.localStorage.getItem(KEY)
 }
 
-/** 按钮的 aria-label 里带当前模式名，用它断言「当前是哪一态」 */
-function currentLabel(): string {
-  return screen.getByRole('button').getAttribute('aria-label') ?? ''
+/** 当前勾选的主题项的无障碍名称 —— 用它断言「界面显示是哪一态」 */
+function checkedLabel(): string {
+  const radios = screen.getAllByRole('radio') as HTMLInputElement[]
+  const on = radios.find((radio) => radio.checked)
+  return on?.getAttribute('aria-label') ?? ''
 }
+
+const lightOption = () => screen.getByRole('radio', { name: '浅色' }) as HTMLInputElement
+const darkOption = () => screen.getByRole('radio', { name: '深色' }) as HTMLInputElement
+const systemOption = () => screen.getByRole('radio', { name: '跟随系统' }) as HTMLInputElement
 
 beforeEach(() => {
   media.dark = false
@@ -87,60 +101,60 @@ afterEach(() => {
 describe('三态的存储语义', () => {
   it('没有存储键时是「跟随系统」，且不主动写入任何值', () => {
     media.dark = true
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
 
     expect(currentTheme()).toBe('dark')
     expect(storedValue()).toBeNull()
-    expect(currentLabel()).toContain('跟随系统')
+    expect(checkedLabel()).toBe('跟随系统')
   })
 
   it('系统偏好浅色时跟随浅色', () => {
     media.dark = false
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('light')
   })
 
-  it('循环顺序是 跟随系统 → 浅色 → 深色 → 跟随系统', () => {
-    render(<ThemeToggle />)
-    const button = screen.getByRole('button')
+  it('三个选项各自落盘：浅色 / 深色写值，跟随系统删键', () => {
+    render(<FooterSettings />)
 
-    expect(currentLabel()).toContain('跟随系统')
+    expect(checkedLabel()).toBe('跟随系统')
 
-    fireEvent.click(button)
+    fireEvent.click(lightOption())
     expect(storedValue()).toBe('light')
     expect(currentTheme()).toBe('light')
-    expect(currentLabel()).toContain('浅色')
+    expect(checkedLabel()).toBe('浅色')
 
-    fireEvent.click(button)
+    fireEvent.click(darkOption())
     expect(storedValue()).toBe('dark')
     expect(currentTheme()).toBe('dark')
-    expect(currentLabel()).toContain('深色')
+    expect(checkedLabel()).toBe('深色')
 
     // 回到 system 时删键，而不是存 'system'
-    fireEvent.click(button)
+    fireEvent.click(systemOption())
     expect(storedValue()).toBeNull()
-    expect(currentLabel()).toContain('跟随系统')
+    expect(checkedLabel()).toBe('跟随系统')
   })
 
   it('从不把 "system" 写进 localStorage', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
+    const order = [lightOption, darkOption, systemOption]
     for (let i = 0; i < 6; i += 1) {
-      fireEvent.click(screen.getByRole('button'))
+      fireEvent.click(order[i % order.length]!())
       expect(storedValue()).not.toBe('system')
     }
   })
 
   it('刷新后保留手动选择（预置存储即等价于刷新后重新挂载）', () => {
     window.localStorage.setItem(KEY, 'dark')
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('dark')
-    expect(currentLabel()).toContain('深色')
+    expect(checkedLabel()).toBe('深色')
   })
 })
 
 describe('系统偏好变化', () => {
   it('跟随系统时立即同步', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('light')
 
     emitSystemChange(true)
@@ -151,8 +165,8 @@ describe('系统偏好变化', () => {
   })
 
   it('手动选浅色后，系统切成深色也不影响页面', () => {
-    render(<ThemeToggle />)
-    fireEvent.click(screen.getByRole('button')) // → light
+    render(<FooterSettings />)
+    fireEvent.click(lightOption())
     expect(currentTheme()).toBe('light')
 
     emitSystemChange(true)
@@ -160,9 +174,8 @@ describe('系统偏好变化', () => {
   })
 
   it('手动选深色后，系统切成浅色也不影响页面', () => {
-    render(<ThemeToggle />)
-    fireEvent.click(screen.getByRole('button')) // → light
-    fireEvent.click(screen.getByRole('button')) // → dark
+    render(<FooterSettings />)
+    fireEvent.click(darkOption())
     expect(currentTheme()).toBe('dark')
 
     emitSystemChange(false)
@@ -170,11 +183,11 @@ describe('系统偏好变化', () => {
   })
 
   it('删掉键回到跟随系统后，系统变化重新生效', () => {
-    render(<ThemeToggle />)
-    const button = screen.getByRole('button')
-    fireEvent.click(button)
-    fireEvent.click(button)
-    fireEvent.click(button) // → system
+    window.localStorage.setItem(KEY, 'dark')
+    render(<FooterSettings />)
+    expect(currentTheme()).toBe('dark')
+
+    fireEvent.click(systemOption())
     expect(storedValue()).toBeNull()
 
     emitSystemChange(true)
@@ -190,7 +203,7 @@ describe('跨标签同步', () => {
     act(() => {
       window.dispatchEvent(
         new StorageEvent('storage', {
-          key: value === null ? KEY : KEY,
+          key: KEY,
           newValue: value,
           storageArea: window.localStorage,
         }),
@@ -199,17 +212,17 @@ describe('跨标签同步', () => {
   }
 
   it('其他标签设成深色，这里跟着变', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('light')
 
     otherTabWrote('dark')
     expect(currentTheme()).toBe('dark')
-    expect(currentLabel()).toContain('深色')
+    expect(checkedLabel()).toBe('深色')
   })
 
   it('其他标签设成浅色，这里跟着变', () => {
     window.localStorage.setItem(KEY, 'dark')
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('dark')
 
     otherTabWrote('light')
@@ -219,31 +232,33 @@ describe('跨标签同步', () => {
   it('其他标签删除键，这里回到跟随系统', () => {
     window.localStorage.setItem(KEY, 'dark')
     media.dark = false
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('dark')
 
     otherTabWrote(null)
     expect(currentTheme()).toBe('light') // 系统浅色
-    expect(currentLabel()).toContain('跟随系统')
+    expect(checkedLabel()).toBe('跟随系统')
   })
 
   it('localStorage.clear()（key 为 null）同样视为回到跟随系统', () => {
     window.localStorage.setItem(KEY, 'dark')
     media.dark = true
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
 
     act(() => {
       window.localStorage.clear()
-      window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: window.localStorage }))
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: null, storageArea: window.localStorage }),
+      )
     })
 
     expect(storedValue()).toBeNull()
-    expect(currentLabel()).toContain('跟随系统')
+    expect(checkedLabel()).toBe('跟随系统')
   })
 
   it('无关的存储键被忽略，不会重置主题', () => {
     window.localStorage.setItem(KEY, 'dark')
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(currentTheme()).toBe('dark')
 
     act(() => {
@@ -258,13 +273,13 @@ describe('跨标签同步', () => {
     })
 
     expect(currentTheme()).toBe('dark')
-    expect(currentLabel()).toContain('深色')
+    expect(checkedLabel()).toBe('深色')
   })
 
   it('本标签页的点击不依赖 storage 事件也能立即生效', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     // jsdom 不会因为同标签页 setItem 派发 storage，这里确认仍已切换
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(lightOption())
     expect(currentTheme()).toBe('light')
     expect(storedValue()).toBe('light')
   })
@@ -272,15 +287,15 @@ describe('跨标签同步', () => {
 
 describe('切换动画', () => {
   it('首次加载不加过渡类', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
   })
 
   it('用户主动切换时临时加过渡类，结束后摘掉', () => {
     vi.useFakeTimers()
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
 
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(lightOption())
     expect(document.documentElement.classList.contains('theme-transition')).toBe(true)
 
     act(() => {
@@ -290,13 +305,13 @@ describe('切换动画', () => {
   })
 
   it('系统自动切换不播放过渡', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     emitSystemChange(true)
     expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
   })
 
   it('其他标签改动不播放过渡（那不是本页的用户操作）', () => {
-    render(<ThemeToggle />)
+    render(<FooterSettings />)
     act(() => {
       window.localStorage.setItem(KEY, 'dark')
       window.dispatchEvent(new StorageEvent('storage', { key: KEY, newValue: 'dark' }))
@@ -306,46 +321,39 @@ describe('切换动画', () => {
 
   it('prefers-reduced-motion: reduce 时完全不用过渡类', () => {
     media.reducedMotion = true
-    render(<ThemeToggle />)
-    fireEvent.click(screen.getByRole('button'))
+    render(<FooterSettings />)
+    fireEvent.click(lightOption())
     expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
     // 但切换本身必须照常生效
     expect(currentTheme()).toBe('light')
   })
 })
 
-describe('图标与提示随状态变化', () => {
-  it('三种状态渲染不同的图标形状', () => {
-    render(<ThemeToggle />)
-    const svg = () => screen.getByRole('button').querySelector('svg')?.innerHTML ?? ''
+describe('图标与无障碍名称', () => {
+  it('三项都渲染图标，且三种形状互不相同', () => {
+    render(<FooterSettings />)
+    const glyph = (option: HTMLInputElement) =>
+      option.closest('label')?.querySelector('svg')?.innerHTML ?? ''
 
-    const system = svg() // 显示器：有 rect
-    expect(system).toContain('<rect')
+    // 显示器：有 rect；太阳：有 circle；月亮：两者都没有，只有 path
+    expect(glyph(systemOption())).toContain('<rect')
+    expect(glyph(lightOption())).toContain('<circle')
+    expect(glyph(darkOption())).not.toContain('<circle')
+    expect(glyph(darkOption())).not.toContain('<rect')
 
-    fireEvent.click(screen.getByRole('button'))
-    const light = svg() // 太阳：有 circle
-    expect(light).toContain('<circle')
-
-    fireEvent.click(screen.getByRole('button'))
-    const dark = svg() // 月亮：只有一条 path
-    expect(dark).not.toContain('<circle')
-    expect(dark).not.toContain('<rect')
-
-    expect(new Set([system, light, dark]).size).toBe(3)
+    expect(new Set([glyph(systemOption()), glyph(lightOption()), glyph(darkOption())]).size).toBe(3)
   })
 
-  it('无障碍名称带上调用方的前缀', () => {
-    render(<ThemeToggle label="主题" />)
-    expect(currentLabel()).toBe('主题 · 跟随系统')
-  })
+  it('组名与每项名称都来自既有字典，不出现图标文字重复朗读', () => {
+    render(<FooterSettings />)
+    expect(screen.getByRole('radiogroup', { name: '主题' })).toBeTruthy()
 
-  it('英文环境下提示是英文', async () => {
-    const { LocaleProvider } = await import('@/lib/i18n/client')
-    render(
-      <LocaleProvider locale="en">
-        <ThemeToggle />
-      </LocaleProvider>,
-    )
-    expect(currentLabel()).toContain('Follow system')
+    for (const name of ['浅色', '跟随系统', '深色']) {
+      const radio = screen.getByRole('radio', { name })
+      const label = radio.closest('label')
+      // 可见文字为空，名称只在 aria-label / title 上
+      expect(label?.textContent?.trim()).toBe('')
+      expect(label?.getAttribute('title')).toBe(name)
+    }
   })
 })

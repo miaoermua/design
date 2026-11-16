@@ -3,14 +3,17 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
-import { getQuickNav, HOME_NAV, isNavItemActive, type NavEntry } from '@/core/navigation'
-import type { Locale } from '@/lib/i18n/config'
+import {
+  getQuickNav,
+  hasLanding,
+  HOME_NAV,
+  isNavItemActive,
+  type NavEntry,
+} from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { CoverImage } from '@/components/ui/cover-image'
-import { LanguageButton } from './language-button'
 import { SearchPanel } from './search-panel'
 import { SiteNavMenu } from './site-nav-menu'
-import { ThemeToggle } from './theme-toggle'
 import { ToolbarButton, ToolbarGroup } from './toolbar-button'
 import { useHeaderScroll } from './use-header-scroll'
 
@@ -30,7 +33,6 @@ interface SiteHeaderClientProps {
   nav: NavEntry[]
   siteName: string
   avatarUrl: string | null
-  locale: Locale
   messages: Record<MessageKey, string>
   /** 是否有搜索模块；关闭时不渲染搜索按钮 */
   searchEnabled: boolean
@@ -50,7 +52,7 @@ interface SiteHeaderClientProps {
  * 上一条「手机精简」的尺寸只在移动断点里成立，不会再压到桌面。
  *
  * 信息架构：桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链，
- * 文章与日记悬停即展开下级；页面与设置收进菜单。手机只留文章与日记
+ * 文章与日记悬停即展开下级；一言与项目收进菜单。手机只留文章与日记
  * （头像承担首页），其余走菜单按钮。两端消费的是同一棵树。
  *
  * 为什么状态用「在哪个路由上打开的」而不是布尔值：路由一变 `open` 自然
@@ -61,7 +63,6 @@ export function SiteHeaderClient({
   nav,
   siteName,
   avatarUrl,
-  locale,
   messages,
   searchEnabled,
 }: SiteHeaderClientProps) {
@@ -279,6 +280,13 @@ export function SiteHeaderClient({
                    * 顶栏刻意**不加任何箭头或 more 图标**：入口读起来就是一条
                    * 普通导航链接，是否还有一层只在鼠标停上去（或菜单抽屉里）
                    * 才显现，不靠装饰性符号暗示。
+                   *
+                   * 下拉里**一律不出现「全部 X」那一行**，没有例外：
+                   * 有鼠标时「点入口 = 去那里」是同一件事，再列一行只是把
+                   * 同一个目的地说两遍。手机相反——没有悬停，抽屉里必须保留
+                   * 这一行做二次确认，对手指来说「展开子项」与「进入列表页」
+                   * 是两次不同的点击。抽屉里那一行的地址直接取入口自己的
+                   * `href`，数据里不存第二份。
                    */
                   return (
                     <li key={item.href} className="nav-flyout" data-compact={compact}>
@@ -294,16 +302,6 @@ export function SiteHeaderClient({
                       <div className="nav-flyout__panel">
                         <div className="nav-flyout__card">
                           <ul className="nav-flyout__list">
-                            <li>
-                              <Link
-                                href={item.href}
-                                aria-current={pathname === item.href ? 'page' : undefined}
-                                className="nav-row nav-row--child"
-                              >
-                                {messages[branch.entryLabel]}
-                              </Link>
-                            </li>
-
                             {branch.status === 'ok' ? (
                               branch.items.map((child) => (
                                 <li key={child.href}>
@@ -376,7 +374,6 @@ export function SiteHeaderClient({
                 id={MENU_ID}
                 closing={closing}
                 nav={nav}
-                locale={locale}
                 messages={messages}
                 siteName={siteName}
                 avatarUrl={avatarUrl}
@@ -395,7 +392,12 @@ export function SiteHeaderClient({
         <noscript>
           <div className="nav-noscript">
             <a href={HOME_NAV.href}>{messages[HOME_NAV.label]}</a>
-            {nav.map((entry) => (
+            {/*
+              跳过「自己不是可去目的地」的纯目录入口（目前只有「页面」）：
+              它的 `href` 只是 branch 的挂载键，`/pages` 并不是主题的路由，
+              在这里给它一条链接就是死链。它的子项由下面那段照常列出。
+            */}
+            {nav.filter(hasLanding).map((entry) => (
               <a key={entry.href} href={entry.href}>
                 {messages[entry.label]}
               </a>
@@ -431,13 +433,9 @@ export function SiteHeaderClient({
             __html: `<a href="/search" style="position:relative;z-index:1" class="text-meta px-2 py-1.5 text-[var(--text-secondary)] underline decoration-[var(--edge-strong)] underline-offset-4">${messages['action.search']}</a>`,
           }}
         />
-        {/* 搜索不在这里：面板仍由 ⌘K / Ctrl+K 与 /search 页承担，
-            右下角只保留「主题 / 语言 / 回顶」三个全站级开关。 */}
+        {/* 搜索不在这里：面板仍由 ⌘K / Ctrl+K 与 /search 页承担。
+            主题与语言已迁到页脚（全站只有那一处设置入口），右下角只剩回顶。 */}
         <ToolbarGroup label={messages['toolbar.group']}>
-          <ThemeToggle label={messages['action.mode']} />
-
-          <LanguageButton current={locale} label={messages['action.language']} />
-
           <ToolbarButton
             label={messages['action.backToTop']}
             onClick={() => {

@@ -55,7 +55,8 @@
      混的是 --surface-lift（纯白）时，颗粒会把纸的暖调冲淡 —— 满屏细砂盖在
      米色纸上一平均，色温就往中性灰拉，眼睛读成「偏蓝」。换成同样带暖调的
      --surface 之后，颗粒只压亮度、不改色温，纸是白的，灰不是发青的灰。
-     刻意避开带青蓝的 --text-heading（#344f58），那是标题色，铺满整张会成蓝雾。
+     刻意避开 --text-heading：那是标题色，铺满整张会压成一层雾。
+     （v2 起标题已退回中性深灰，不再带青蓝；这条约束仍然成立 —— 标题比正文更重。）
      亮色：以正文墨为主、掺暖纸；暗色在文件末尾覆盖成暖白。 */
   --pc-grain-ink: color-mix(in oklab, var(--text-primary) 46%, var(--surface));
   /* 纸纹：明信片自带，不复用全站的 --material-grain-image。
@@ -130,8 +131,9 @@
    底色在 --surface-raised（米白）与 --surface-lift（纯白）之间取，
    纯白占 45% —— 卡片本身要读成「白纸」，只剩一点点米调托住暖纸的气质；
    再压就更接近页面底色，白与米并排时反而显出一层青灰。
-   **不掺 --surface-sunk**：那一级在暗色下是更冷的深墨（#101315），
-   掺进去会把整张卡往青色推，正是之前「纸偏蓝」的第二个来源。 */
+   **不掺 --surface-sunk**：那一级在暗色下比页面还暗一档（v2 起为 #0f0e11），
+   掺进去会把卡面压到页面之下，卡片就从「浮起的一张纸」变成「挖下去的一个洞」，
+   方向与 --shadow-raise 直接打架。 */
 .friend-postcard__paper {
   position: absolute;
   z-index: 0;
@@ -150,9 +152,10 @@
 }
 
 /* 纸纹颗粒：噪声只当遮罩，颜色由 --pc-grain-ink 给。
-   **不能用 --text-heading**：那是青蓝的标题色（#344f58），铺到整张纸上会把纸
-   染成蓝调，暗色模式下更明显。这里取 --text-primary（暖灰墨）+ --surface
-   的暖调混色 —— 落在暖灰上，不带色相，只压亮度。
+   **不能用 --text-heading**：那是比正文更重的标题色（v2 起为中性 #2c2a26），
+   铺到整张纸上会压成一层雾，卡片上的字就没有「印在纸上」的层次了。
+   这里取 --text-primary（中性暖灰墨）+ --surface 的暖调混色 ——
+   落在暖灰上，不带色相，只压亮度。
    opacity 0.26（原 0.32，减两成）：颗粒层的平均墨量从约一成半降到一成二，
    近看仍是细砂，退到一个手臂的距离就只剩「纸不平」的感觉，不再是一层噪点壳。 */
 .friend-postcard__paper::after {
@@ -346,8 +349,11 @@
    旋转角度由 seed 确定性派生（-7° ~ +7°），每张卡片略有不同，
    是纯 CSS transform，在合成阶段完成，不触发重排/重绘，零额外开销。 */
 .friend-postmark {
+  /* 实际角度由 postmark.tsx 以内联样式注入（每张卡片 -7°~+7°）；
+     这里写默认值只是让「未注入时」的表现有据可查，值与原 fallback 完全一致。 */
+  --postmark-rotate: -3deg;
   opacity: 0.72;
-  transform: rotate(var(--postmark-rotate, -3deg));
+  transform: rotate(var(--postmark-rotate));
   transform-origin: 50% 50%;
 }
 
@@ -388,16 +394,20 @@
 
 [data-theme='dark'] .friend-postcard__stamp-paper {
   background-color: var(--pc-stamp-bg);
-  box-shadow: inset 0 0 0 1px rgb(198 215 217 / 0.12);
+  /* 原为 rgb(198 215 217 / 0.12) —— 那是旧暗色标题 #c6d7d9 的复制粘贴值，
+     带青绿倾向。改用 --text-heading 派生后，换主题时会跟着标题一起走。 */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-heading) 12%, transparent);
 }
 
 [data-theme='dark'] .friend-postcard__paper {
   background-color: var(--pc-paper-bg);
   background-image: linear-gradient(156deg, var(--pc-paper-grad) 0%, transparent 52%);
   border-color: var(--pc-paper-edge);
+  /* 投影走 --shadow-color（暗色下就是 0 0 0），高光走 --text-heading ——
+     明信片是插画组件，但它压在页面纸面上，所以宁可派生也不要写死纯白。 */
   box-shadow:
-    0 1px 3px rgb(0 0 0 / 0.3),
-    0 0 0 1px rgb(255 255 255 / 0.04);
+    0 1px 3px rgb(var(--shadow-color) / 0.3),
+    0 0 0 1px color-mix(in srgb, var(--text-heading) 4%, transparent);
 }
 
 [data-theme='dark'] .friend-postcard__paper::after {
@@ -462,8 +472,11 @@
     font-size: 0.9375rem;
   }
 
+  /* 描述不再跟着标题一起缩到 11px：它是卡片上唯一成句的信息，
+     11px 在 320px 屏上已经是要凑着看的大小。基础值 --text-meta(12px) 在
+     312px 宽的卡里每行仍有 ~25 汉字、最多两行，空间足够。 */
   .friend-postcard__desc {
-    font-size: 0.6875rem;
+    font-size: var(--text-meta);
   }
 }
 

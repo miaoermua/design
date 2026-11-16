@@ -2,12 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import type { ReactNode, RefObject } from 'react'
-import { HOME_NAV, isNavItemActive, type NavEntry } from '@/core/navigation'
-import type { Locale } from '@/lib/i18n/config'
+import { useCallback, type ReactNode, type RefObject, type SyntheticEvent } from 'react'
+import { hasLanding, HOME_NAV, isNavItemActive, type NavEntry } from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { CoverImage } from '@/components/ui/cover-image'
-import { NavSettings } from './nav-settings'
 
 interface SiteNavMenuProps {
   /** 由触发器通过 aria-controls 指向；也是测试定位面板的锚点 */
@@ -21,7 +19,6 @@ interface SiteNavMenuProps {
    * `section` 分成两段渲染，父级入口的子项就挂在它自己的 `branch` 上。
    */
   nav: NavEntry[]
-  locale: Locale
   messages: Record<MessageKey, string>
   siteName: string
   avatarUrl: string | null
@@ -43,13 +40,14 @@ interface SiteNavMenuProps {
 /**
  * 完整菜单面板（桌面端与移动端共用一套内容）
  *
- * 结构固定为四段：站点身份 → 主导航 → 更多 → Settings。
+ * 结构固定为三段：站点身份 → 一张导航列表。
+ * 列表里每一行都来自 `nav` 里的同一个 `NavEntry`；「更多」只是这张列表的
+ * 最后一行（`section: 'more'` 的入口收在它自己的折叠里），不是第四个分区。
  * 桌面端与移动端的差别只在**定位与展开方向**（由 CSS 按断点决定），
  * 内容、顺序、文案、选中态完全同一份，不存在第二套菜单。
  *
- * 它是导航的展开形态，不是第二套导航：每一行都来自 `nav` 里的同一个
- * `NavEntry`，目录型入口的父子关系就写在数据里（`entry.branch`），
- * 不另存一份分组清单，也不手工映射分组标题。
+ * 它是导航的展开形态，不是第二套导航：目录型入口的父子关系就写在数据里
+ * （`entry.branch`），不另存一份分组清单，也不手工映射分组标题。
  *
  * 它不是模态对话框：不劫持焦点、不加 `aria-modal`、不锁背景滚动。
  * 菜单只是导航的展开形态——用户随时可以点页面其它地方继续阅读。
@@ -58,7 +56,6 @@ export function SiteNavMenu({
   id,
   closing,
   nav,
-  locale,
   messages,
   siteName,
   avatarUrl,
@@ -74,6 +71,28 @@ export function SiteNavMenu({
   // 同一棵树的两个投影：分区只是呈现，不是第二份配置
   const mainNav = nav.filter((entry) => (entry.section ?? 'main') === 'main')
   const moreNav = nav.filter((entry) => entry.section === 'more')
+
+  /**
+   * 手风琴：展开一组时收起同一张列表里的其它组。
+   *
+   * 不用 React state 管「哪一组开着」——`<details>` 的 open 本来就是
+   * 浏览器自己的状态，接管它反而要多维护一份副本，还会在无 JS 时失效。
+   * 这里只在 `toggle` 事件里把兄弟节点关掉，DOM 仍是唯一事实来源。
+   *
+   * 收起的理由：一行展开后会把后面的入口推到面板底部之外，列表一长
+   * 就要边滚边找；同时只开一组，面板高度稳定，也更容易看出
+   * 「展开的是哪一个」。
+   */
+  const onGroupToggle = useCallback((event: SyntheticEvent<HTMLDetailsElement>) => {
+    const current = event.currentTarget
+    // 只在「刚展开」时处理；收起是用户自己的动作，不需要连带处理
+    if (!current.open) return
+    const scope = current.closest('.nav-list')
+    if (!scope) return
+    for (const other of scope.querySelectorAll<HTMLDetailsElement>('details')) {
+      if (other !== current && other.open) other.open = false
+    }
+  }, [])
 
   return (
     <div
@@ -103,7 +122,7 @@ export function SiteNavMenu({
         {/* 文章目录的预留位：当前为空，不占高度 */}
         {tocSlot}
 
-        {/* B. 主导航 */}
+        {/* B. 主导航 + 更多：同一张列表里的若干行 */}
         <nav aria-label={messages['nav.main']} className="nav-section">
           <ul className="nav-list">
             {mainNav.map((entry) => (
@@ -114,34 +133,28 @@ export function SiteNavMenu({
                 currentUrl={currentUrl}
                 messages={messages}
                 onNavigate={onNavigate}
+                onGroupToggle={onGroupToggle}
               />
             ))}
+
+            {/*
+             * 「更多」是**一行菜单**，不是一个分区：它和其他入口一样是
+             * 可折叠的一行（`<details>`），子项收在自己的折叠里。
+             * 上一版把它做成带标题的虚线分区，读起来像另一份清单；
+             * 现在它就是这张列表里的最后一行，只是没有自己的落地页。
+             */}
+            {moreNav.length > 0 ? (
+              <NavMoreGroup
+                entries={moreNav}
+                pathname={pathname}
+                currentUrl={currentUrl}
+                messages={messages}
+                onNavigate={onNavigate}
+                onGroupToggle={onGroupToggle}
+              />
+            ) : null}
           </ul>
         </nav>
-
-        {/* C. 更多：同一条树上标了 `section: 'more'` 的入口 */}
-        {moreNav.length > 0 ? (
-          <section aria-label={messages['nav.more']} className="nav-section nav-section--more">
-            <p className="nav-section__title">{messages['nav.more']}</p>
-            <ul className="nav-list">
-              {moreNav.map((entry) => (
-                <NavEntryRow
-                  key={entry.href}
-                  entry={entry}
-                  pathname={pathname}
-                  currentUrl={currentUrl}
-                  messages={messages}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </ul>
-          </section>
-        ) : null}
-      </div>
-
-      {/* D. Settings：固定在面板底部，滚动只发生在上面那一段 */}
-      <div className="nav-panel__settings">
-        <NavSettings locale={locale} messages={messages} />
       </div>
     </div>
   )
@@ -161,16 +174,19 @@ function NavEntryRow({
   currentUrl,
   messages,
   onNavigate,
+  onGroupToggle,
 }: {
   entry: NavEntry
   pathname: string
   currentUrl: string
   messages: Record<MessageKey, string>
   onNavigate: () => void
+  onGroupToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void
 }) {
   const active = isNavItemActive(entry, pathname)
   const branch = entry.branch
-
+  // 目录自己的列表页就是入口自身；数据里不再存第二份地址
+  const listHref = entry.href
   if (!branch) {
     return (
       <li>
@@ -191,28 +207,43 @@ function NavEntryRow({
   const hasActiveChild = branch.items.some(
     (item) => item.href === currentUrl || item.href === pathname,
   )
-  const onListPage = pathname === entry.href
+  const onListPage = pathname === listHref
 
   return (
     <li>
-      <details className="nav-group" open={active || hasActiveChild || undefined}>
+      <details
+        className="nav-group"
+        open={active || hasActiveChild || undefined}
+        onToggle={onGroupToggle}
+      >
         <summary className="nav-group__summary" data-active={active ? 'true' : undefined}>
           <span>{messages[entry.label]}</span>
           <ChevronIcon />
         </summary>
 
         <ul className="nav-group__list">
-          <li>
-            <Link
-              href={entry.href}
-              onClick={onNavigate}
-              aria-current={onListPage ? 'page' : undefined}
-              data-active={onListPage ? 'true' : undefined}
-              className="nav-row nav-row--child"
-            >
-              {messages[branch.entryLabel]}
-            </Link>
-          </li>
+          {/*
+           * 第一行「全部文章」在抽屉里**必须留着**：触屏没有悬停，
+           * 点开折叠是第一次点击，进来之后要再有一次明确的点击才能去列表页——
+           * 这正是防止手指误触的设计。桌面下拉里则省掉这一行（入口本身就是它）。
+           *
+           * 但这一行不是无条件的：`linkable: false` 的纯目录（「页面」）
+           * 自己没有索引页，画一行「全部页面」只会指向不存在的地址。
+           * 那种情况下折叠区里直接就是真实子项。
+           */}
+          {branch.entryLabel && hasLanding(entry) ? (
+            <li>
+              <Link
+                href={listHref}
+                onClick={onNavigate}
+                aria-current={onListPage ? 'page' : undefined}
+                data-active={onListPage ? 'true' : undefined}
+                className="nav-row nav-row--child"
+              >
+                {messages[branch.entryLabel]}
+              </Link>
+            </li>
+          ) : null}
 
           {branch.status === 'ok' ? (
             branch.items.map((item) => {
@@ -237,6 +268,72 @@ function NavEntryRow({
               {messages[branch.status === 'error' ? branch.errorLabel : branch.emptyLabel]}
             </li>
           )}
+        </ul>
+      </details>
+    </li>
+  )
+}
+
+/**
+ * 「更多」折叠行。
+ *
+ * 数据上它仍然是「标了 `section: 'more'` 的那些入口」，不是第二份清单——
+ * 这里只是换了个呈现：一行折叠头 + 自己的子项，和文章 / 日记
+ * 完全同构（同一个 `.nav-group`、同一个 chevron、同样在 active 时默认展开）。
+ *
+ * 与其它折叠行唯一的差别：它没有自己的列表页（没有 `/more` 这种路由），
+ * 所以折叠区里不出现「全部 X」那一行。折叠头本身不是链接，点它只展开。
+ */
+function NavMoreGroup({
+  entries,
+  pathname,
+  currentUrl,
+  messages,
+  onNavigate,
+  onGroupToggle,
+}: {
+  entries: NavEntry[]
+  pathname: string
+  currentUrl: string
+  messages: Record<MessageKey, string>
+  onNavigate: () => void
+  onGroupToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void
+}) {
+  // 子项里有一项是当前页 → 这一行也算「在这里」，和目录型入口同一套判定
+  const active = entries.some((entry) => isNavItemActive(entry, pathname))
+  const hasActiveChild = entries.some(
+    (entry) => entry.href === currentUrl || entry.href === pathname,
+  )
+
+  return (
+    <li>
+      <details
+        className="nav-group"
+        open={active || hasActiveChild || undefined}
+        onToggle={onGroupToggle}
+      >
+        <summary className="nav-group__summary" data-active={active ? 'true' : undefined}>
+          <span>{messages['nav.more']}</span>
+          <ChevronIcon />
+        </summary>
+
+        <ul className="nav-group__list">
+          {entries.map((entry) => {
+            const itemActive = isNavItemActive(entry, pathname)
+            return (
+              <li key={entry.href}>
+                <Link
+                  href={entry.href}
+                  onClick={onNavigate}
+                  aria-current={itemActive ? 'page' : undefined}
+                  data-active={itemActive ? 'true' : undefined}
+                  className="nav-row nav-row--child"
+                >
+                  {messages[entry.label]}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </details>
     </li>

@@ -38,7 +38,6 @@ function renderHeader(searchEnabled = true) {
       nav={buildNav()}
       siteName="Folio"
       avatarUrl={null}
-      locale="zh-CN"
       messages={messages}
       searchEnabled={searchEnabled}
     />,
@@ -68,15 +67,16 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('工具组：搜索入口已移除', () => {
-  it('右下角只剩主题、语言、回顶三个按钮', () => {
+  it('右下角只剩回顶一个按钮（主题与语言已迁到页脚）', () => {
     renderHeader()
     const buttons = dock().querySelectorAll('button')
-    expect(buttons).toHaveLength(3)
+    expect(buttons).toHaveLength(1)
 
     const labels = [...buttons].map((button) => button.getAttribute('aria-label') ?? '')
-    expect(labels.some((label) => label.includes(messages['action.mode']))).toBe(true)
-    expect(labels.some((label) => label.includes(messages['action.language']))).toBe(true)
-    expect(labels.some((label) => label.includes(messages['action.backToTop']))).toBe(true)
+    expect(labels[0]).toContain(messages['action.backToTop'])
+    // 设置类开关不得留在浮标里：全站只有页脚那一处
+    expect(labels.some((label) => label.includes(messages['action.mode']))).toBe(false)
+    expect(labels.some((label) => label.includes(messages['action.language']))).toBe(false)
   })
 
   it('工具组里没有以「搜索」命名的按钮', () => {
@@ -89,13 +89,13 @@ describe('工具组：搜索入口已移除', () => {
 
   it('搜索能力关闭时也不再需要那个入口', () => {
     renderHeader(false)
-    expect(dock().querySelectorAll('button')).toHaveLength(3)
+    expect(dock().querySelectorAll('button')).toHaveLength(1)
   })
 
-  it('工具组仍有分组语义，屏幕上仍能一次读完三个开关', () => {
+  it('工具组仍有分组语义', () => {
     renderHeader()
     const group = screen.getByRole('group', { name: messages['toolbar.group'] })
-    expect(group.querySelectorAll('button')).toHaveLength(3)
+    expect(group.querySelectorAll('button')).toHaveLength(1)
   })
 
   it('搜索图标没有残留成孤儿（不在工具组、也不在页头其它位置）', () => {

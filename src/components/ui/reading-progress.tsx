@@ -101,7 +101,7 @@ export function ReadingProgressRing({ targetId, className }: ReadingProgressRing
           className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-150"
         />
       </svg>
-      <span className="text-[0.75rem] leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
+      <span className="text-meta leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
         {percent}%
       </span>
     </div>
@@ -166,7 +166,7 @@ export function ReadingProgressBar({ targetId, className }: ReadingProgressRingP
           style={{ height: `${percent}%` }}
         />
       </div>
-      <span className="text-[0.6875rem] leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
+      <span className="text-meta leading-none font-medium tracking-[-0.02em] text-[var(--text-secondary)] tabular-nums">
         {percent}%
       </span>
     </div>

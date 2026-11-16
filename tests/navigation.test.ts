@@ -4,6 +4,7 @@ import {
   buildNav,
   getPrimaryNav,
   getQuickNav,
+  hasLanding,
   isDesktopOnly,
   isNavItemActive,
   type NavItem,
@@ -26,13 +27,15 @@ const item = (href: string): NavItem => {
 }
 
 describe('getPrimaryNav', () => {
-  it('顶栏普通链接顺序固定：文章 / 日记 / 探索 / 友链 / 页面', () => {
+  it('顶栏普通链接顺序固定：文章 / 日记 / 探索 / 友链 / 页面，其后是一言与项目', () => {
     expect(getPrimaryNav().map((entry) => entry.href)).toEqual([
       '/articles',
       '/diaries',
       '/explore',
       '/friends',
       '/pages',
+      '/says',
+      '/projects',
     ])
   })
 
@@ -94,6 +97,8 @@ describe('buildNav', () => {
       '/explore',
       '/friends',
       '/pages',
+      '/says',
+      '/projects',
     ])
     expect(buildNav().some((entry) => entry.href === '/')).toBe(false)
   })
@@ -134,8 +139,44 @@ describe('buildNav', () => {
     expect(getQuickNav(nav)[1]).toBe(nav[0])
     // 「更多」那一段不在顶栏
     expect(
-      getQuickNav(nav).some((entry) => nav.some((node) => node === entry && node.section === 'more')),
+      getQuickNav(nav).some((entry) =>
+        nav.some((node) => node === entry && node.section === 'more'),
+      ),
     ).toBe(false)
+  })
+
+  it('「页面」不进顶栏：它没有列表页，顶栏只收点了能到达的入口', () => {
+    const nav = buildNav({
+      '/pages': {
+        emptyLabel: 'nav.noPages',
+        errorLabel: 'nav.pagesUnavailable',
+        status: 'ok',
+        items: [{ href: '/pages/site', label: '站点' }],
+      },
+    })
+
+    expect(getQuickNav(nav).map((entry) => entry.href)).not.toContain('/pages')
+    // 但它的子项挂在首页下拉上：桌面悬停首页就能看到
+    expect(getQuickNav(nav)[0].branch?.items).toEqual([{ href: '/pages/site', label: '站点' }])
+  })
+
+  it('hasLanding 区分「入口自己能不能去」与「只是子项容器」', () => {
+    const nav = buildNav({
+      '/pages': {
+        emptyLabel: 'nav.noPages',
+        errorLabel: 'nav.pagesUnavailable',
+        status: 'ok',
+        items: [{ href: '/pages/site', label: '站点' }],
+      },
+    })
+
+    const byHref = (href: string) => nav.find((entry) => entry.href === href)!
+    expect(hasLanding(byHref('/articles'))).toBe(true)
+    // 「页面」有子项、但自己没有索引页
+    expect(hasLanding(byHref('/pages'))).toBe(false)
+    // 判据不依赖 branch：取数失败时布局也不该变
+    expect(hasLanding({ linkable: false })).toBe(false)
+    expect(hasLanding({})).toBe(true)
   })
 
   it('首页 / 探索 / 友链标了「仅桌面」：手机顶栏只留文章与日记', () => {
@@ -152,7 +193,7 @@ describe('buildNav', () => {
       buildNav()
         .filter((entry) => entry.section === 'more')
         .map((entry) => entry.href),
-    ).toEqual(['/pages'])
+    ).toEqual(['/says', '/projects'])
   })
 })
 

@@ -1,9 +1,6 @@
 'use client'
 
 import { useCallback, useSyncExternalStore } from 'react'
-import { useLocale } from '@/lib/i18n/client'
-import { t } from '@/lib/i18n/dictionary'
-import { ToolbarButton } from './toolbar-button'
 
 /**
  * 三态主题
@@ -101,11 +98,11 @@ function subscribePreference(onChange: () => void): () => void {
 }
 
 /**
- * 主题偏好的唯一读写入口。
+ * 主题三态的唯一读写入口。
  *
- * 工具按钮（右下角三态循环）与菜单 Settings（三段单选）都消费这个 hook：
- * 「跟随系统 = 删除键」「切换时加 300ms 颜色过渡」「派发事件通知同页其它订阅者」
- * 这三条规则只在这里实现一次，新增入口不可能绕开它们写出第四种行为。
+ * 页脚的三段单选消费这个 hook：「跟随系统 = 删除键」「切换时加 300ms 颜色过渡」
+ * 「派发事件通知同页其它订阅者」这三条规则只在这里实现一次，
+ * 新增入口不可能绕开它们写出第四种行为。
  */
 export function useThemePreference() {
   const preference = useSyncExternalStore<ThemePreference | null>(
@@ -145,52 +142,7 @@ export function useThemePreference() {
   return { preference, setPreference }
 }
 
-interface ThemeToggleProps {
-  /** 无障碍名称前缀与 Tooltip 文本（随语言变化） */
-  label?: string
-}
-
-/**
- * 主题切换：`跟随系统 → 浅色 → 深色 → 跟随系统`。
- *
- * 生效的基准永远是 DOM 上的 `data-theme`，不是 React state：
- * 这样防闪脚本、跨标签页、以及任何直接改 `data-theme` 的地方都不会和按钮状态打架。
- * 组件只负责「偏好」，`data-theme` 只是偏好的投影。
- *
- * 外观交给 ToolbarButton：它与语言/置顶是同一组工具，
- * 尺寸与交互反馈必须一致，不能各自维护。
- */
-export function ThemeToggle({ label }: ThemeToggleProps) {
-  const locale = useLocale()
-  const { preference, setPreference } = useThemePreference()
-
-  const cycle = () => {
-    setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system')
-  }
-
-  const status = t(
-    locale,
-    preference === 'system'
-      ? 'action.modeSystem'
-      : preference === 'light'
-        ? 'action.modeLight'
-        : 'action.modeDark',
-  )
-  const text = label ? `${label} · ${status}` : status
-
-  return (
-    <ToolbarButton label={text} onClick={cycle}>
-      {preference === null ? (
-        // 占位同尺寸，避免水合前后按钮宽度跳动
-        <span aria-hidden="true" className="size-[1.05rem]" />
-      ) : (
-        <ThemeGlyph value={preference} />
-      )}
-    </ToolbarButton>
-  )
-}
-
-/** 主题三态的图标：工具按钮与菜单 Settings 共用，避免各画一套 */
+/** 主题三态的图标：页脚三段单选与文档示例共用，避免各画一套 */
 export function ThemeGlyph({ value }: { value: ThemePreference }) {
   if (value === 'light') return <SunIcon />
   if (value === 'dark') return <MoonIcon />

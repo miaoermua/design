@@ -136,9 +136,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   }
 
   const heading = (
-    <h1 className="font-serif text-[calc(var(--text-display)*0.78)] leading-[1.25] tracking-[-0.022em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
-      {article.title}
-    </h1>
+    <h1 className="text-headline font-serif text-[var(--text-heading)]">{article.title}</h1>
   )
 
   return (
@@ -160,8 +158,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       <article id="article-content" className="pb-[var(--spacing-section)]">
         {/* 桌面：左操作栏 / 中间正文 / 右阅读辅助；移动：正文在前，操作栏跟在文末 */}
-        <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
-          <div className="mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1">
+        <div className="mx-auto grid max-w-[var(--measure-post)] gap-10 xl:max-w-[var(--shell-post)] xl:grid-cols-[minmax(0,var(--measure-post))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
+          <div className="mx-auto w-full max-w-[var(--measure-post)] min-w-0 xl:col-start-1 xl:row-start-1">
             <header className="pt-10 sm:pt-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--accent-line)]" />
@@ -339,8 +337,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         评论一旦进容器就会把进度条拖成「读完正文才走一半」。
         这里复用同一套栅格，让左列仍然与正文左边界对齐、右侧留出辅助栏空档。
       */}
-      <div className="mx-auto grid max-w-[calc(var(--container-prose)+7rem)] gap-10 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
-        <div className="mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1">
+      <div className="mx-auto grid max-w-[var(--measure-post)] gap-10 xl:max-w-[var(--shell-post)] xl:grid-cols-[minmax(0,var(--measure-post))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
+        <div className="mx-auto w-full max-w-[var(--measure-post)] min-w-0 xl:col-start-1">
           <CommentsSection refId={article.id} timeZone={timeZone} />
         </div>
       </div>

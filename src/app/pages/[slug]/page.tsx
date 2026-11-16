@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -65,7 +64,8 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
   }
 
   const isMarkdown = page.contentFormat === 'markdown'
-  const rendered = isMarkdown && page.content.trim() ? await renderMarkdown(page.content, locale) : null
+  const rendered =
+    isMarkdown && page.content.trim() ? await renderMarkdown(page.content, locale) : null
 
   return (
     <Container width="prose">
@@ -94,7 +94,7 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
             <p className="text-small text-[var(--text-heading)]">
               {tf(locale, 'page.unsupportedFormat', { format: page.contentFormat })}
             </p>
-            <p className="mt-2 text-caption text-[var(--text-secondary)]">
+            <p className="text-caption mt-2 text-[var(--text-secondary)]">
               {t(locale, 'page.unsupportedFormatHint')}
             </p>
           </div>
@@ -102,12 +102,6 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
       </div>
 
       <CommentsSection refId={page.id} />
-
-      <p className="mt-14 border-t border-[var(--edge)] pt-6">
-        <Link href="/pages" className="link-quiet meta">
-          {t(locale, 'page.backAll')}
-        </Link>
-      </p>
     </Container>
   )
 }

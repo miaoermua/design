@@ -213,7 +213,8 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
     return { status: 404, body: { ok: 0, code: 11003, message: 'Snippet 不存在' } }
   }
 
-  // 独立页面列表：线上是 { data, pagination }，mock 保持同一形状
+  // 独立页面列表：线上是 { data, pagination }，mock 保持同一形状。
+  // 主题不渲染索引页，但导航里「页面」目录的子项要读这个端点。
   if (path === '/pages') {
     const rows = [...mockPages].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     return { status: 200, body: paginate(rows, page, size) }

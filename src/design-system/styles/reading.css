@@ -775,7 +775,10 @@
   padding: 0.05rem 0.28rem;
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-xs, 3px);
-  font-size: 0.625rem;
+  /* 与相邻 label 同为 meta 号：这个「AI」徽章靠边框和留白区别于正文，
+     不靠缩到 10px —— 小到读不出字形的标记反而让读者以为是图案。 */
+  font-size: var(--text-meta);
+  line-height: 1.4;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-secondary);

@@ -65,7 +65,6 @@ function header() {
       nav={nav}
       siteName="Folio"
       avatarUrl={null}
-      locale="zh-CN"
       messages={messages}
       searchEnabled={false}
     />

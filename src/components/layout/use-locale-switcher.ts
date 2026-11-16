@@ -2,16 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
-import {
-  DEFAULT_LOCALE,
-  LOCALES,
-  LOCALE_COOKIE,
-  localeLabel,
-  localeName,
-  parseLocaleCookie,
-  type Locale,
-} from '@/lib/i18n/config'
-import { ToolbarButton } from './toolbar-button'
+import { LOCALE_COOKIE, parseLocaleCookie, type Locale } from '@/lib/i18n/config'
 
 /**
  * cookie 里当前的手动选择；`null` = 用户还没选过（现在是自动识别的结果）。
@@ -31,10 +22,9 @@ function readCookieLocale(): Locale | null {
 }
 
 /**
- * 语言切换的唯一写入点。
+ * 语言切换的唯一写入点（Footer 的语言选择器消费它）。
  *
- * 菜单 Settings 与右下角按钮都消费这个 hook：cookie 名、有效期、
- * `router.refresh()` 的调用时机只在这里实现一次。
+ * cookie 名、有效期、`router.refresh()` 的调用时机只在这里实现一次。
  *
  * 走的是 Mix Space 官方的**内容翻译**能力：把语言写进 cookie，
  * 服务端取数时带上 `?lang=en`，后端返回已翻译的标题与正文。
@@ -72,38 +62,4 @@ export function useLocaleSwitcher(current: Locale) {
   )
 
   return { value, pending, setLocale }
-}
-
-interface LanguageButtonProps {
-  current: Locale
-  label: string
-}
-
-/**
- * 语言切换（中文 → English → 中文）
- *
- * 只有两种界面语言，所以这个按钮就是二态开关；精确选择在菜单 Settings 里。
- *
- * 已知边界（写在这里以免被当成 bug）：站点标题、简介、导航名等
- * **站点级身份**不参与后端翻译——`/aggregate` 在 `?lang=en` 下仍返回原文，
- * 后端也没有 UI 文案接口。界面层的按钮与区块标题由本地字典负责。
- */
-export function LanguageButton({ current, label }: LanguageButtonProps) {
-  const { value, pending, setLocale } = useLocaleSwitcher(current)
-
-  const next: Locale = LOCALES[(LOCALES.indexOf(value) + 1) % LOCALES.length] ?? DEFAULT_LOCALE
-
-  return (
-    <ToolbarButton
-      label={`${label} · ${localeName(next)}`}
-      onClick={() => setLocale(next)}
-      aria-busy={pending}
-      // 两种语言是有限的，用短标识直接呈现当前语言，比一个通用「语言」图标信息量高
-      className={pending ? 'opacity-60' : undefined}
-    >
-      <span aria-hidden="true" className="text-meta font-mono tracking-tight">
-        {localeLabel(value)}
-      </span>
-    </ToolbarButton>
-  )
 }

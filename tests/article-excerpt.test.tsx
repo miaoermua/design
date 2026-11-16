@@ -225,7 +225,7 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
     expect(p).not.toBeNull()
     expect(p?.textContent).toBe(long)
     expect(p?.className).toContain('line-clamp-1')
-    expect(p?.className).toContain('max-w-[var(--container-prose)]')
+    expect(p?.className).toContain('max-w-[var(--measure-copy)]')
     expect(p?.className).toContain('text-small')
     expect(p?.className).toContain('text-[var(--text-secondary)]')
     expect(p?.className).not.toContain('truncate') // 是 line-clamp，不是 JS/单行 overflow 截断
