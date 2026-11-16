@@ -39,17 +39,23 @@ interface SiteHeaderClientProps {
 }
 
 /**
- * 悬浮导航
+ * 悬浮导航（桌面双态 / 手机单态）
  *
- * 形态：一块浮在纸面上的微圆角卡片（`--radius-md`，不是药丸）。
- *   - ≥48rem：贴顶悬浮，滚动向下隐藏、向上回来；
+ * 形态：**一套 DOM，三种状态**，由 `<header data-mode>` 切换——
+ *   - `top`：页面顶部，通栏透明的 Editorial Bar，与页面容器同宽对齐；
+ *   - `hidden`：向下滚动，整块滑出视口，把阅读空间还给正文；
+ *   - `floating`：离开顶部后向上滚动，收紧成居中悬浮的玻璃 Dock。
+ *
+ * 为什么不做两棵 DOM：两套导航轮流出现意味着重复的 HTML ID、两份菜单
+ * 开关状态、两条 Tab 顺序，以及「哪一份才是真的」这个永远要解释的问题。
+ * 这里导航数据、菜单状态、键盘顺序都只有一份，状态机只在
+ * `use-header-scroll.ts` 里判断；CSS 只描述「每种形态长什么样」。
+ *
+ * 断点仍是项目已有的 md = 48rem：
+ *   - ≥48rem：贴顶，三态生效；
  *   - <48rem：贴底悬浮（让出 `env(safe-area-inset-bottom)`），**不随滚动隐藏**
- *     —— 手机上它是唯一的导航，滑走就等于没有导航。
- *
- * 两端共用一棵 DOM 与同一份导航数据，但**布局是两套**（globals.css 的
- * 桌面断点段落）：桌面按内容定宽铺开成一整条（入口在左、菜单在右，
- * 间距按桌面给），移动是内容宽度的紧凑胶囊（项与项之间留出可点击的间隔）。
- * 上一条「手机精简」的尺寸只在移动断点里成立，不会再压到桌面。
+ *     —— 手机上它是唯一的导航，滑走就等于没有导航。三态的视觉规则全部写在
+ *     桌面断点里，因此手机不需要 JS 判断视口，也不会被这套逻辑碰到。
  *
  * 信息架构：桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链，
  * 文章与日记悬停即展开下级；一言与项目收进菜单。手机只留文章与日记
@@ -90,8 +96,22 @@ export function SiteHeaderClient({
   const open = openAt === pathname
   const mounted = open || closing
 
-  // 搜索面板或菜单打开时锁定导航（不允许滑走：面板跟着卡片，卡片不能先消失）
-  const { hidden } = useHeaderScroll(searchOpen || open)
+  /**
+   * 下拉悬停的冻结标志。
+   *
+   * 指针停在「文章 / 日记」的下拉上时，导航不该因为一次滚轮就滑走——
+   * 菜单是卡片的子节点，卡片走了菜单也就没了。用 ref 而不是 state：
+   * 指针每进出一次下拉就 setState，会把整棵导航（含菜单子树）重渲染一遍。
+   *
+   * 冻结期间滚过的距离要补算：`holdFrom` 记下进入下拉时的位置，指针离开时
+   * 若页面已经挪动过，就按新位置重新落定（否则那条通栏透明的 Editorial Bar
+   * 会一直停在正文上方）。
+   */
+  const flyoutHold = useRef(false)
+  const holdFrom = useRef<number | null>(null)
+
+  // 搜索面板或菜单打开时锁定导航；下拉悬停同样冻结（两者都不允许滑走）
+  const { mode, resync } = useHeaderScroll(searchOpen || open, flyoutHold)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -185,6 +205,14 @@ export function SiteHeaderClient({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [searchEnabled])
 
+  /** 解除下拉冻结：冻结期间页面挪动过就按新位置落定，别让旧形态留在屏幕上 */
+  const releaseFlyoutHold = useCallback(() => {
+    if (!flyoutHold.current) return
+    flyoutHold.current = false
+    if (holdFrom.current !== null && Math.abs(window.scrollY - holdFrom.current) > 1) resync()
+    holdFrom.current = null
+  }, [resync])
+
   const closeSearch = useCallback(() => setSearchOpen(false), [])
 
   /**
@@ -203,9 +231,28 @@ export function SiteHeaderClient({
 
   return (
     <>
-      <header ref={rootRef} data-hidden={hidden ? 'true' : undefined} className="site-nav">
+      <header ref={rootRef} data-mode={mode} className="site-nav">
         <div className="nav-shell">
-          <div ref={cardRef} className="nav-card">
+          <div
+            ref={cardRef}
+            className="nav-card"
+            /*
+             * 指针进出下拉时写冻结标志。`pointerover` 会从子元素冒泡上来，
+             * 所以直接看落点是否在 `.nav-flyout` 里；离开整张卡片时清掉
+             * （下拉面板是卡片的子孙，指进去不会触发 pointerleave）。
+             * 触屏没有 hover，这里拿到的永远是 false，不影响手机行为。
+             */
+            onPointerOver={(event) => {
+              const inside = Boolean((event.target as Element | null)?.closest?.('.nav-flyout'))
+              if (inside) {
+                if (!flyoutHold.current) holdFrom.current = window.scrollY
+                flyoutHold.current = true
+              } else {
+                releaseFlyoutHold()
+              }
+            }}
+            onPointerLeave={releaseFlyoutHold}
+          >
             {/*
              * 玻璃单独一层：不能直接给 .nav-card 加 backdrop-filter ——
              * 滤镜会让卡片成为 position: fixed 后代的包含块，

@@ -27,6 +27,8 @@
 
 > **2026-11-16 设置入口统一迁到页脚**：右下工具胶囊只留「回到顶部」，主题与语言从浮标和导航菜单里全部撤出，改为页脚顶部一行——左侧语言选择器（Languages 图标 + 当前语言名 + 向上弹出的菜单，`menu` / `menuitemradio` 语义）、右侧三态主题（Sun → Monitor → Moon，原生 radio + `radiogroup`）。语言仍写 `folio-lang` cookie + `router.refresh()`（唯一写入点搬到 `use-locale-switcher.ts`），主题仍走 `useThemePreference`（`system` = 删除键）。删除 `NavSettings`、`LanguageButton`、`ThemeToggle` 三个组件，连线上的 `--nav-settings-surface` 一并移除（失去全部消费者，登记表无需扩列）。页脚为 fixed 的回顶浮标让出右侧 4.5rem，移动端再让出底部 6rem，避免滚到页底时压住设置行与备案行。契约测试同步：`theme-preference` / `footer-settings` 改为驱动三段单选，菜单测试新增「菜单里不再有 radio」，工具胶囊按钮数从 3 改为 1。同步 §7、§9、§14。
 
+> **2026-11-16 桌面导航双态（Editorial Bar / Floating Dock）**：桌面顶栏从「单态悬浮卡片」升级为**一套 DOM、三种状态**，由 `<header data-mode>` 切换：`top` 为通栏透明的 Editorial Bar（`--nav-topbar-height` 4.25rem、与 `Container` 的 `--container-wide` + `--spacing-gutter` 逐像素对齐、`.nav-glass` 与 `.nav-spotlight` 在该态 `opacity: 0` / `display: none`），`hidden` 整块滑出并按 `visibility: hidden` 真正离开可聚焦树，`floating` 收紧为居中 560 × 50px、16px 微圆角、带玻璃与光斑的 Dock。状态机重写为 `top / hidden / floating` 三态并集中阈值：离开顶部 72px、回到顶部 40px（迟滞死区）、下滚累计 96px 隐藏、上滚累计 40px 显示；初始位置、`pageshow`、`popstate` 按位置重新落定，恢复中段页面不会先画一帧顶部栏；菜单 / 搜索打开与下拉悬停期间冻结形态，解锁 / 下拉解除时按位置恢复成可见的 Dock（`restore()`，避免把刚落回焦点的按钮一起收走）。**不做双 DOM**：导航数据、菜单开关、`aria-controls` 的 ID 与 Tab 顺序都保持唯一。移动端零改动——三态规则全部写在 `@media (min-width: 48rem)` 内，`<48rem` 块里不出现 `data-mode`。占位块改用 `--nav-topbar-height`，两态切换正文不跳。新增 Token：`--nav-topbar-height` / `--nav-dock-height` / `--nav-dock-width` / `--nav-dock-radius` / `--nav-dock-offset`（布局值，非颜色）；`--nav-bar-height` / `--nav-gap` / `--nav-inset` / `--nav-panel-max` 从 `globals.css` 的 `:root` 迁入 `tokens.css`。滚动阈值**不进 Token**（JS 读不到 CSS 变量，写进去就是第二份事实）。实测：1024 / 1104 / 1280 / 1440 / 1920 五档三态与对齐、1440 下两态的下拉与菜单、320 / 375 / 390 / 430 四档手机回归、768 断点归属，全部通过（`scripts/visual/nav-dual-state.mjs`）。新增 `tests/nav-dual-state.test.tsx`（18 例）守护单 DOM、状态机、冻结与断点边界。同步 §4.1、§6、§7、§9。
+
 ---
 
 ## 1. 设计语言
@@ -241,6 +243,22 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | `--nav-divider`          | `line` 68%         | `line` 82%         | 快捷栏与菜单内的分隔线                                                 |
 | `--nav-focus`            | `accent-strong`    | 继承亮色           | 菜单项与分段控件的焦点环                                               |
 
+**布局尺寸（第三层，随导航双态新增）**。下面是几何值，不是颜色：三种状态的所有尺寸都由这几个值派生，`globals.css` 只消费、不另写平行数值。
+
+| 变量                  | 值     | 场景                                                       |
+| --------------------- | ------ | ---------------------------------------------------------- |
+| `--nav-bar-height`    | 3.5rem | 移动端底部胶囊高度（双态不参与手机端）                     |
+| `--nav-topbar-height` | 4.25rem | Editorial Bar 高度，也是 `.site-nav-spacer` 的占位高度     |
+| `--nav-dock-height`   | 3.125rem | Floating Dock 高度                                        |
+| `--nav-dock-width`    | 35rem  | Floating Dock 宽度上限（560px，收缩动画的终点）            |
+| `--nav-dock-radius`   | 1rem   | Dock 圆角（16px 微圆角卡片，**不是** `--radius-pill` 药丸） |
+| `--nav-dock-offset`   | 0.875rem | Dock 与视口顶边的距离                                     |
+| `--nav-gap`           | 0.5rem | 卡片与菜单 / 下拉面板之间的缝                              |
+| `--nav-inset`         | 0.75rem | 移动端与物理边缘的距离（不含安全区）                       |
+| `--nav-panel-max`     | `min(34rem, 72dvh)` | 菜单面板最大高度                              |
+
+滚动阈值（离开顶部 72px / 回到顶部 40px / 下滚 96px 隐藏 / 上滚 40px 显示）**刻意不是 CSS 变量**：JS 读不到 CSS 变量，写进 Token 就成了第二份事实，阈值只存在于 `use-header-scroll.ts`。
+
 本轮合并了两条**没有独立视觉职责**的导航 Token：原 `nav-icon`（与 `nav-ink` 亮暗都同值）、原 `nav-ink-muted`（= `ink-faint`，在导航玻璃上只有 3.2–3.4:1，却承担 12px 分组标题与空态）。两者的消费者统一并入 `--nav-ink`，层级改由字号、字距与大写表达。历史判断保留在本段，不再单列 Token 行。
 
 这些变量**只在导航内部消费**（消费者是 `globals.css` 的 `.site-nav` 样式块与 `material.css` 的 `.glass-nav`），不替代 `--surface` / `--text-*` 等全站语义层；页脚、正文、卡片仍用 §4 主表那批变量。Tags 的多彩便利贴（§14.12）完全不读这一组，两条视觉线路互不影响。
@@ -339,7 +357,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | 页边距   | `--spacing-gutter` / `-lg`            | 1.25rem / 2rem                      | `<640` / `≥640`                                 |
 | 区块间距 | `--spacing-section`                   | 5rem                                | 首页各 section 上下                             |
 | 区块内部 | `--spacing-stack`                     | 2rem                                | 标题与内容之间                                  |
-| 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md，导航卡片与工具胶囊用 pill |
+| 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md，移动端导航与工具胶囊用 pill；桌面 Dock 用 `--nav-dock-radius`（16px） |
 | 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                     |
 | 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                         |
 | 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔      |
@@ -368,7 +386,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                | 全站 1 层，不随内容滚动                                        |
 | `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                         | 全站 1 层                                                      |
 | `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                            | 文章/日记详情各 1 个                                           |
-| `.glass-nav`     | 纸面底 `--nav-backdrop` + `backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur))`（亮 14px / 暗 12px）+ `--nav-edge` 发丝边 + `--nav-shadow`。**底色调是暖纸，不是冰色** | 悬浮导航卡片、右下工具胶囊（两处都挂在宿主的 `.nav-glass` 层） |
+| `.glass-nav`     | 纸面底 `--nav-backdrop` + `backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur))`（亮 14px / 暗 12px）+ `--nav-edge` 发丝边 + `--nav-shadow`。**底色调是暖纸，不是冰色** | Floating Dock、右下工具胶囊、移动端底部胶囊（三处都挂在宿主的 `.nav-glass` 层）；Editorial Bar 状态下该层 `opacity: 0` |
 | `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                       | 搜索面板                                                       |
 
 `.glass-nav` 用 `--nav-backdrop`（暖纸），是全站唯一的玻璃材质。`.glass-bar` 曾是一块「大面积冰色薄片」的预留类，全站从没有 DOM 生产者，`scripts/visual/contrast.mjs` 里 `.glass-bar a` 的采样目标也一直匹配不到元素；已删除该类及其专用 alpha 参数。它**没有**被并入导航。将来若真需要整行玻璃，必须连同真实生产者一起新增。
@@ -380,7 +398,30 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 两条必须记住的实现约束：
 
 1. **玻璃不能挂在 `.nav-card` 上**。带 `backdrop-filter` 的元素会成为 `position: fixed` 后代的包含块，移动端菜单面板会被缩进卡片内部（实测宽度从 350px 缩到 161px）。因此 `.glass-nav` 落在卡片内独立的 `.nav-glass` 绝对定位层，卡片本身不带滤镜；`tests/nav-menu.test.tsx` 有回归护栏。
-2. **菜单面板刻意做实色，不跟着卡片做玻璃**。卡片只有 60px 高，透一点无妨；面板下压着整段正文，实测即使把不透明度提到 97% 仍能看到文章标题的淡影。这与 `.glass-panel` 的判断一致：浮层优先可读性。面板沿用 `--surface-raised` + `--nav-edge` + `--nav-shadow`，与卡片同色系但实心。
+2. **菜单面板刻意做实色，不跟着卡片做玻璃**。卡片只有 50–68px 高，透一点无妨；面板下压着整段正文，实测即使把不透明度提到 97% 仍能看到文章标题的淡影。这与 `.glass-panel` 的判断一致：浮层优先可读性。面板沿用 `--surface-raised` + `--nav-edge` + `--nav-shadow`，与卡片同色系但实心。
+
+### 7.1 导航双态（Editorial Bar / Floating Dock）
+
+一次导航改造，**一套 DOM、三种状态**，由 `<header class="site-nav" data-mode>` 切换。三态的视觉差异全部落在同一个 `.nav-card` 上，靠 `max-width` / `height` / `border-radius` / `transform` / `opacity` 过渡；没有第二棵导航树，因此导航数据、菜单开关、`aria-controls` 指向的 ID 与 Tab 顺序都只有一份。
+
+| 维度     | `top`（Editorial Bar）        | `floating`（Floating Dock） | `hidden`                    |
+| -------- | ----------------------------- | --------------------------- | --------------------------- |
+| 宽度     | `min(视口, --container-wide)` | `--nav-dock-width`（560px） | 同 `top`（只是滑出）        |
+| 高度     | `--nav-topbar-height`（68px） | `--nav-dock-height`（50px） | —                           |
+| 圆角     | 无（通栏）                    | `--nav-dock-radius`（16px） | —                           |
+| 背景     | 透明                          | `.nav-glass`（`opacity: 1`）| —                           |
+| 边框     | 无                            | `--nav-edge` 发丝边         | —                           |
+| 光斑     | `display: none`               | 保留                        | —                           |
+| 位置     | 贴顶，与版心 / gutter 对齐    | 贴顶居中，下沉 `--nav-dock-offset` | `translateY(-100% - --nav-gap)` + `opacity: 0` + `visibility: hidden` |
+
+要点：
+
+- **顶部态刻意什么都不画**。轻盈感来自「没有玻璃、没有边框、没有光斑」，而不是再叠一层更淡的样式；`--nav-pad` 在 `top` 是 `--spacing-gutter`，在 `floating` 收成 `0.5rem`，菜单面板的右边缘也跟着这个变量走。
+- **对齐靠容器，不靠第二套版心**：`.site-nav` 在桌面只负责铺满视口（`padding-inline: 0`），卡片自己取 `--container-wide` + `--spacing-gutter`，与 `Container` 组件逐像素一致（实测 1024/1104/1280/1440/1920 五档左缘全部对齐）。
+- **`hidden` 必须真的离开可聚焦树**：只写 `opacity: 0` 会让键盘 Tab 走进看不见的链接。`visibility: hidden` 的过渡延迟与滑出动画等长（`transition-delay` 第 6 位对应 `transition-property` 第 6 项），退场才不会被截断。
+- **占位块只有一种高度**（`--nav-topbar-height`）：两态切换不改变文档流，正文不跳。
+- **移动端完全不参与**：三态规则全部写在 `@media (min-width: 48rem)` 里，`max-width: 47.9375rem` 块里不出现任何 `data-mode`，`tests/nav-dual-state.test.tsx` 守护这条边界。手机仍是贴底药丸、始终可见。
+- `prefers-reduced-motion: reduce` 时 `.nav-card` 与 `.nav-glass` 的过渡归零，状态切换瞬时完成，不播放位移与淡入。
 
 退化路径：`@supports not (backdrop-filter)` → 实色纸面（`.glass-nav`）；`prefers-reduced-transparency: reduce` → 实色且关闭模糊。
 工具按钮的激活态走 `--nav-item-active` + `--nav-item-active-ink`（与 `.nav-link[data-active='true']` 同一对语义 Token），按钮自身不再携带任何材质或 `[data-active]` 底色规则。
@@ -404,7 +445,7 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 | 组件                             | 文件                                        | 状态                                                                                                                                                                                                         |
 | -------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `SiteHeader`                     | `layout/site-header.tsx`                    | 服务端壳：从 `core/navigation` 取快捷栏 / 菜单主导航 / 更多，按 Feature 开关收敛后下发；自身不渲染交互                                                                                                       |
-| `SiteHeaderClient`               | `layout/site-header-client.tsx`             | 一棵 DOM 两套定位（CSS 断点）：桌面顶部悬浮、移动底部悬浮；只含头像 / 博客 / 日记 / 菜单四个入口；右下工具组挂载点；滚动累计隐藏                                                                             |
+| `SiteHeaderClient`               | `layout/site-header-client.tsx`             | 一棵 DOM 三种状态（`data-mode`：`top` Editorial Bar / `floating` Dock / `hidden`）：桌面双态、移动底部悬浮；只含头像 / 博客 / 日记 / 菜单四个入口；右下工具组挂载点；下拉悬停与菜单打开时冻结滚动形态 |
 | `SiteNavMenu`                    | `layout/site-nav-menu.tsx`                  | 桌面与移动共用同一份内容的菜单面板：站点身份 → 主导航 → 更多（原生 `<details>` 分组）；**不再挂设置**，`tocSlot` 为目录预留位                                                                                  |
 | `FooterSettings`                 | `layout/footer-settings.tsx`                | 全站唯一的设置区：左语言选择器（图标 + 名称 + 向上弹出的菜单）/ 右三态主题（Sun → Monitor → Moon）。语言走 `useLocaleSwitcher`，主题走 `useThemePreference`，不另存状态                                       |
 | `ToolbarGroup` / `ToolbarButton` | `layout/toolbar-button.tsx`                 | 40px 方格（`--radius-pill`），**自身无材质**：玻璃与光斑由 `.toolbar-dock` 的 `.glass-nav` + `.nav-spotlight` 提供；悬停/激活复用 `--nav-item-hover` / `--nav-item-active`，tooltip 仅 hover / focus-visible |

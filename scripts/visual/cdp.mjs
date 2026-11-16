@@ -14,9 +14,15 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-/** macOS 默认安装路径；可用 FOLIO_CHROME 覆盖 */
+/**
+ * 各平台默认安装路径；可用 FOLIO_CHROME 覆盖。
+ * Windows 上必须是 .exe 的绝对路径——spawn 不走 shell，找不到就会直接报错。
+ */
 const CHROME =
-  process.env.FOLIO_CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  process.env.FOLIO_CHROME ??
+  (process.platform === 'win32'
+    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+    : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 

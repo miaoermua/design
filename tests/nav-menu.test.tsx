@@ -310,6 +310,10 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
 
 describe('桌面顶栏的排布契约', () => {
   const css = readFileSync(join(import.meta.dirname, '../src/app/globals.css'), 'utf8')
+  const tokens = readFileSync(
+    join(import.meta.dirname, '../src/design-system/tokens/tokens.css'),
+    'utf8',
+  )
 
   it('头像贴最左、链接整组贴右、中间留空由 margin-right:auto 推出来', () => {
     // 用 auto margin 而不是 space-between：条目数量变化时链接不会漂移
@@ -319,13 +323,18 @@ describe('桌面顶栏的排布契约', () => {
     )
   })
 
-  it('桌面卡片比移动端更矮：手机 3.5rem、桌面 3.25rem', () => {
-    expect(css).toContain('--nav-bar-height: 3.5rem')
+  it('桌面两态的几何：顶部 4.25rem 通栏、悬浮 3.125rem 卡片', () => {
+    // 手机底部胶囊的高度仍由 tokens.css 里的 --nav-bar-height 承担
+    expect(tokens).toContain('--nav-bar-height: 3.5rem')
+    expect(tokens).toContain('--nav-topbar-height: 4.25rem')
+    expect(tokens).toContain('--nav-dock-height: 3.125rem')
+
+    expect(css).toMatch(/\.nav-card \{[\s\S]*?height: var\(--nav-topbar-height\)/)
     expect(css).toMatch(
-      /@media \(min-width: 48rem\) \{[\s\S]*?\.nav-card \{[\s\S]*?height: 3\.25rem/,
+      /\[data-mode='floating'\] \.nav-card \{[\s\S]*?height: var\(--nav-dock-height\)/,
     )
-    // 占位块跟着卡片高度走，正文不会被盖住
-    expect(css).toMatch(/\.site-nav-spacer \{[\s\S]*?height: calc\(3\.25rem \+ 1rem\)/)
+    // 占位块跟着顶部状态的高度走：两种桌面状态切换时正文不会跳
+    expect(css).toMatch(/\.site-nav-spacer \{[\s\S]*?height: var\(--nav-topbar-height\)/)
   })
 
   it('菜单键与导航链接同一套外观：都是常态无边框、hover 才铺底', () => {
@@ -333,8 +342,8 @@ describe('桌面顶栏的排布契约', () => {
     // 不再给菜单键单独加一圈发丝边
     expect(trigger).not.toContain('box-shadow: inset')
     expect(trigger).not.toMatch(/(^|\n)\s*border:/)
-    // 与 .nav-link 相同的圆角与 hover 底色
-    expect(trigger).toContain('border-radius: var(--radius-sm)')
+    // 与 .nav-link 相同的药丸圆角与 hover 底色
+    expect(trigger).toContain('border-radius: var(--radius-pill)')
     expect(css).toMatch(/\.nav-link:hover \{[\s\S]*?background-color: var\(--nav-item-hover\)/)
     expect(css).toMatch(
       /\.nav-menu-trigger:hover \{[\s\S]*?background-color: var\(--nav-item-hover\)/,

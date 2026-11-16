@@ -144,25 +144,29 @@
   border-top: var(--border-rule) dashed var(--edge-strong);
 }
 
-/* ══ 悬浮导航 ═══════════════════════════════════════════════════════
+/* ══ 导航：桌面双态（Editorial Bar / Floating Dock）═════════════════
  *
- * 一棵 DOM，两套定位：
- *   <48rem  贴底悬浮（底部安全区之内，与物理边缘留出间距）
- *   ≥48rem  贴顶悬浮（滚动向下滑出、向上回来）
- * 断点用项目已有的 md = 48rem，不新增断点体系。
+ * 一棵 DOM，三种状态，由 `<header data-mode>` 切换：
  *
- * 为什么定位全部写在 CSS 而不是工具类：隐藏位移是 calc() 表达式，
+ *   top      页面顶部 —— 通栏、透明、与页面容器同宽对齐的 Editorial Bar
+ *   hidden   向下滚动 —— 整块滑出视口，把阅读空间还给正文
+ *   floating 向上滚动 —— 收紧成居中悬浮的玻璃 Dock
+ *
+ * 状态机在 use-header-scroll.ts（阈值只有那一处），这里只描述「每种形态
+ * 长什么样」。切换靠 max-width / height / border-radius / transform /
+ * opacity 的过渡，不做第二棵 DOM：两套导航轮流出现会带来重复的 HTML ID、
+ * 两份菜单开关状态和两条 Tab 顺序，而这些代价换不来更好的视觉。
+ *
+ * 断点仍是项目已有的 md = 48rem：
+ *   <48rem  贴底悬浮（底部安全区之内，与物理边缘留出间距）。
+ *           三种状态的视觉规则**全部**写在桌面断点里，手机因此完全不受影响。
+ *   ≥48rem  贴顶；top / floating / hidden 三态生效。
+ *
+ * 为什么定位与尺寸全部写在 CSS 而不是工具类：隐藏位移是 calc() 表达式，
  * 任意值类在构建期静默失败过一次（state 变了但 transform 仍是 none）；
- * 而且「移动端不隐藏」这件事只应该在桌面断点里存在——写在 CSS 里
+ * 而且「手机不随滚动隐藏」这件事只应该在桌面断点里存在——写在 CSS 里
  * 天然只有一条规则生效，不需要 JS 判断视口。
  */
-
-:root {
-  --nav-bar-height: 3.5rem;
-  --nav-gap: 0.5rem;
-  --nav-inset: 0.75rem;
-  --nav-panel-max: min(34rem, 72dvh);
-}
 
 .site-nav {
   position: fixed;
@@ -186,13 +190,16 @@
 }
 
 .nav-card {
+  /* 卡片横向内边距：菜单面板的右边缘也挂在同一个值上，两处不会走散 */
+  --nav-pad: 0.5rem;
   position: relative;
   display: flex;
   align-items: center;
   gap: 0.25rem;
   max-width: 100%;
   height: var(--nav-bar-height);
-  padding: 0.25rem 0.5rem;
+  padding-block: 0.25rem;
+  padding-inline: var(--nav-pad);
   border-radius: var(--radius-pill);
   pointer-events: auto;
   /* Spotlight 的默认落点：鼠标进入前光斑停在卡片中央，不闪烁 */
@@ -207,28 +214,45 @@
 }
 
 @media (min-width: 48rem) {
+  /*
+   * 横向内边距从容器挪到卡片：`.site-nav` 只负责铺满视口，卡片自己取
+   * Container 的宽度（`--container-wide`）与内边距（`--spacing-gutter`），
+   * 于是顶部状态的导航内容与正文**逐像素对齐**，不需要再算第二套版心。
+   */
   .site-nav {
     top: 0;
     bottom: auto;
-    padding-top: 1rem;
+    padding-inline: 0;
   }
 
   /*
-   * 桌面是**另一套布局**，不是手机栏放大：
-   *   - 卡片按内容定宽（桌面尺寸本来就大），最多不超过列表页的内容栏；
-   *   - 头像贴最左，链接整组贴最右，中间留空（`margin-right: auto` 推的
-   *     是「链接之前的所有空位」，因此链接永远靠右、不会随条目数量漂移）；
-   *   - 高度比上一版收紧（3.25rem），热区仍是 40px 的可点尺寸。
-   * 热区尺寸写在下面「桌面：热区尺寸」一段里覆盖——必须写在基线规则
-   * 之后：媒体查询不提高优先级，写在前面的同权重规则会被后面的基线值盖掉。
+   * 状态 A：Editorial Bar。
+   *
+   * 卡片本身就是那条通栏——透明、无边框、无圆角，直接落在纸面上。
+   * 玻璃层与光斑层在这一态被关掉（见下方 .nav-glass / .nav-spotlight 规则），
+   * 所以「轻盈、融入页面」不是再叠一层样式，而是**什么都不画**。
+   *
+   * 过渡列表里 `visibility` 排在最后一位，隐藏态按位次给它一个延迟
+   * （见 `[data-mode='hidden']`）：退场要等滑出动画走完才真正不可见，
+   * 进场则立刻可见。位次与 transition-property 一一对应，改列表必须同步改那里。
    */
   .nav-card {
-    justify-content: space-between;
+    --nav-pad: var(--spacing-gutter);
     width: 100%;
-    max-width: 44rem;
-    height: 3.25rem;
-    padding: 0.25rem 0.75rem;
+    max-width: var(--container-wide);
+    height: var(--nav-topbar-height);
+    margin-inline: auto;
+    justify-content: space-between;
     gap: 0.5rem;
+    border-radius: 0;
+    transition:
+      max-width var(--duration-base) var(--ease-out-soft),
+      height var(--duration-base) var(--ease-out-soft),
+      border-radius var(--duration-base) var(--ease-out-soft),
+      transform var(--duration-base) var(--ease-out-soft),
+      opacity var(--duration-base) var(--ease-out-soft),
+      visibility 0s linear;
+    will-change: transform;
   }
 
   .nav-quick {
@@ -240,14 +264,35 @@
     margin-right: auto;
   }
 
-  .nav-card {
-    transition: transform var(--duration-base) var(--ease-out-soft);
-    will-change: transform;
+  /*
+   * 状态 B：Floating Dock。
+   *
+   * 与状态 A 是**同一条横向导航**，只是容器收紧：宽度从版心收到 560px、
+   * 高度收到 50px、圆角与玻璃出现、整体下沉 14px。内部结构（头像贴左、
+   * 链接整组贴右、菜单键收尾）一个元素都不变——这正是「同一个导航系统在
+   * 不同滚动状态下换了个形态」，而不是两套导航轮流出现。
+   */
+  .site-nav[data-mode='floating'] .nav-card {
+    --nav-pad: 0.5rem;
+    max-width: var(--nav-dock-width);
+    height: var(--nav-dock-height);
+    border-radius: var(--nav-dock-radius);
+    transform: translate3d(0, var(--nav-dock-offset), 0);
   }
 
-  /* 隐藏：整块卡片连同（若已展开的）菜单一起滑出，不改变页面布局 */
-  .site-nav[data-hidden='true'] .nav-card {
-    transform: translate3d(0, calc(-100% - 1rem), 0);
+  /*
+   * 状态 C：隐藏。
+   *
+   * 整块（含已展开的下拉）滑出视口上缘并淡出，不改变页面布局。
+   * `visibility: hidden` 让这块不再进入 Tab 顺序、也不被屏幕阅读器读成
+   * 可用入口；延迟量与动画等长，所以退场动画不会被它截断。
+   */
+  .site-nav[data-mode='hidden'] .nav-card {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(0, calc(-100% - var(--nav-gap)), 0);
+    transition-delay: 0s, 0s, 0s, 0s, 0s, var(--duration-base);
   }
 }
 
@@ -258,14 +303,16 @@
   }
 }
 
-/* 固定卡片不占文档流：≥48rem 时用占位块让正文不被盖住（移动端在底部，靠页面 padding 让位） */
+/* 固定卡片不占文档流：≥48rem 时用占位块让正文不被顶部那条导航盖住
+   （移动端贴底，靠页面 padding 让位）。
+   占位高度 = Editorial Bar 高度，两种桌面状态切换时正文不会跳。 */
 .site-nav-spacer {
   height: 0;
 }
 
 @media (min-width: 48rem) {
   .site-nav-spacer {
-    height: calc(3.25rem + 1rem);
+    height: var(--nav-topbar-height);
   }
 }
 
@@ -287,6 +334,10 @@
  * 为什么不让 .nav-card 直接吃 .glass-nav：带滤镜的元素会为 position: fixed 的
  * 后代建立包含块，菜单面板（移动端 fixed 到视口）会被困在卡片里。玻璃下沉一层，
  * 卡片本身保持无滤镜，面板的定位就仍以视口为准。
+ *
+ * 双态：Editorial Bar 里这一层整体透明（连发丝边与投影一起消失，因为
+ * opacity 作用于整个元素），Floating Dock 里才亮起来。淡入淡出解释的是
+ * 「同一块玻璃在两种形态之间显隐」，不是两个控件轮流出现。
  */
 .nav-glass {
   position: absolute;
@@ -294,6 +345,18 @@
   z-index: 0;
   border-radius: inherit;
   pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
+}
+
+.site-nav[data-mode='top'] .nav-glass {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 玻璃的显隐也变成瞬时：减弱动效的用户不该再看到一层渐变的层次变化 */
+  .nav-glass {
+    transition: none;
+  }
 }
 
 .nav-spotlight {
@@ -320,6 +383,16 @@
 
 .nav-card:hover .nav-spotlight {
   opacity: 1;
+}
+
+/*
+ * Editorial Bar 不点光斑：那一态连玻璃都没有，光斑会变成纸面上的一团
+ * 无来由的色斑。`display: none` 而不是 opacity: 0——它同时省掉一层
+ * 不透明度合成，卡片只有 68px 高，没有保留下来的理由。
+ * 作用域限定在 `.site-nav` 内，右下工具胶囊的同一个类不受影响。
+ */
+.site-nav[data-mode='top'] .nav-spotlight {
+  display: none;
 }
 
 /* 触屏不模拟鼠标跟随；减弱动效时连这层光一起关掉 */
@@ -678,7 +751,8 @@
   .nav-panel {
     position: absolute;
     top: calc(100% + var(--nav-gap));
-    right: 0;
+    /* 右边缘跟着卡片的内边距走，两种状态下都对齐菜单按钮 */
+    right: var(--nav-pad);
     bottom: auto;
     left: auto;
     width: 21rem;

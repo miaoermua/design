@@ -302,6 +302,21 @@
      命名按**角色**而不是色值：--nav-item-hover 说明此处是什么，
      换色时只改这一处，不需要回到组件里找「哪个蓝色」。
      非选中项用墨色/次级墨色，Accent 只出现在选中、悬停与光斑上。 */
+
+  /* 布局尺寸。三种状态（top / hidden / floating）的几何全部由这几个值派生，
+     尺寸只在这里定义一次——globals.css 只消费，不再写一套平行数值。
+     滚动阈值（离开顶部 72px / 回到顶部 40px）**不在这里**：JS 读不到 CSS
+     变量，写进来就成了第二份事实，阈值只在 use-header-scroll.ts 里。 */
+  --nav-bar-height: 3.5rem; /* 56px · 移动端底部胶囊高度 */
+  --nav-gap: 0.5rem; /* 卡片与菜单面板 / 下拉面板之间的缝 */
+  --nav-inset: 0.75rem; /* 移动端与物理边缘的距离（不含安全区） */
+  --nav-panel-max: min(34rem, 72dvh); /* 菜单面板最大高度 */
+  --nav-topbar-height: 4.25rem; /* 68px · Editorial Bar（页面顶部） */
+  --nav-dock-height: 3.125rem; /* 50px · Floating Dock（滚动后） */
+  --nav-dock-width: 35rem; /* 560px · Dock 的宽度上限，也是收缩动画的终点 */
+  --nav-dock-radius: 1rem; /* 16px · Dock 圆角：微圆角卡片，不是药丸 */
+  --nav-dock-offset: 0.875rem; /* 14px · Dock 与视口顶边的距离 */
+
   --nav-backdrop: color-mix(in srgb, var(--color-paper-raised) 82%, transparent);
   --nav-edge: color-mix(in srgb, var(--color-line-strong) 42%, transparent);
   --nav-shadow:

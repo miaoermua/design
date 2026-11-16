@@ -24,7 +24,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/components/layout/use-header-scroll', () => ({
-  useHeaderScroll: () => ({ hidden: false, detached: false }),
+  useHeaderScroll: () => ({ mode: 'top' }),
 }))
 
 import { SiteHeaderClient } from '@/components/layout/site-header-client'
@@ -189,24 +189,25 @@ describe('工具胶囊：与顶栏同源的玻璃与光斑', () => {
 
   it('玻璃层铺满宿主并置于内容之下', () => {
     const css = readFileSync(join(ROOT, 'src/app/globals.css'), 'utf8')
-    const glass = css.match(/\.nav-glass\s*\{[^}]*\}/)?.[0] ?? ''
+    // 锚到行首的 `.nav-glass {`：减弱动效块里还有一个同名规则，不能取到那里
+    const glass = css.match(/\n\.nav-glass \{([^}]*)\}/)?.[1] ?? ''
     expect(glass).toMatch(/position:\s*absolute/)
     expect(glass).toMatch(/inset:\s*0/)
     expect(glass).toMatch(/border-radius:\s*inherit/)
     // 内容必须抬到玻璃之上，否则按钮点不到
     const group = css.match(/\.toolbar-dock\s*\{[^}]*\}/)?.[0] ?? ''
-    expect(group).toMatch(/border-radius:\s*var\(--radius-md\)/)
+    expect(group).toMatch(/border-radius:\s*var\(--radius-pill\)/)
     expect(group).toMatch(/padding:/)
   })
 
-  it('三个按钮自身不再带材质或边框', () => {
+  it('工具组只剩一个按钮，且自身不带材质或边框', () => {
     renderHeader(true)
     const buttons = Array.from(dock().querySelectorAll('button'))
-    expect(buttons).toHaveLength(3)
+    expect(buttons).toHaveLength(1)
     for (const button of buttons) {
       expect(button.className).not.toContain('glass-control')
       expect(button.className).not.toContain('rounded-full')
-      expect(button.className).toContain('rounded-[var(--radius-sm)]')
+      expect(button.className).toContain('rounded-[var(--radius-pill)]')
     }
   })
 
