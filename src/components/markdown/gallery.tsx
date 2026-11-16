@@ -217,6 +217,10 @@ export function Gallery({
                   src={image.src}
                   alt={image.alt}
                   title={image.title}
+                  /* 宽高来自服务端静态轨道上的同名属性（media-enhancer 回读）。
+                     带上它们，浏览器在下载前就能算出 aspect-ratio 并占位。 */
+                  width={image.width}
+                  height={image.height}
                   loading="lazy"
                   decoding="async"
                   draggable={false}

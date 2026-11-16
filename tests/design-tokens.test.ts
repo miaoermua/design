@@ -1,18 +1,18 @@
 import { readFileSync } from 'node:fs'
-import { relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   EXTERNAL_PREFIXES,
   KNOWN_DEAD_ALIASES,
   KNOWN_UNUSED_MOTION_TOKENS,
-  ROOT,
   SRC,
   TOKENS,
   contrast,
   cssDefinitions,
   cssVarReferences,
   palette,
+  relativeToRoot,
   stripCssComments,
+  stripJsComments,
   stripNonColorLiterals,
   tokensSection,
   walk,
@@ -30,7 +30,7 @@ const used = new Map<string, string>()
 const varSites = new Map<string, string[]>()
 
 function record(name: string, file: string) {
-  const rel = relative(ROOT, file)
+  const rel = relativeToRoot(file)
   const sites = varSites.get(name) ?? []
   if (!sites.includes(rel)) sites.push(rel)
   varSites.set(name, sites)
@@ -40,7 +40,7 @@ for (const file of cssFiles) {
   const text = readFileSync(file, 'utf8')
   for (const name of cssDefinitions(text)) defined.add(name)
   for (const name of cssVarReferences(text)) {
-    if (!used.has(name)) used.set(name, relative(ROOT, file))
+    if (!used.has(name)) used.set(name, relativeToRoot(file))
     record(name, file)
   }
 }
@@ -50,11 +50,11 @@ for (const file of tsFiles) {
 
 /** 在 tokens.css 之外（含 TS/TSX）有 var() 消费者 */
 function consumedOutsideTokens(name: string): boolean {
-  return (varSites.get(name) ?? []).some((site) => site !== relative(ROOT, TOKENS))
+  return (varSites.get(name) ?? []).some((site) => site !== relativeToRoot(TOKENS))
 }
 /** 被 tokens.css 里另一条声明引用：仍处在主题定义链上，不算死 Token */
 function usedByOtherToken(name: string): boolean {
-  return (varSites.get(name) ?? []).includes(relative(ROOT, TOKENS))
+  return (varSites.get(name) ?? []).includes(relativeToRoot(TOKENS))
 }
 
 const styleCss = styleFiles.map((file) => readFileSync(file, 'utf8')).join('\n')
@@ -89,14 +89,14 @@ describe('Design Token：结构', () => {
 
     for (const file of tsFiles) {
       const source = readFileSync(file, 'utf8')
-      expect(source, `${relative(ROOT, file)} 不应出现 dark: 变体`).not.toMatch(/\bdark:[a-z[]/)
+      expect(source, `${relativeToRoot(file)} 不应出现 dark: 变体`).not.toMatch(/\bdark:[a-z[]/)
     }
   })
 
   it('样式层 CSS 也不出现 dark: 变体', () => {
     for (const file of styleFiles) {
       const text = stripCssComments(readFileSync(file, 'utf8'))
-      expect(text, `${relative(ROOT, file)} 不应出现 dark: 变体`).not.toMatch(/\bdark:[a-z[]/)
+      expect(text, `${relativeToRoot(file)} 不应出现 dark: 变体`).not.toMatch(/\bdark:[a-z[]/)
     }
   })
 })
@@ -129,10 +129,16 @@ describe('Design Token：引用完整性', () => {
     const offenders: string[] = []
 
     for (const file of tsFiles) {
-      if (file.includes('/lib/api/mock/')) continue
-      const source = readFileSync(file, 'utf8')
+      const rel = relativeToRoot(file)
+      // mock fixtures 里的色值来自上游数据样本（图片 accent、话题色），它们模拟的是
+      // **接口返回**，不是设计决策。判定必须用归一化路径：`includes('/lib/…')` 在
+      // Windows 上因为原文是反斜杠恒不命中，于是 mock 会被当成"组件硬编码"长期报红。
+      if (rel.includes('/lib/api/mock/')) continue
+      // 注释里的色值是**说明文字**（如 postmark.tsx 用 #41527e 解释旧配色为什么被换掉）。
+      // 扫字面量前先剥注释，否则这条测试测的是注释而不是代码。
+      const source = stripJsComments(readFileSync(file, 'utf8'))
       for (const match of source.matchAll(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi)) {
-        offenders.push(`${relative(ROOT, file)} → ${match[0]}`)
+        offenders.push(`${rel} → ${match[0]}`)
       }
     }
 
@@ -148,10 +154,10 @@ describe('Design Token：样式层不硬编码颜色', () => {
       // 注释里的示例色值、url() 中的 data URI 与 #fragment 都不是颜色声明
       const text = stripNonColorLiterals(stripCssComments(readFileSync(file, 'utf8')))
       for (const match of text.matchAll(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi)) {
-        offenders.push(`${relative(ROOT, file)} → ${match[0]}`)
+        offenders.push(`${relativeToRoot(file)} → ${match[0]}`)
       }
       for (const match of text.matchAll(/\b(?:rgb|rgba|hsl|hsla)\s*\(([^)]*)\)/gi)) {
-        if (!match[1].includes('var(')) offenders.push(`${relative(ROOT, file)} → ${match[0]}`)
+        if (!match[1].includes('var(')) offenders.push(`${relativeToRoot(file)} → ${match[0]}`)
       }
     }
 

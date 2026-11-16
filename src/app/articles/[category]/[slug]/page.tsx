@@ -24,6 +24,7 @@ import {
   isNotFound,
   type ArticleDetail,
 } from '@/lib/api'
+import { imageSizeIndex } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { toContentLang } from '@/lib/i18n/config'
@@ -99,8 +100,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const locale = await getLocale()
   const isMarkdown = article.contentFormat === 'markdown'
+  // 正文图尺寸来自 core 的附件元数据；命中才写 width/height，拿不到就不猜
   const rendered =
-    isMarkdown && article.content.trim() ? await renderMarkdown(article.content, locale) : null
+    isMarkdown && article.content.trim()
+      ? await renderMarkdown(article.content, locale, {
+          imageSizes: imageSizeIndex(article.images),
+        })
+      : null
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
 
   // AI 资源是附加信息：并行取，任一失败都只影响自己那一块

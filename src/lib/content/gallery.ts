@@ -37,6 +37,16 @@ export interface GalleryImage {
   alt: string
   /** `![alt](src "title")` 里的 title */
   title?: string
+  /**
+   * 原始宽高（来自附件元数据，解析阶段就能拿到）。
+   *
+   * 只在 `renderGalleryHtml` 里用到 —— 那是**服务端**产出的静态轨道，也是
+   * 客户端增强组件读取图片清单的唯一来源（`readGalleryImages` 从 DOM 属性回读）。
+   * 少了这两个值，增强后的 `<img>` 会在图片下载完成后整体跳一次高度，
+   * 一篇 470 张图的日记实测 CLS 0.92。
+   */
+  width?: number
+  height?: number
 }
 
 /** 容器起点的粗匹配：给 marked 的 `start()` 用，只负责“这里可能有容器” */
@@ -90,19 +100,28 @@ export function selectGalleryImages(content: string): GalleryImage[] {
   })
 }
 
-/** 相册容器 HTML：无 JS 时仍然是一排可横向滚动、可点击查看原图的图片 */
+/**
+ * 相册容器 HTML：无 JS 时仍然是一排可横向滚动、可点击查看原图的图片
+ *
+ * `imageSizes` 与正文图共用同一份索引（来自 core 的附件元数据）：相册是
+ * 「一排缩略图」，缺尺寸时整条轨道的高度会在图片陆续下载完成时反复跳，
+ * 比单张图更明显。命中才写，未命中照旧。
+ */
 export function renderGalleryHtml(
   id: string,
   variant: GalleryVariant,
   images: GalleryImage[],
+  imageSizes?: ReadonlyMap<string, { width: number; height: number }>,
 ): string {
   const items = images
     .map((image) => {
       const title = image.title ? ` title="${escapeAttribute(image.title)}"` : ''
+      const size = imageSizes?.get(image.src)
+      const dimensions = size ? ` width="${size.width}" height="${size.height}"` : ''
       return [
         '<li class="md-gallery__item">',
         `<a class="md-gallery__link" href="${escapeAttribute(image.src)}" target="_blank" rel="noopener noreferrer">`,
-        `<img src="${escapeAttribute(image.src)}" alt="${escapeAttribute(image.alt)}" loading="lazy" decoding="async"${title} />`,
+        `<img src="${escapeAttribute(image.src)}" alt="${escapeAttribute(image.alt)}"${dimensions} loading="lazy" decoding="async"${title} />`,
         '</a>',
         '</li>',
       ].join('')
@@ -133,7 +152,10 @@ interface GalleryToken extends Tokens.Generic {
  * 没有任何可用图片时**不产出相册**，而是把正文按普通 Markdown 渲染：
  * 文字继续可见，非法图片自然被清洗掉（空相册不占位、不报错）。
  */
-export function createGalleryExtension(register: (id: string) => void): MarkedExtension {
+export function createGalleryExtension(
+  register: (id: string) => void,
+  imageSizes?: ReadonlyMap<string, { width: number; height: number }>,
+): MarkedExtension {
   let counter = 0
 
   return {
@@ -178,7 +200,7 @@ export function createGalleryExtension(register: (id: string) => void): MarkedEx
           }
 
           register(gallery.id)
-          return renderGalleryHtml(gallery.id, gallery.variant, gallery.images)
+          return renderGalleryHtml(gallery.id, gallery.variant, gallery.images, imageSizes)
         },
       },
     ],

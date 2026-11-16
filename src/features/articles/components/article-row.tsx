@@ -61,7 +61,7 @@ export function ArticleRow({
         <h3
           className={cn(
             'font-serif text-[var(--text-heading)]',
-            compact ? 'text-h3 leading-[1.45]' : 'text-[1.625rem] leading-[1.3] tracking-[-0.01em]',
+            compact ? 'text-h3 leading-[1.45]' : 'text-rowtitle',
           )}
         >
           {href ? (

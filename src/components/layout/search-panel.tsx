@@ -154,7 +154,7 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="search-panel fixed inset-0 z-50">
       {/* 遮罩：点击关闭；不使用黑色蒙版，用纸面 + 轻模糊，保持「纸上浮起」的层次 */}
       <button
         type="button"

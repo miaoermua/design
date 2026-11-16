@@ -1,7 +1,13 @@
 import { requestV2 } from '../client/http'
 import type { V2PageListBody, V2PageRow } from '../contracts/v2/content'
-import { expectObject, readString, stringOrNull, toPageResult } from '../adapters/common'
-import type { PageResult } from '../domain/common'
+import {
+  expectObject,
+  readString,
+  stringOrNull,
+  toAttachments,
+  toPageResult,
+} from '../adapters/common'
+import type { Attachment, PageResult } from '../domain/common'
 
 export interface PageContent {
   /** 页面实体 id：评论等按 refId 关联的能力需要它 */
@@ -10,6 +16,8 @@ export interface PageContent {
   subtitle: string | null
   content: string
   contentFormat: string
+  /** 正文图尺寸来源（core 的 images 带 width/height） */
+  images: Attachment[]
   updatedAt: string | null
 }
 
@@ -70,6 +78,7 @@ export async function getPageBySlug(
     subtitle: stringOrNull(row.subtitle),
     content: stringOrNull(row.text) ?? stringOrNull(row.content) ?? '',
     contentFormat: readString(row, 'content_format', 'contentFormat') ?? 'markdown',
+    images: toAttachments(row.images),
     updatedAt: readString(row, 'modified_at', 'modifiedAt'),
   }
 }

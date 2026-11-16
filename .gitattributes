@@ -1,0 +1,30 @@
+# 统一行尾：仓库与检出都用 LF。
+#
+# 为什么需要这个文件：仓库此前没有 .gitattributes，而 Windows 上
+# `core.autocrlf=true` 会把检出转成 CRLF。后果有两类，都不是"风格问题"：
+#   1) Prettier 默认 endOfLine: "lf"，在 CRLF 检出上 `prettier --check .` 全量报错；
+#   2) 测试里用 `'.md-callout,\n.md-banner'` 这类跨行选择器做 indexOf 的断言恒 miss，
+#      报"样式里找不到某个选择器"，而它其实就在文件里。
+# 测试侧已经做了行尾归一（见 tests/helpers/design-tokens.ts 的 normalizeEol），
+# 这个文件负责让新检出不再产生新的 CRLF。
+* text=auto eol=lf
+
+# 二进制：明确标出来，避免被当成文本改写内容
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.mp4 binary
+
+# 锁文件由包管理器生成，不做行尾转换
+pnpm-lock.yaml -text
+package-lock.json -text

@@ -117,3 +117,49 @@ export function firstImageSource(markdown: string): string | null {
 
   return null
 }
+
+/* ── 附件宽高索引（给正文图补 width/height，消 CLS）───────────────
+ *
+ * core 的 `images` 带回 `width` / `height`（实测 236/236 条日记附件、3/3 条
+ * 文章附件都带）。正文图缺这两个属性时，浏览器只能等图片下载完才知道占多大，
+ * 于是每张图落地都把下面的内容往下推一次 —— 一篇 475 张图的长日记滚起来是
+ * 持续的位移抖动。
+ *
+ * 索引只收**两个值都有效**的条目：浏览器要从 `width` + `height` 推出
+ * `aspect-ratio`，只给一个反而会按默认 300×150 之类兜底，比不给更糟。
+ *
+ * 匹配是**精确地址相等**，不做「同文件名」之类的模糊配对：
+ * 两个目录下的 `cover.webp` 是两张不同的图，猜错会把图撑成长条。
+ * 因此拿不到尺寸的图保持原样（宁可它继续有 CLS，也不要一张比例错误的图）。
+ */
+
+/** 一张图在版面上需要的最小信息 */
+export interface ImageSize {
+  width: number
+  height: number
+}
+
+/**
+ * 从附件列表建 `src → 宽高` 索引。
+ *
+ * 只取 `kind === 'image'`：视频附件的 `width/height` 是视频轨道的尺寸，
+ * 套到 `<img>` 上（比如视频的封面图）会是错的。
+ */
+export function imageSizeIndex(
+  images:
+    readonly { src: string; width?: number; height?: number; kind?: string }[] | null | undefined,
+): Map<string, ImageSize> {
+  const index = new Map<string, ImageSize>()
+
+  for (const image of images ?? []) {
+    if (!image || typeof image.src !== 'string') continue
+    if (image.kind && image.kind !== 'image') continue
+    const { width, height } = image
+    if (!Number.isFinite(width) || !Number.isFinite(height)) continue
+    if (!width || !height || width <= 0 || height <= 0) continue
+    if (index.has(image.src)) continue
+    index.set(image.src, { width: Math.round(width), height: Math.round(height) })
+  }
+
+  return index
+}

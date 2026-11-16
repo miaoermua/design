@@ -40,7 +40,7 @@ export function ReadingAside({
   const hasToc = items.length >= 2
 
   return (
-    <aside className="min-w-0 xl:col-start-2 xl:row-start-1">
+    <aside className="reading-aside min-w-0 xl:col-start-2 xl:row-start-1">
       <div className="mt-8 pt-4 xl:sticky xl:top-28 xl:mt-0 xl:pt-0">
         <div className="hidden xl:block">
           {hasToc ? (
@@ -76,7 +76,7 @@ export function ReadingInline({ items, targetId, locale = DEFAULT_LOCALE }: Read
   const hasToc = items.length >= 2
 
   return (
-    <div className="mt-10 xl:hidden">
+    <div className="reading-inline mt-10 xl:hidden">
       {hasToc ? (
         <details className="border-t border-dashed border-[var(--edge)] pt-4">
           <summary className="toc-summary meta flex cursor-pointer items-center justify-between gap-3 select-none">

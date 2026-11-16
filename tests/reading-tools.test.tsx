@@ -26,14 +26,20 @@ const ACTIONS = (
 )
 
 describe('ReadingAside 桌面栏', () => {
-  it('目录标题在左、环形进度在右，同处一行', () => {
+  // 桌面栏用的是**竖向线性**进度条（不是环形）：环形只在移动端折叠行的右侧出现。
+  // 进度条不是 header 的直接子节点，它外面还有一层 `mt-4` 间距容器——断言必须
+  // 认这一层，否则改一次间距就等于改一次测试。
+  it('目录标题在上、竖向进度条在下，同处一栏', () => {
     render(<ReadingAside items={ITEMS} targetId="body" actions={ACTIONS} />)
-    const header = screen.getByText('目录').parentElement as HTMLElement
-    const ring = document.querySelector('[data-reading-progress]') as HTMLElement
+    const column = screen.getByText('目录').parentElement as HTMLElement
+    const progress = document.querySelector('[data-reading-progress]') as HTMLElement
 
-    expect(header.contains(ring)).toBe(true)
-    expect(header.firstElementChild).toBe(screen.getByText('目录'))
-    expect(header.lastElementChild).toBe(ring)
+    expect(column.contains(progress)).toBe(true)
+    expect(column.firstElementChild).toBe(screen.getByText('目录'))
+    // 最后一个子节点是包着进度条的容器，进度条本身是它的唯一子元素
+    const last = column.lastElementChild as HTMLElement
+    expect(last.contains(progress)).toBe(true)
+    expect(last.children).toHaveLength(1)
   })
 
   it('进度只有一处，不再单独占一行', () => {

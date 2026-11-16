@@ -45,8 +45,47 @@ export function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
+/**
+ * 相对仓库根的路径，**统一用正斜杠**。
+ *
+ * `node:path.relative()` 在 Windows 上返回 `src\app\globals.css`。而测试里的例外清单
+ * 与文档一律写 `src/app/globals.css` —— 直接拿返回值去查表会恒不命中：例外清单里的
+ * 条目全部变成"失效项"，同时每一条本该被放行的引用都变成"违例"。这两种表现互相
+ * 抵消不掉，最终就是**整条守卫静默失效**（Windows 上是常红，Linux 上才是真绿）。
+ *
+ * 路径在这里归一，而不是在每张表里准备两份 key：一份事实只写一遍。
+ */
 export function relativeToRoot(file: string, root: string = ROOT): string {
-  return relative(root, file)
+  return relative(root, file).replaceAll('\\', '/')
+}
+
+/**
+ * 去掉 JS / TS 注释，为「扫字面量」一类断言服务。
+ *
+ * 为什么必须剥：`postmark.tsx` 的文件头注释用 `#41527e` / `#3a4561` 解释配色
+ * 来源，`tag-note-list.tsx` 用十六进制解释哈希常量。把它们当"硬编码颜色"报出来，
+ * 等于把**说明文字**判成**违规代码**——测试会长期红着，然后所有人学会无视它。
+ *
+ * 只处理本项目实际存在的两种形态，不做完整 parser：
+ *   - `/* … *\/` 块注释（含 JSDoc）
+ *   - 行注释，但 `://` 里的 `//` 不算（URL 与协议相对地址都含它）
+ * 字符串里的 `//`（如 `'https://…'`）同样被 `://` 规则保住；
+ * 代价是字符串里出现 `// 说明` 这种内容会被误剥——本项目没有这种写法，
+ * 真出现时也只会让断言变宽松，不会变严。
+ */
+export function stripJsComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:/\w])\/\/[^\n]*/g, '$1')
+}
+
+/**
+ * 把 CRLF 归一成 LF，供"按行"做字符串匹配的地方使用。
+ *
+ * 仓库里存的是 LF，但 `core.autocrlf=true` 的 Windows 检出是 CRLF。凡是拿
+ * `'...\n...'` 这样的多行选择器去 `indexOf` 的断言，在 CRLF 检出上会恒 miss ——
+ * 表现是"样式里明明有这个选择器，测试却说找不到"。
+ */
+export function normalizeEol(text: string): string {
+  return text.replaceAll('\r\n', '\n')
 }
 
 /**
@@ -133,12 +172,18 @@ export function aliasDefinitions(): Map<string, string> {
   return map
 }
 
-/** 解析 `@theme` / `:root` 里的 Token 值（字号、间距、圆角、阴影、动效等） */
+/**
+ * 解析 `@theme` / `:root` 里的 Token 值（字号、间距、圆角、阴影、动效、版心与布局轨道）。
+ *
+ * 前缀按"族"列举而不是 `--[a-z-]+` 全收：全收会把 `--color-*`、`--nav-*`、`--material-*`
+ * 一起卷进来，那些族各有自己的文档章节与断言口径。新增一族（如 `--measure-*`）时必须
+ * 在这里登记，否则它在 §6 的"存在性 + 精确值"断言里会被判成"源码里不存在"。
+ */
 export function themeValues(): Map<string, string> {
   const map = new Map<string, string>()
   const block = tokensSection('light')
   const pattern =
-    /^\s*(--(?:text|spacing|radius|border|container|shadow|ease|duration|font)-[a-z0-9-]+)\s*:\s*([\s\S]+?);/gim
+    /^\s*(--(?:text|spacing|radius|border|container|shadow|ease|duration|font|measure|rail|shell|gap|pad)-[a-z0-9-]+)\s*:\s*([\s\S]+?);/gim
   for (const match of block.matchAll(pattern)) {
     map.set(match[1], match[2].replace(/\s+/g, ' ').trim())
   }
@@ -169,15 +214,17 @@ export function rgbToHex(rgb: Rgb): string {
   return (
     '#' +
     rgb
-      .map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0'))
+      .map((v) =>
+        Math.round(Math.max(0, Math.min(1, v)) * 255)
+          .toString(16)
+          .padStart(2, '0'),
+      )
       .join('')
   )
 }
 
-const toLinear = (c: number): number =>
-  c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-const toSrgb = (c: number): number =>
-  c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055
+const toLinear = (c: number): number => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const toSrgb = (c: number): number => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055)
 
 function srgbToOklab(rgb: Rgb): Rgb {
   const [r, g, b] = rgb.map(toLinear)

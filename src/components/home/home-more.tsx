@@ -101,10 +101,17 @@ function SubscribeEntry({ item }: { item: ThemeHomepageMoreItem }) {
   const wrapperRef = useRef<HTMLSpanElement | null>(null)
   const panelId = useId()
 
-  useEffect(() => {
-    if (!open) return
+  /**
+   * 打开面板。
+   *
+   * 权限状态只在**打开这一刻**读一次，而不是放进 effect：在 effect 里同步
+   * `setState` 会触发一轮级联渲染（eslint 的 `set-state-in-effect` 正是拦这个）。
+   * 这里是在用户点击的事件处理里读写，React 会把它和 `setOpen` 合并成一次渲染。
+   */
+  const openPanel = () => {
     setNotifyState(systemNotifications.getState())
-  }, [open])
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -163,7 +170,7 @@ function SubscribeEntry({ item }: { item: ThemeHomepageMoreItem }) {
         type="button"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={() => (open ? setOpen(false) : openPanel())}
         style={item.color ? { color: item.color } : undefined}
         className="home-more__entry"
       >

@@ -9,6 +9,11 @@
 @import '../design-system/styles/footnotes.css';
 @import '../design-system/styles/mentions.css';
 @import '../design-system/styles/reading.css';
+/* 系统高对比度与增强对比：只在对应的媒体查询里生效，常规浏览零影响 */
+@import '../design-system/styles/forced-colors.css';
+/* 打印：整份文件只包一个 @media print，屏幕样式零影响。放在最后，
+   保证它能覆盖前面各层（同权重下后者胜） */
+@import '../design-system/styles/print.css';
 /* 组件专属样式：只服务单个页面/组件，不属于站点级设计系统，
    因此放在各自的 feature / components 目录、由这里汇总引入。
    新增时保持「一个组件一个文件」，不要在 globals.css 里续写组件规则。 */

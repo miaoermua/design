@@ -151,6 +151,15 @@
   --text-title--line-height: 1.26;
   --text-title--letter-spacing: -0.014em;
 
+  /* 列表行标题（文章列表每一条的 h3）。
+     它**不能**用 `--text-title`：那个是 clamp，桌面端会爬到 32–34px，而行标题
+     需要固定在 26px 才不把一屏行数压掉。区间恰好等于 title 的下限 1.625rem，
+     所以过去一直被写成 `text-[1.625rem]` 任意值——那不是"特殊排版"，是缺一档。
+     行高 1.3、字距 −0.01em 比 title 略紧：行标题常与摘要两行并置，需要更紧凑。 */
+  --text-rowtitle: 1.625rem;
+  --text-rowtitle--line-height: 1.3;
+  --text-rowtitle--letter-spacing: -0.01em;
+
   --text-h2: 1.375rem;
   --text-h2--line-height: 1.4;
   --text-h3: 1.125rem;
@@ -200,7 +209,9 @@
   --shell-post: calc(var(--measure-post) + var(--gap-rail) + var(--rail-toc));
   /* 日记 shell = measure-note + 2×pad-paper + 2×hairline + gap-rail + rail-toc */
   --shell-note: calc(var(--measure-note) + var(--pad-paper-inline) + var(--pad-paper-inline) + var(--gap-rail) + var(--rail-toc));
-  /* 普通页 shell = rail-side + gap-side + measure-page              */
+  /* 普通页 shell = rail-side + gap-side + measure-page = 65rem = 1040px
+     侧栏的显示阈值就是「这个宽度 + 双侧 gutter」= 1040 + 64 = 1104px（69rem）。
+     换算写在 about/page.tsx 的注释里；改这三个值必须同时看那个断点。 */
   --shell-page: calc(var(--rail-side) + var(--gap-side) + var(--measure-page));
 
   /* ── 4e. 旧兼容（保持 Container 组件不变）────────────────────── */

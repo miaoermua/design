@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  ROOT,
   SRC,
   TOKENS,
   aliasDefinitions,
@@ -13,6 +11,7 @@ import {
   mixOklab,
   mixSrgb,
   palette,
+  relativeToRoot,
   stripCssComments,
   tokensSection,
   walk,
@@ -288,7 +287,7 @@ function occurrences(pattern: RegExp): Occurrence[] {
     for (const [index, line] of lines.entries()) {
       if (pattern.test(line)) {
         out.push({
-          file: relative(ROOT, file),
+          file: relativeToRoot(file),
           line: index + 1,
           text: line.trim(),
           selector: isCss ? selectorFor(lines, index) : '',
@@ -447,7 +446,12 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
     {
       file: 'src/components/ui/pagination.tsx',
       match: 'disabledClass',
-      reason: '未激活控件（WCAG 1.4.3 对 inactive component 豁免）',
+      // 这是白名单里**唯一承载可读文字**的一处（其余都是分隔符与图标）。
+      // 判定依据不是"豁免"两个字，而是：它渲染成 `<span aria-disabled="true">`，
+      // 不响应点击、不在 Tab 顺序里，属于 WCAG 1.4.3 定义的 inactive component，
+      // 没有对比度要求。反过来，把它提到 secondary 会让"不可点"看起来像"可点"，
+      // 是一个更严重的可用性错误 —— 灰得明显，才是正确的禁用信号。
+      reason: '未激活控件（`<span aria-disabled>` 不可点、不在 Tab 顺序）；过亮会误导成可点',
     },
     {
       file: 'src/components/ui/mermaid-hydrator.tsx',
@@ -499,7 +503,7 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
         const body = block[1]
         if (smallSize.test(body) && weak.test(body)) {
           problems.push(
-            `${relative(ROOT, file)} → ${body.replace(/\s+/g, ' ').trim().slice(0, 160)}`,
+            `${relativeToRoot(file)} → ${body.replace(/\s+/g, ' ').trim().slice(0, 160)}`,
           )
         }
       }

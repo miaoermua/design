@@ -17,7 +17,7 @@ import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
-import { inlineMediaSources } from '@/lib/content/inline-media'
+import { imageSizeIndex, inlineMediaSources } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang, type Locale } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
@@ -124,7 +124,11 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   const timeZone = getSiteTimezone()
   const isMarkdown = diary.contentFormat === 'markdown'
   const rendered =
-    isMarkdown && diary.content.trim() ? await renderMarkdown(diary.content, locale) : null
+    isMarkdown && diary.content.trim()
+      ? await renderMarkdown(diary.content, locale, {
+          imageSizes: imageSizeIndex(diary.images),
+        })
+      : null
   // core 的 `images` 是正文里抽出来的全部图片（`::: gallery` / `::: carousel`
   // 里的也在其中）。正文已经渲染过的不在文末再铺一遍，否则用相册的日记会把
   // 同一批图显示两次；这里只补正文里没出现过的附件。

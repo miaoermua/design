@@ -6,6 +6,7 @@ import { Prose } from '@/components/ui/prose'
 import { requireFeature } from '@/core/registry/guard'
 import { CommentsSection } from '@/features/comments'
 import { getPageBySlug, isNotFound } from '@/lib/api'
+import { imageSizeIndex } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
@@ -65,7 +66,11 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
 
   const isMarkdown = page.contentFormat === 'markdown'
   const rendered =
-    isMarkdown && page.content.trim() ? await renderMarkdown(page.content, locale) : null
+    isMarkdown && page.content.trim()
+      ? await renderMarkdown(page.content, locale, {
+          imageSizes: imageSizeIndex(page.images),
+        })
+      : null
 
   return (
     <Container width="prose">

@@ -54,6 +54,14 @@ function readGalleryImages(node: HTMLElement): GalleryImage[] {
     const title = img.getAttribute('title')
     const image: GalleryImage = { src, alt: img.getAttribute('alt') ?? '' }
     if (title) image.title = title
+    // 尺寸也一起回读：增强后的 <img> 是**新建**的节点，不继承服务端属性。
+    // 不回读就会丢掉「下载前占位」的能力，470 张图的相册一次性抖一次高度。
+    const width = Number(img.getAttribute('width'))
+    const height = Number(img.getAttribute('height'))
+    if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+      image.width = width
+      image.height = height
+    }
     images.push(image)
   }
 

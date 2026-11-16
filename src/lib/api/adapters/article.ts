@@ -8,6 +8,7 @@ import {
   stringArray,
   stringOrNull,
   toAttachment,
+  toAttachments,
 } from './common'
 
 function toCategoryRef(row: V2PostRow): ArticleCategoryRef | null {
@@ -65,6 +66,8 @@ export function toArticleDetail(row: V2PostDetail): ArticleDetail {
     text: null,
     content: pickContent(row),
     contentFormat: stringOrNull(row.content_format) ?? 'markdown',
+    // 正文图尺寸来源：core 的 images 带 width/height，正文里同一张图共用同一地址
+    images: toAttachments(row.images),
     copyright: Boolean(row.copyright),
     related: related.map((item) => toArticle(item as V2PostRow)),
     liked: typeof row.liked === 'boolean' ? row.liked : null,

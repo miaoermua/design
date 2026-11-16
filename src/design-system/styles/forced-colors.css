@@ -1,0 +1,137 @@
+/* ══ 系统高对比度（forced-colors）═══════════════════════════════════
+ *
+ * Windows 高对比度、macOS「增强对比度」等模式会**强制覆盖**大部分颜色：
+ * 浏览器把 `background-color` / `color` / `border-color` 换成系统调色板，
+ * 只保留少数属性。它不读我们的 Token，所以这不是"再调一次色"能解决的。
+ *
+ * 这套模式下真正会坏的只有三类东西：
+ *   1. **用 color-mix() / 半透明表达的层级**（导航玻璃、发丝边、光斑）——
+ *      透明度会被抹平，玻璃与纸面变成同一个颜色，卡片边界消失；
+ *   2. **只靠颜色表达的状态**（当前页、按下、完成）—— 色相被系统替换后
+ *      两个状态可能长得一样；
+ *   3. **用背景块而非边框做的分隔**（便利贴、代码块底色）—— 底色没了就没了。
+ *
+ * 处理原则：**不加新颜色，只把"被系统抹掉的信息"改用系统色 + 结构表达**。
+ * `Canvas` / `CanvasText` / `LinkText` / `ButtonBorder` / `Highlight` 是
+ * CSS System Color 关键字，浏览器会把它们映射成用户当前主题的实际颜色，
+ * 因此这里写死的不是色值，是"用哪个系统角色"。
+ */
+
+@media (forced-colors: active) {
+  /* ── 1. 玻璃与浮层：还原成实色 + 系统边框 ───────────────────── */
+
+  /* 导航卡片 / 工具胶囊 / 移动底部胶囊：玻璃被抹平后，
+     唯一的边界只能靠 `ButtonBorder` 的实线。 */
+  .glass-nav,
+  .nav-glass {
+    background-color: Canvas;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    /* 光斑在强制色下没有意义，且会被渲染成一个突兀的色块 */
+    --nav-spotlight: transparent;
+  }
+
+  .nav-spotlight {
+    display: none;
+  }
+
+  /* 菜单 / 搜索面板：同样是浮在内容上的层，必须有可见边界 */
+  .nav-panel,
+  .nav-flyout__card,
+  .glass-panel {
+    background-color: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  /* 阅读纸面：底色被抹掉后，用边框标出它的范围，否则正文与页面糊在一起 */
+  .reading-sheet {
+    border: 1px solid CanvasText;
+  }
+
+  /* ── 2. 只靠颜色表达的状态：补上结构差异 ─────────────────────── */
+
+  /* 当前页：屏幕上是"浅底 + 加粗"，强制色下浅底消失，只剩加粗 ——
+     补一条底边线，让"在哪一页"在黑白下也成立 */
+  .nav-link[data-active='true'],
+  .nav-link[aria-current='page'] {
+    border-bottom: 2px solid CanvasText;
+    font-weight: 700;
+  }
+
+  /* 目录的当前项：屏幕上是 accent 竖线（`bg-[var(--accent)]` 的绝对定位 span），
+     强制色下 accent 被替换成 Highlight，2px 细线常常直接消失 ——
+     改由文字本身的描边表达"当前在哪一节" */
+  .prose a[aria-current='location'],
+  aside a[aria-current='location'] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+
+  /* 链接：强制色下用系统 LinkText，且下划线必须保留 */
+  .prose a,
+  .link-quiet {
+    color: LinkText;
+    text-decoration: underline;
+  }
+
+  /* ── 3. 靠底色表达的块：补边框 ───────────────────────────────── */
+
+  /* 代码块 / 行内代码 / 便利贴：底色在强制色下会被统一，
+     块与正文失去区分，用边框重建层次 */
+  .prose pre,
+  .prose :not(pre) > code,
+  .tag-note__body,
+  .md-callout,
+  .md-banner {
+    border: 1px solid CanvasText;
+    forced-color-adjust: none;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  /* 表格：单元格线在强制色下可能消失 */
+  .prose th,
+  .prose td {
+    border: 1px solid CanvasText;
+  }
+
+  /* ── 4. 焦点环：系统色，保证在任何背景上都可见 ───────────────── */
+
+  /* 全站焦点环用的是 `--focus-ring-color` = accent。强制色下 accent 被
+     替换成系统 Highlight，但 `outline-color` 有时会被忽略 —— 显式指定 */
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* ── 5. 装饰性图形：不做反色，直接隐藏 ───────────────────────── */
+
+  /* 纸纹噪点与受光渐变在强制色下会变成噪点块或纯色斑 */
+  .paper-grain,
+  .paper-ambient {
+    display: none;
+  }
+
+  /* 明信片的模糊底头像（同一张头像的 blur 副本）：强制色下它会变成一块
+     实色矩形压在卡面上，把主体头像糊掉。装饰性的"底"先撤掉，主体保留。 */
+  .friend-postcard__glow {
+    display: none;
+  }
+}
+
+/* `prefers-contrast: more` 是「我希望对比更强」而不是「别管我的颜色」，
+   与 forced-colors 不同：这里保留自己的配色，只把最弱的层抬一档。
+   `--text-tertiary` 是装饰专用色，把它抬到 secondary 会让图标与分隔点
+   与正文抢注意力，所以**不动它**；只加强边框这一层 —— 它是最容易"糊在纸上"的。 */
+@media (prefers-contrast: more) {
+  :root {
+    --edge: var(--edge-strong);
+  }
+
+  .nav-link[data-active='true']::after {
+    /* 选中细线从 1px 加到 2px：颜色不变，只让它更明确 */
+    height: 2px;
+  }
+}
