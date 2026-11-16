@@ -114,17 +114,17 @@ export default async function HomePage() {
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
       {showProfile ? (
-        <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
-          <div className="flex items-start gap-5 sm:gap-6">
+        <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.5)] pb-[var(--spacing-stack)]">
+          <div className="flex items-start gap-5 sm:gap-7">
             {owner?.avatar ? (
               <CoverImage
                 src={owner.avatar}
                 alt={name}
-                width={72}
-                height={72}
+                width={88}
+                height={88}
                 priority
                 // 圆形头像，尺寸克制：它是身份的一部分，不是首屏主视觉
-                className="size-14 shrink-0 rounded-full border border-[var(--edge)] sm:size-[4.5rem]"
+                className="size-16 shrink-0 rounded-full border border-[var(--edge)] sm:size-[5.5rem]"
               />
             ) : null}
 
