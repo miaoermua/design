@@ -1,115 +1,112 @@
 # AGENTS.md
 
-Folio 仓库对所有 Coding Agent 的长期工程约束。**提示词有特殊需求需要按照提示词的特殊需求完成**；与本文冲突的做法，先提出来，不要直接执行。
+本文记录 Folio 的默认工程约束与已知陷阱，不覆盖用户对当前任务的明确要求。用户明确要求的变更或操作（如修改设计系统、提交代码）直接执行，不重复征求同意；只有范围不清或可能误伤他人数据时才先确认。
 
-文档分工：
-
-| 文档                         | 地位                                                       |
-| ---------------------------- | ---------------------------------------------------------- |
-| `AGENTS.md`（本文件）        | 工程约束与行为边界，长期有效                               |
-| `docs/DESIGN-SYSTEM.md`      | 视觉规范权威（颜色、排版、材质、组件状态）                 |
-| `docs/FEATURE.md`            | 功能实现矩阵：**事实快照，不是任务清单**（维护规则见末节） |
-| `docs/audits/PHASE-*.md`     | 阶段事实与验收证据，**进度以这些报告为准**                 |
-| `README.md` / `.env.example` | 运行方式与配置项                                           |
+Folio 是基于 Mix Space 官方协议 API v2 / Core 12.x 的前端主题，不是通用博客模板。目录与组件清单以代码为准，不在这里重复。
 
 ---
 
-## Project Identity
+## 文档分工
 
-- **Folio** 是基于 [Mix Space](https://github.com/mx-space/) 官方协议（**API v2 / Core 12.x**）的前端主题，不是通用博客模板。
-- 可以借鉴 Shiro / kami / mx-starter 的**产品完成度**（信息架构、交互细节、边界情况处理），但不得把它们的内部约定当成 Mix Space 的能力。
-- Design 和 Folio 都是该仓库的代号，不代表最终名字。
-
----
-
-## Technology Stack
-
-以 `package.json` 为准，勿重复维护依赖版本或引入项目未采用的技术。样式使用 Tailwind v4 的 CSS 配置；Token 位于 `src/design-system/tokens/tokens.css`，不要新增 `tailwind.config.*`。`fonts.css` 在 `src/app/layout.tsx` 中单独引入，勿随意调整顺序。
+- `AGENTS.md`：Agent 的默认工程约束；用户对当前任务的明确要求可提出例外。
+- `docs/DESIGN-SYSTEM.md`：视觉规范权威，不是只读文档；按用户要求或实现需要可以修改。Token 具体值以 `src/design-system/tokens/tokens.css` 为准。
+- `docs/FEATURE.md`：已实现功能的事实快照，不是任务清单。
+- `docs/audits/PHASE-*.md`：阶段事实与验收证据，进度以报告为准。
+- `README.md` / `.env.example`：运行方式与配置项。
 
 ---
 
-## Architecture Principles
+## 工作区
 
-**依赖方向单向**：页面 / 路由 → `src/features/*` → `src/lib/api` → 契约。反向依赖一律视为设计错误。
+开始前看 `git status --short`、`git rev-parse HEAD`、`git worktree list`。
 
-- API 分层：`client`、`contracts/v2`、`domain`、`adapters`、`repositories`、`mock`、`errors` 各司其职；页面与 feature **只能从 `src/lib/api/index.ts` 取数**，不得直接依赖 `client` 或 `contracts`。
-- **Feature Registry 是唯一开关源**（`src/core/registry/features.ts`）：关闭模块时，导航、路由和请求都必须受守卫控制；新增 feature 必须同时登记 `featureFlags` 与含 routes/endpoints 的 `manifest.ts`。
-- **不为单个功能引入大型依赖**。新增运行时依赖需先说明：现有依赖为何不够、体积代价、是否有更小的替代。
-- 避免重复请求、重复 Markdown 解析和无谓重渲染；取数在 RSC 完成，不在 render 内做 I/O。
-
----
-
-## Protocol Constraints
-
-- 严格遵循 Mix Space 官方协议，只实现 **v2**（`MX_API_VERSION=2`）。契约方言开关存在只是为未来移植留位，**当前不要实现 v3 API**。
-- **不擅自增加上游不存在的字段**，也不要在前端"补"一个后端没有的概念，也就是不要独立实现不存在的东西。
+- 默认不覆盖他人未提交的改动、不清理无关并行改动。
+- 默认不执行 `reset --hard`、强制 checkout、clean、删 worktree 等破坏性操作；用户明确要求且目标和影响范围清楚时可以执行，不明确就先确认。
+- 默认不 commit、push、改远程分支或合并 PR；用户明确要求时直接按要求执行，不额外确认。
+- 默认保留 `docs/audits/` 历史报告；如用户要求清理，先确认具体范围及引用。
 
 ---
 
-## Design System
+## 协议与架构
 
-**唯一权威**：`docs/DESIGN-SYSTEM.md`。**唯一 Token 来源**：`src/design-system/tokens/tokens.css`。
-
-Token 分层与视觉规范以 `tokens.css` 和设计系统文档 §2 为准。
-
-硬性要求：
-
-- 组件使用语义 Token，不硬编码颜色；浅色与暗色保持相同语义。例外以相关测试登记为准。
-- 保持 Warm Paper × Lavender Blue 的暖底冷界面关系；避免无必要的材质、阴影和卡片。
-- 使用项目自托管字体；`fonts.css` 只声明 `@font-face`，字体栈只定义在 `tokens.css`。
-- 新增 Token 时，同步更新 `tokens.css`、`DESIGN-SYSTEM.md` 和测试。修改视觉参数后，重新测量对应基线并更新报告。
+- 默认只实现 Mix Space API v2；任务明确要求支持其他版本时，先核对官方协议并同步更新契约、文档和测试。不凭空虚构上游字段或概念。依赖版本以 `package.json` 为准，包管理使用 pnpm。
+- 依赖方向为页面/路由 → feature → `src/lib/api` → 契约。API 的 client、contracts、domain、adapters、repositories、mock、errors 分层；页面与 feature 只从 `src/lib/api/index.ts` 取数。
+- 取数在 RSC 完成；避免重复请求、重复 Markdown 解析和 render 内 I/O。新增大型运行时依赖前，说明必要性与替代方案。
 
 ---
 
-## CSS 与组件规则
+## Feature 开关
 
-- CSS 选择器必须对应真实 DOM；删除或改名之前检查生产者、引用和测试，不保留失效选择器。
-- 组件专属效果留在组件内；带 `backdrop-filter` 的层不要包住承载 `position: fixed` 后代的元素。
-- 优先语义化 HTML；交互需支持键盘、可见焦点和减少动态效果设置，并保证无 JS 时基本可用。
-- 布局尺寸从 Token 派生；具体视觉规则以 `DESIGN-SYSTEM.md` 为准。
+`src/core/registry/features.ts` 是唯一开关源。关一个模块必须**同时**：导航消失、路由 `requireFeature` 拦下、守卫在任何取数之前（零请求）。所以关模块是改布尔值，不是删文件。
 
----
+有路由的 feature 必须有 `manifest.ts`；key 唯一且是 `featureFlags` 的键，routes 对应真实 `page.tsx` 且该页守卫同一个 key。`tests/feature-manifest.test.ts` 守这四条。
 
-## 性能与图片
-
-- 图片和嵌入内容应预留真实尺寸；列表只渲染摘要和必要媒体，避免承载详情页内容。
-- 性能结论以实际网络或测量数据为依据；未测的指标标为 `NOT TESTED`。
+> 踩过：两份清单写同一个 `key`，按 key 建索引时后者静默覆盖前者；另一份把别的模块的路由写进自己 `routes`。都不报错。
 
 ---
 
-## 验证与验收
+## 设计 Token
 
-### 日常开发验证（默认）
-
-标准启动命令，默认使用 3000 端口，仅供 miaoer 的测试使用：
-
-```bash
-MX_SERVER_URL=https://api.miaoer.net \
-MX_THEME_NAME=folio \
-./node_modules/.bin/next dev -p 3000
-```
-
-- 修改代码后用 HMR 实时预览，不重启、不重新构建。
-- **不得为了普通页面预览执行 `next build`**；**不得把 `next start` 当作日常开发预览命令**。
-- 只在 Dev Server 无法满足具体验证需求（构建期行为、生产专属问题等）时，才考虑生产构建，并**说明原因**。
-- 按改动范围运行 `pnpm typecheck`、`pnpm lint`、`pnpm test` 或对应的 Vitest 测试。
-
-开始任务前：
-
-1. `git status` 与 `git worktree list`，确认当前在哪个工作树、有没有别人的未提交改动。
-2. 读相关文档（视觉改动读 `DESIGN-SYSTEM.md`，进度读最近的 `docs/audits/PHASE-*.md`）。
-3. 先审计再改：把"现状是什么、证据在哪"写清楚，再动手。
-
-执行中：
-
-- **不覆盖用户未提交修改**。目标文件有未提交改动且与本次改动冲突时，停下来问，不要"顺手覆盖"。
-- **不擅自 `commit` / `push` / 改远程分支**。提交只在明确要求时发生，除非提示词里面写了特殊需求否则不要执行，如需要执行请按照英文规范进行提交。
-- 如果有并发 Coding 或者个人改动，如果没改到本次任务内容，不要中断，这是多个开发并行行为，除非文件全改乱了、动到了本次任务的内容，那就停下来。
-
-视觉基线使用 `scripts/visual/*.mjs`，默认对 Dev Server 采集，不需要生产构建；仅在生产行为必须验证时才运行 `pnpm build`。测试与采集状态以实际执行结果为准，截图不要提交或存入仓库。
+- 视觉规范以 `docs/DESIGN-SYSTEM.md` 为准，Token 唯一来源是 `src/design-system/tokens/tokens.css`；Tailwind v4 使用 CSS 配置，不新增 `tailwind.config.*`。
+- 组件使用语义 Token，不硬编码颜色；浅色与暗色保持相同语义。保持暖纸底与冷色界面的设计关系，避免无必要的材质和卡片。
+- `fonts.css` 只声明项目自托管字体的 `@font-face`；字体栈只定义在 `tokens.css`。
+- 新增 Token 时同步更新 Token、设计文档和测试；修改视觉参数后，重新采集对应基线并更新报告。
 
 ---
 
-## 功能矩阵与报告（`docs/FEATURE.md`）
+## CSS 选择器
 
-- 新增、修改或删除功能时同步更新 `FEATURE.md`；阶段报告放在 `docs/audits/` 并在矩阵中索引。矩阵是事实快照，不是任务清单。
+- 写规则前确认组件**真的产出**这个类。别因为别的主题用了某类名就推断 Folio 也有——照抄得到一条永不生效的规则。
+- 删/改名前列出生产者、消费者、测试三处；三无才删。
+- 不保留失效选择器；优先语义化 HTML，布局尺寸从 Token 派生。
+- **`backdrop-filter` 元素会成为 `position: fixed` 后代的包含块**。玻璃挂独立层，别挂承载 fixed 菜单的卡片上（实测菜单 350px → 161px）。
+- **客户端重建 DOM 节点必须继承关键属性**。新建 `<img>` 要带上 `width`/`height`（相册增强实测：470 张图一次位移 0.92）。
+
+---
+
+## 无 JS
+
+内容本体不依赖 JS，JS 只做增强。spoiler 是范例：无 JS 是普通文本，有 JS 才模糊可展开。不要做"藏起来却打不开"的死路。
+
+交互一律要键盘可达、可见焦点、`prefers-reduced-motion` 降级。
+
+---
+
+## 图片与性能
+
+- 尺寸用附件元数据的真实值，按**完整地址**匹配（别只比文件名）。
+- **拿不到就一个属性都不加**。猜比例会把图撑成长条，比有位移更糟。
+- 列表页只出摘要 + 必要的一张图；判断标准是"服务端输出多少节点"，不是"CSS 藏了多少"。
+- **不得编造 LCP/INP/CLS/FCP**。没实测就写 `NOT TESTED`。
+
+---
+
+## 验收
+
+| 层                       | 能证明什么                     |
+| ------------------------ | ------------------------------ |
+| 静态审计                 | 实现存在，**不能**证明看起来对 |
+| Dev Server + CDP（默认） | 真实渲染与交互                 |
+| 生产构建                 | 只在明确需要时，且先说明原因   |
+
+- 日常视觉验收不用 `next build` / `next start` 当预览。
+- 截图不入库。脚本依赖系统 Chrome，不引入 Playwright。
+- `NOT TESTED` 不得写成 `PASS`；区分"没跑"和"跑失败"。
+- 日常按改动范围运行 `pnpm typecheck`、`pnpm lint`、`pnpm test` 或对应测试。视觉基线使用 `scripts/visual/*.mjs`，默认对 Dev Server 采集；只有生产行为确需验证时才构建。
+
+---
+
+## 测试
+
+- 修红灯前判断是**真缺陷**还是**陈旧断言**并给出证据；默认不删测试、不 skip 或放宽断言来求全绿，确认为过时的测试可据证据更新。
+- 守卫或契约变更应覆盖允许与拒绝路径；涉及新增约束时，验证违规输入确实会被拦截。
+- 路径比较用 `relativeToRoot()`，跨行比较先 `normalizeEol()`。不归一会让断言在某个平台**恒不命中**，看起来像"没这个选择器"。
+
+---
+
+## 文档
+
+- Token 值以 `tokens.css` 为准，视觉规则以 `DESIGN-SYSTEM.md` 为准，两者同批改。
+- 文档里**不写死行号、不写死"共 N 处"**。用符号引用。
+- 功能变更同批更新 `FEATURE.md`：写"已实现"要能指到代码与验证方式。阶段报告写入 `docs/audits/` 并从矩阵索引；历史测试结果保留时间语境，不冒充当前结果。
+- 全仓 `prettier --check` 有历史红。新文件必须过；只做内容编辑的历史文件不整篇重排。
