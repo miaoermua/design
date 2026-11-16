@@ -30,6 +30,7 @@
 > **2026-11-16 桌面导航双态（Editorial Bar / Floating Dock）**：桌面顶栏从「单态悬浮卡片」升级为**一套 DOM、三种状态**，由 `<header data-mode>` 切换：`top` 为通栏透明的 Editorial Bar（`--nav-topbar-height` 4.25rem、与 `Container` 的 `--container-wide` + `--spacing-gutter` 逐像素对齐、`.nav-glass` 与 `.nav-spotlight` 在该态 `opacity: 0` / `display: none`），`hidden` 整块滑出并按 `visibility: hidden` 真正离开可聚焦树，`floating` 收紧为居中 560 × 50px、16px 微圆角、带玻璃与光斑的 Dock。状态机重写为 `top / hidden / floating` 三态并集中阈值：离开顶部 72px、回到顶部 40px（迟滞死区）、下滚累计 96px 隐藏、上滚累计 40px 显示；初始位置、`pageshow`、`popstate` 按位置重新落定，恢复中段页面不会先画一帧顶部栏；菜单 / 搜索打开与下拉悬停期间冻结形态，解锁 / 下拉解除时按位置恢复成可见的 Dock（`restore()`，避免把刚落回焦点的按钮一起收走）。**不做双 DOM**：导航数据、菜单开关、`aria-controls` 的 ID 与 Tab 顺序都保持唯一。移动端零改动——三态规则全部写在 `@media (min-width: 48rem)` 内，`<48rem` 块里不出现 `data-mode`。占位块改用 `--nav-topbar-height`，两态切换正文不跳。新增 Token：`--nav-topbar-height` / `--nav-dock-height` / `--nav-dock-width` / `--nav-dock-radius` / `--nav-dock-offset`（布局值，非颜色）；`--nav-bar-height` / `--nav-gap` / `--nav-inset` / `--nav-panel-max` 从 `globals.css` 的 `:root` 迁入 `tokens.css`。滚动阈值**不进 Token**（JS 读不到 CSS 变量，写进去就是第二份事实）。实测：1024 / 1104 / 1280 / 1440 / 1920 五档三态与对齐、1440 下两态的下拉与菜单、320 / 375 / 390 / 430 四档手机回归、768 断点归属，全部通过（`scripts/visual/nav-dual-state.mjs`）。新增 `tests/nav-dual-state.test.tsx`（18 例）守护单 DOM、状态机、冻结与断点边界。同步 §4.1、§6、§7、§9。
 >
 > **2026-11-16 文档与源码对齐（v0.2 合并前审计 T3）**：本轮只改文档与测试，**不动任何 Token 值、颜色、字号**。修掉六处会让"以本文为准"失效的错误：① §2 的「三层结构」改为**四层**（`@theme` / 语义别名 / 组件专属 `--nav-*`·`--note-*` / 材质 `--material-*`），并写清每层的消费权限——旧文把 `--material-*` 归进别名层、又规定"组件只消费第 2 层"，与 `--nav-*` 的实际消费自相矛盾；② §6 删掉三个**源码里已不存在**的 Token（`--container-prose` / `--container-diary` / `--spacing-gutter-lg`，它们被 `--measure-post` / `--measure-note` 与 `clamp()` 版 gutter 取代），补记 9 个从未进文档的布局 Token（`--measure-post|note|page|copy`、`--rail-toc|side`、`--shell-post|note|page`）与 `--gap-rail|side`、`--pad-paper-*`，并诚实标注 `--shell-page` **当前无消费者**；③ `--nav-blur` 的 §4.1 值 22/20 改为源码的 **14/12**（§7 本来就写 14/12，两处打架）；④ `--shadow-color` 的 34 40 38 改为 **43 40 48**；⑤ §5 仍把 `.nav-label` / `.nav-panel-link` 当现行类，实际早已由 `.nav-link` / `.nav-row` 取代，且 `.meta` 的行号引用已漂移 → 改为符号引用、不写行号；⑥ 断点表删掉不存在的 `--spacing-gutter-lg`、补上真实存在的 `md`（48rem，友链两列 + 导航双态起点）与 `69rem`（1104px 侧栏阈值），并把"没有 `md:` 使用"改成事实。另修：`--text-tertiary` 白名单 10 → **11 处**；「i18n 三语」→ **中英双语**（`LOCALES` 只有两种）；§9 的 `DiaryEntry` 描述从"多图 3 列缩略"改为**摘要 + 单张代表图**，`ArticleRow` 标题从"16→20px"改为实际的 `text-[1.625rem]`（26px，待 Token 化）；两条 2026-11-15 记录的先后按提交历史（`5856d6c` blur 14/alpha 85 → `291bfdd` alpha 82）**对调并注明这是一次往返**。§14.9 补 `nav-dual-state.test.tsx` 一行。配套修复：`tests/helpers/design-tokens.ts` 的路径分隔符与行尾归一（见 `.gitattributes`），此前 `design-color-system` 与 `markdown-css-contract` 的守卫在 Windows 上**恒不命中**。
+> **2026-11-16 第二/三组：体验与兼容性收敛**：① **正文图补宽高**（T4）：`renderMarkdown` 新增 `RenderOptions.imageSizes`，`imageSizeIndex()` 从 core 的附件元数据建 `src → 宽高` 索引，命中才输出 `width`/`height`（未命中一个属性都不加，不猜比例）；相册静态轨道与**客户端增强后的 `<img>`** 共用同一份索引（`media-enhancer` 从 DOM 属性回读，否则重建节点会丢掉尺寸）。实测最长日记 CLS 从 **0.9244 → 0**，尺寸覆盖 471/475。② **打印样式**（T5，新增 `print.css`）与 **系统高对比度**（T13，新增 `forced-colors.css`），见 §7.2。③ **`--text-rowtitle` 新档位**（T7）：文章列表行标题过去写成 `text-[1.625rem]`，实为缺一档；固定 26px（不能用 clamp 的 `--text-title`，桌面会爬到 32–34px）。④ `--shell-page` 从「零消费者」改为真实使用（`/about` 的 `max-w`），并写明 **1104px = 65rem + 双侧 gutter**。⑤ `--text-tertiary` 白名单唯一承载可读文字的那条（分页禁用项）补上了真正的判定依据。
 >
 ---
 
@@ -56,6 +57,7 @@ src/design-system/tokens/tokens.css      ← 唯一色值/字号/间距/圆角/�
 src/design-system/styles/fonts.css       ← 只声明 @font-face（自托管中文 Web Font），不含语义变量
 src/design-system/styles/material.css    ← 材质实现（颗粒、环境光、纸面、冰面）
 src/design-system/styles/{motion,prose,code-block,media,footnotes,mentions,containers}.css
+src/design-system/styles/{print,forced-colors}.css  ← 印刷与系统高对比度，各自只包一个媒体查询
 src/app/globals.css                      ← base 层：元素默认样式 + 少量结构化类
 src/features/*/[component].css           ← 组件专属样式（当前：friends/friend-postcard.css），
                                            由 globals.css 顶部 @import 汇总引入
@@ -453,6 +455,48 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 友链明信片的邮戳不属于材质层：它是 SVG 墨迹（`currentColor` + 语义 Token 混色），不加模糊、不加投影，避免变成第二枚玻璃按钮。**邮戳只有一个图案，卡片之间的差异只有旋转角**（`Postmark` 的 `seedRotation()`：`seed` 的 UTF-16 code unit 求和后映射到 −7°~+7°，`seed` 取 `link.id`）。早期版本用 FNV-1a 从 `id + url` 派生五组变体（墨色 / 透明度 / 线宽 / 虚线），`520ec32` 按「简化 + 性能」收敛成单一图案；这是**当前的设计决定**，不是遗漏——不要再按「变体」去描述或实现它。邮戳允许压过邮票左缘与下缘、也允许盖在模糊底上，圆底还会越过卡底 12px 由根节点 `overflow: hidden` 裁掉（`--pc-mark-ox` / `--pc-mark-dy` 把它定位到 164–240 / 80–156），但不覆盖 72px 主头像（圆心距 78.8px ≥ 36 + 38）—— 这里**没有**齿孔 alpha mask 参与（齿孔 mask 只作用于邮票的 `__stamp-paper`）。双层头像的底层是同一张头像的 `blur()` 副本（组件内 `filter` + 透明度），同样不算材质 Token；邮票纸边的 `drop-shadow` 是组件级细节，不得提升为材质参数。
 明信片的纸面与纸纹同样不进材质层：卡片自建 `--pc-grain`（两层频率相乘）、底色与墨色都在 `friend-postcard.css` 里用语义 Token 混色，**不消费 `--material-grain-*`**。全站材质关掉后这张卡仍是一张完整的暖纸明信片；反过来，改 `--material-grain-opacity` 也不会影响它 —— 两者的颗粒是刻意分开的（全站那张 240px / SVG 内 0.05 不透明度，贴到 312px 小卡上会被压平到看不出纸）。
 **关闭全部材质**：删掉 `globals.css` 顶部对 `material.css` 的 `@import`，站点仍是完整的纸色排版。
+
+---
+
+## 7.2 印刷与系统高对比度（两个"离屏"渲染路径）
+
+屏幕样式有截图可看，这两条没有：打印要看纸、高对比度要改系统设置。它们最容易在
+重构中被静默删掉，因此各自有契约测试（`tests/print-css.test.ts`、`tests/forced-colors.test.ts`），
+并且**都不允许污染常规渲染** —— 前者整份包在 `@media print`，后者包在
+`@media (forced-colors: active)` / `@media (prefers-contrast: more)`。
+
+**打印（`print.css`）**
+
+| 处理 | 对象 | 理由 |
+| --- | --- | --- |
+| `display: none` | `.site-nav`、`.site-nav-spacer`、`.toolbar-dock`、`.reading-aside`、`.reading-inline`、`.search-panel`、`.nav-panel`、`.nav-flyout`、`.comments`、`footer`、`.paper-grain`、`.paper-ambient` | 固定定位的导航会盖住每页顶部；占位块必须跟着隐藏，否则每页空一条导航的高度 |
+| 去底去边去影 | `.reading-sheet` | 屏幕上的白纸 + 发丝边在纸上是灰框 |
+| `max-width: none` | `.prose`、`main` | 704px 的固定行宽在 A4 上是浪费 |
+| `break-inside: avoid` | `figure` / `blockquote` / `.md-callout` / `.md-banner` | 图与图注不该被拆到两页 |
+| `break-inside: auto` | `pre` / `table` | 长代码与宽表**允许**跨页，强行不拆会切掉内容 |
+| 不展开 URL | `a` | 中文排版里「正文 + 括号里的长 URL」比省略更难读 |
+
+隐藏必须用 `display: none`：`visibility: hidden` / `opacity: 0` / `height: 0` 都仍然占位，
+打印出来是一片空白页。
+
+**系统高对比度（`forced-colors.css`）**
+
+强制色模式下浏览器会把颜色换掉、透明度抹平，所以这套规则**不加新颜色**，
+只把被抹掉的信息改用系统色（`Canvas` / `CanvasText` / `LinkText` / `Highlight`）
+与**结构**表达：
+
+- 玻璃与浮层 → `background: Canvas` + `CanvasText` 实线边（否则卡片边界消失）
+- 光斑、纸纹噪点、受光渐变、明信片的模糊底头像 → 直接不显示（会变成突兀色块）
+- 当前页 / 当前目录项 → 加粗 + 下划线（屏幕上是浅底 + 细线，强制色下都会没）
+- 代码块 / 便利贴 / Callout / 表格 → 补 1px 实线边（底色被统一后失去层次）
+- 焦点环 → `outline-color: Highlight`（`--accent` 会被替换）
+
+`prefers-contrast: more` 是另一回事：它表示"我希望对比更强"，不是"别管我的颜色"，
+因此保留自己的配色，只把 `--edge` 提到 `--edge-strong`、选中细线从 1px 加到 2px。
+`--text-tertiary` **不抬**——它是装饰专用色，抬到 secondary 会让图标与分隔点跟正文抢注意力。
+
+两个新增的语义类：`.reading-aside` / `.reading-inline` / `.search-panel` 是给这三个容器
+补的稳定名字（此前它们只有工具类），打印与强制色都需要一个不随排版改动的引用点。
 
 ---
 
