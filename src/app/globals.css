@@ -1176,17 +1176,150 @@ details[open] > .toc-summary .toc-chevron {
 }
 
 /* 页脚分隔符：两行共用同一套字号、间距与颜色，避免各写一份 mx-*。
-   固定 meta 字号，否则第一行会继承 17px 正文字号，两条分隔线一大一小。 */
+   固定 meta 字号，否则第一行会继承 17px 正文字号，两条分隔线一大一小。
+   只给右侧间距——左侧间距由 `.site-footer__meta` 的 `column-gap` 提供，
+   这样分隔符本身落到行首时不会带出一段缩进（见下方说明）。 */
 .footer-sep {
-  margin-inline: 0.55em;
+  margin-inline-end: 0.55em;
   color: var(--text-tertiary);
   font-size: var(--text-meta);
   font-weight: 300;
 }
 
+/* ── Footer 布局：信息区在左、设置区在右 ────────────────────────
+   两个**平级区域**，不是一列堆叠：
+     - `.site-footer__info`     两行文字（版权行 / 出处与备案行）
+     - `.site-footer__settings` 语言 + 三态主题，全站唯一设置入口
+
+   桌面端 1fr + auto：信息区吃掉剩余宽度，设置区按内容收窄并贴右，
+   所以右侧不会出现「内容全挤在左半边」的失衡；
+   手机端退化成单列，信息在上、设置在下——两者都靠左，
+   避免窄屏里把 250px 宽的控件组硬推到右边。
+
+   断点取 48rem：768px 时内容宽 704px，信息区约 320px、设置区约 254px
+   加上列间距仍然宽松；再窄（640px）就只剩 576px，必须上下排列。 */
+
+.site-footer__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
+  padding-block: 2.5rem;
+}
+
+.site-footer__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  /* 信息区可能含长链接，允许收缩到列宽以内，不撑破 grid */
+  min-width: 0;
+}
+
+/*
+ * 第二行是一条**可换行的流**，不是若干段落：
+ * 「Powered by … Design.」「｜ 备案」「｜ footer.links」都是流里的
+ * `.site-footer__meta-unit`——不可拆的整体。正常情况排在同一视觉行；
+ * 宽度不足时整个单元换行，分隔符跟着后面的链接一起走，
+ * 所以不会出现行尾悬着一个孤立「｜」的情况。
+ *
+ * 单元之间的横向间距交给 `column-gap`，分隔符自己只留右侧间距：
+ * 若改成 `margin-inline` 双侧，被换到行首的分隔符会带着左侧间距一起换行，
+ * 第二行看起来就比第一行缩进了一格（实测 0.55em ≈ 7px）。
+ */
+.site-footer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.55em;
+  row-gap: 0.3rem;
+}
+
+/*
+ * `.site-footer__meta-unit` 是第二行的最小不可拆单元：分隔符 + 它后面那条链接。
+ * 用 `white-space: nowrap` 保持整体不折行即可，**不要**改成 `inline-flex` ——
+ * flex 布局会丢掉文本节点首尾的空白，`Powered by <a>` 会渲染成 `Powered byMix-Space`。
+ * 作为 `.site-footer__meta` 的 flex item 它本来就会被块化，无需再声明 display。
+ */
+.site-footer__meta-unit {
+  white-space: nowrap;
+}
+
+.site-footer__settings {
+  display: flex;
+  /* 窄屏：跟信息区同一条左边线，控件组不会被推到右侧孤零零一块 */
+  justify-content: flex-start;
+}
+
+@media (min-width: 48rem) {
+  .site-footer__inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 2rem 3rem;
+  }
+
+  /*
+   * 设置区贴右，同时给 fixed 回顶浮标让出净空。
+   *
+   * 为什么必须让：浮标在 `right: 1.5rem`、宽 3rem（竖排 48px），即占据
+   * 视口右侧 24–72px 这一带；而版心右边缘距视口右只有 gutter（clamp 后 ≤32px），
+   * 所以 ≤1280 时浮标必然压进版心 40px。页脚又恰在页底：768 实测浮标
+   * 纵向 128–176px（距视口底）正落在设置区的垂直区间内，主题胶囊被压住 15px。
+   *
+   * 为什么不用 `padding-right: 4.5rem` 那种固定值：宽屏（≥1280）版心居中后
+   * 内容边缘已在浮标外侧，固定 padding 会白留 72px，正是「右侧一大片空白」的成因。
+   * 这里先算出版心右边缘的真实内缩，再取「浮标占位 + 呼吸」与它的差值：
+   *   --footer-content-right = gutter + max(0, (100vw - 版心宽) / 2)
+   *   需要净空 = max(0, 5.5rem - --footer-content-right)
+   * 宽屏时差值为 0，净空自动消失；窄屏时正好让到浮标左缘之外。
+   *
+   * 为什么是 5.5rem 而不是 5rem（= 浮标右距 1.5 + 宽 3 + 呼吸 0.5）：
+   * `100vw` 含纵向滚动条宽度，而版心实际居中于 `clientWidth`，
+   * 两者相差约 7.5px（Windows 滚动条 15px 的一半），会让公式**高估**版心右缩进、
+   * 从而少算让位。留 0.5rem 余量正好吸收这段误差，实测净空 8–16px。
+   */
+  .site-footer__settings {
+    --footer-content-right: calc(
+      var(--spacing-gutter) + max(0px, (100vw - var(--container-wide)) / 2)
+    );
+    justify-content: flex-end;
+    padding-inline-end: max(0px, calc(5.5rem - var(--footer-content-right)));
+  }
+}
+
+/*
+ * 移动端底部空间：右下工具浮标（`bottom: 7rem`，竖排 48px 宽）固定贴右，
+ * 滚到页底时会落在页脚最后 160px 的区间里。设置区在单列布局的最后一行、
+ * 靠左且只有约 254px 宽，与浮标横向不重叠；这里再让出 4rem，
+ * 让浮标整体落在「设置区下方」的空白里，而不是压在它旁边。
+ *
+ * 不沿用 6rem：那是设置区排在信息区**上方**时的补偿，现在设置区在最底下，
+ * 6rem 会在页脚底部留一大块没有内容的空白。
+ */
+@media (max-width: 39.999rem) {
+  .site-footer__inner {
+    padding-bottom: 4rem;
+  }
+}
+
+/*
+ * 极窄屏（<22rem = 352px，如 iPhone SE 320px）：
+ * 语言 + 主题这一组合计约 254px，加上 20px gutter 后右缘落在 274px，
+ * 而浮标左缘在 320px 时只有 256px —— 必然横向相交；
+ * 短页面里两者纵向也重叠，主题胶囊会被浮标压住一角。
+ *
+ * 这里把可用宽度收到「右侧留给浮标」，让两个控件各占一行（`.footer-settings`
+ * 本来就是 `flex-wrap`）。不是把控件改小、也不动浮标的定位。
+ * 360px 以上控件右缘（274px）已经小于浮标左缘，无需处理。
+ */
+@media (max-width: 22rem) {
+  .site-footer__settings {
+    max-inline-size: calc(100% - 4.5rem);
+  }
+}
+
 /* ── Footer settings ───────────────────────────────────────────
-   全站唯一的设置区：语言与三态主题紧挨成一组，靠左排。
-   两者是同一个「偏好」概念的两个维度，中间不插别的东西；
+   全站唯一的设置区：语言与三态主题紧挨成一组。
+   两者是同一个「偏好」概念的两个维度，中间不插别的东西——
+   但它们属于页脚**右侧**那一栏（见上），不再是从信息区顶上横过去的一行。
    右下角浮标只剩「回到顶部」，导航菜单里的 Settings 已删除，
    所以这里不需要与别处争夺层级，也不新增任何颜色——全部走语义 Token。 */
 
@@ -1197,27 +1330,6 @@ details[open] > .toc-summary .toc-chevron {
   /* 两者是一组的两个控件，不是同一个控件：间距要够读出「这是两个」，
      又不能大到像分居两处 */
   gap: 0.625rem 1.25rem;
-}
-
-/*
- * 给右下角的回顶浮标让位：它是 fixed 且贴右，滚到页底时会正好压在
- * 主题胶囊上（1024 / 768 实测横向重叠 40px，390 宽更明显——浮标盖住月亮）。
- * 这里在**所有断点**预留「浮标宽度 + 边距」，而不是把浮标挪走：
- * 那个位置属于全站导航，不该因为页脚多了一行而变。
- */
-.footer-settings {
-  padding-right: 4.5rem;
-}
-
-/*
- * 移动端底部空间：回顶浮标（bottom 7rem）与底部导航条都贴在视口下沿，
- * 滚到页底时会压在「Powered by / 备案」那一行上。页脚自己让出这段高度，
- * 而不是去动那两个固定元素的定位。
- */
-@media (max-width: 39.999rem) {
-  .site-footer__inner {
-    padding-bottom: 6rem;
-  }
 }
 
 .footer-lang {

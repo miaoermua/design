@@ -175,6 +175,16 @@ describe('设置区结构', () => {
     expect(second?.getAttribute('role')).toBe('radiogroup')
   })
 
+  it('是紧凑的一组：只有两个控件，不插占位元素', () => {
+    const { container } = render(<FooterSettings />)
+    const root = container.firstElementChild as HTMLElement
+
+    // 两个控件之间没有 spacer / 分隔符：间距由 `.footer-settings` 的 gap 给
+    expect(root.children).toHaveLength(2)
+    // 组件自身不带定位或避让类——左右分区由页脚的 grid 决定
+    expect(root.className).not.toMatch(/\bjustify-|\bmx-auto\b|\bpr-\d/)
+  })
+
   it('主题三项顺序是 浅色 → 跟随系统 → 深色', () => {
     render(<FooterSettings />)
     const order = screen.getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))

@@ -25,18 +25,23 @@ const ICP_QUERY_URL = 'https://beian.miit.gov.cn/'
 /**
  * 页脚
  *
- * 靠左的三排：
- *   - 第一排：`© 2021–2026  名字 ｜ 个性签名`
- *   - 第二排：`Powered by Mix-Space. Design. ｜ ICP`
- *   - 第三排：Theme Snippet 的 `footer.links`（可选，追加不覆盖）
+ * 结构是**两个平级区域**，不是一列堆叠：
+ *   - `.site-footer__info`：两行信息
+ *       第一行 `© 年份区间  名字 ｜ 个性签名`
+ *       第二行 `Powered by Mix-Space. Design. ｜ ICP ｜ footer.links…`
+ *   - `.site-footer__settings`：语言选择器 + 三态主题（全站唯一设置入口）
+ *
+ * 桌面端左右并排（信息在左、设置在右），手机端上下排列。
+ * 布局全部由 `.site-footer__inner` 的 grid 负责，这里不写断点类名——
+ * 断点与右侧避让的推导都在 `globals.css` 那一节里，改一处就够。
  *
  * 三处内容全部来自真实接口，不写死：
  *   - 名字 / 个性签名 → `identity.owner.name` / `identity.owner.introduce`
  *   - 起始年份 → Theme Snippet 的 `footer.since`
  * 年份区间用起始年与当前年拼出；两者相同时只显示一个年份，避免「2026–2026」。
  *
- * `footer.links` 是**追加**的一排，不是替换：原有版权行、Powered by、ICP
- * 无论配置里写了什么都保持原样。这样「加两个友链」不会意外抹掉版权信息。
+ * `footer.links` 是**追加**的：接在第二行末尾，不替换版权行、Powered by、ICP。
+ * 这样「加两个友链」不会意外抹掉版权信息。
  *
  * 刻意不再放：页脚导航（与顶栏重复）、社交图标（正文已有 Social 组件）、
  * RSS（走 /feed，由站点元信息暴露）。
@@ -54,51 +59,13 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
 
   const { icp, links } = theme.footer
 
-  /*
-   * `footer.links` 排在署名行**上方**——它接着设置行，再往下才是身份与出处。
-   * 链接为空时整块不渲染，署名行自然上移，不留空行。
-   */
-  const linksRow =
-    links.length > 0 ? (
-      <p className="text-meta flex flex-wrap items-center gap-x-1 gap-y-1 text-[var(--text-secondary)]">
-        {links.map((link, index) => (
-          <span key={link.url} className="inline-flex items-center gap-x-1">
-            {index > 0 ? (
-              <span aria-hidden="true" className="footer-sep">
-                ｜
-              </span>
-            ) : null}
-            {link.url.startsWith('/') && !link.url.startsWith('//') ? (
-              // 站内路径走客户端路由：页脚里的 /about 不该整页刷新
-              <Link href={link.url} className="link-quiet whitespace-nowrap">
-                {link.title}
-              </Link>
-            ) : (
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="link-quiet whitespace-nowrap"
-              >
-                {link.title}
-              </a>
-            )}
-          </span>
-        ))}
-      </p>
-    ) : null
-
   return (
     <footer className="mt-[var(--spacing-section)] border-t border-[var(--edge)]">
       <Container width="wide">
-        <div className="site-footer__inner flex flex-col gap-7 py-10">
-          {/* 全站唯一的设置入口：语言与三态主题紧挨成一组。 */}
-          <FooterSettings />
-
-          <div className="flex flex-col gap-1.5">
-            {linksRow}
-
-            <p>
+        <div className="site-footer__inner">
+          {/* 信息区：两行。第二行是一条可换行的流，链接不拆成独立段落。 */}
+          <div className="site-footer__info">
+            <p className="site-footer__line text-meta">
               <span className="meta">© {yearRange}</span>{' '}
               <span className="text-body font-serif font-medium text-[var(--text-heading)]">
                 {authorName}
@@ -113,28 +80,37 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
               ) : null}
             </p>
 
-            <p className="text-meta text-[var(--text-secondary)]">
-              Powered by{' '}
-              <a
-                href={PROJECT_LINKS.core}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="link-quiet"
-              >
-                Mix-Space
-              </a>
-              .{' '}
-              <a
-                href={PROJECT_LINKS.theme}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="link-quiet"
-              >
-                Design
-              </a>
-              .
+            {/*
+             * 第二行：出处、备案与自定义链接共用同一条流。
+             * 用 flex-wrap 而不是若干 <p>：宽度不足时换行，但每个 `.meta-unit`
+             * 是**不可拆**的整体（分隔符跟着它后面的链接走，`nowrap`），
+             * 所以换行只发生在链接之间，不会出现「行尾一个孤零零的｜」。
+             */}
+            <p className="site-footer__meta text-meta">
+              <span className="site-footer__meta-unit">
+                Powered by{' '}
+                <a
+                  href={PROJECT_LINKS.core}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="link-quiet"
+                >
+                  Mix-Space
+                </a>
+                .{' '}
+                <a
+                  href={PROJECT_LINKS.theme}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="link-quiet"
+                >
+                  Design
+                </a>
+                .
+              </span>
+
               {icp.enabled && icp.label ? (
-                <>
+                <span className="site-footer__meta-unit">
                   <span aria-hidden="true" className="footer-sep">
                     ｜
                   </span>
@@ -142,13 +118,41 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
                     href={icp.url ?? ICP_QUERY_URL}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="link-quiet whitespace-nowrap"
+                    className="link-quiet"
                   >
                     {icp.label}
                   </a>
-                </>
+                </span>
               ) : null}
+
+              {links.map((link) => (
+                <span key={link.url} className="site-footer__meta-unit">
+                  <span aria-hidden="true" className="footer-sep">
+                    ｜
+                  </span>
+                  {link.url.startsWith('/') && !link.url.startsWith('//') ? (
+                    // 站内路径走客户端路由：页脚里的 /about 不该整页刷新
+                    <Link href={link.url} className="link-quiet">
+                      {link.title}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="link-quiet"
+                    >
+                      {link.title}
+                    </a>
+                  )}
+                </span>
+              ))}
             </p>
+          </div>
+
+          {/* 设置区：全站唯一的语言与主题入口，两个控件紧挨成一组。 */}
+          <div className="site-footer__settings">
+            <FooterSettings />
           </div>
         </div>
       </Container>
