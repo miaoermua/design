@@ -1,0 +1,135 @@
+/* ══ 打印 ══════════════════════════════════════════════════════════
+ *
+ * 目标只有一个：**打印/导出 PDF 时只留正文**。
+ *
+ * 屏幕上那些「帮你读」的东西在纸上全是噪声：固定导航会把每页顶部盖住、
+ * 阅读工具与浮标会压住段落、页脚会占掉最后一页。纸没有滚动、没有 hover、
+ * 也没有第二屏可以翻回去，所以隐藏是唯一正确的处理。
+ *
+ * 三条实现约束，写在这里免得下次重蹈：
+ *   1. 只改 `@media print`，**不动任何屏幕样式**。整份文件不参与常规层叠，
+ *      因此不需要提高选择器权重，`!important` 只用在必须有它才生效的地方。
+ *   2. 隐藏靠 `display: none`，不用 `visibility` / `opacity` / `height: 0`：
+ *      后三者仍然占位，打印出来是一片空白页。
+ *   3. 纸面**不去色、不反色**：正文保持黑字白底，链接不展开 URL ——
+ *      中文排版里「正文 + 括号里的长 URL」比省略更难读，且会把行宽撑爆。
+ *
+ * 选择器纪律：这里的每个类名都必须有真实 DOM 生产者。`.reading-aside` /
+ * `.reading-inline` / `.search-panel` 是本文件新增时**一并补在组件根节点上**的
+ * 语义类（此前这三个容器只有工具类，没有可被稳定引用的名字）。不要照着
+ * "应该有个评论容器"之类的想象加选择器 —— 死选择器不报错，只是永远不生效。
+ */
+
+@media print {
+  /* 纸面：白底、黑字。屏幕上的暖纸会打印成一片浅灰，正文对比度反而下降 */
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    /* 用关键字而不是 hex：这里要的就是"纸白 / 墨黑"这两个绝对语义，
+       与主题的暖纸、墨色都无关。打印出的黑白是物理结果，不是设计 Token。 */
+    background: white !important;
+    color: black !important;
+  }
+
+  /* ── 不进入纸面的东西 ─────────────────────────────────────────── */
+
+  /* 导航：桌面双态三态、移动底部胶囊、占位块一起走。
+     占位块必须跟着隐藏，否则每页顶部会空出一整条导航的高度 */
+  .site-nav,
+  .site-nav-spacer,
+  /* 右下工具胶囊与它的玻璃层 */
+  .toolbar-dock,
+  /* 阅读辅助：目录侧栏、折叠目录、阅读进度、回到顶部 */
+  .reading-aside,
+  .reading-inline,
+  /* 搜索面板 / 菜单面板（打印时用户可能正开着） */
+  .search-panel,
+  .nav-panel,
+  .nav-flyout,
+  /* 评论：交互才有意义的区块 */
+  .comments,
+  /* 页脚 */
+  footer,
+  /* 全站材质装饰层：颗粒噪点与受光渐变在纸上要么不可见、要么变成脏底 */
+  .paper-grain,
+  .paper-ambient {
+    display: none !important;
+  }
+
+  /* ── 正文：去掉屏幕专属的纸张与阴影 ──────────────────────────── */
+
+  /* `.reading-sheet` 的白底 + 发丝边 + 投影在纸上是灰框，去掉 */
+  .reading-sheet {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 正文容器本来有固定行宽（704 / 640px），纸上应该铺满可打印宽度。
+     **不要**用「属性选择器匹配 max-w 类名前缀」那种写法：它既脆（Tailwind
+     类名一改就失效），又会被 `design-tokens` 的引用扫描误判成一个被截断的
+     变量名（那一处扫描不剥注释，所以这里也不写完整写法）。正文的宽度上限
+     真正落在 `.prose`、`.reading-sheet` 与 `main` 三层上，逐个覆盖就够。 */
+  .prose,
+  main {
+    max-width: none !important;
+  }
+
+  /* 链接：保持正文墨色，不追加 URL。下划线保留 —— 纸上看不出 hover，
+     下划线是唯一还能说明"这是链接"的线索 */
+  a,
+  a:visited {
+    color: inherit !important;
+    text-decoration: underline;
+    text-decoration-color: currentColor;
+  }
+
+  /* ── 分页控制 ────────────────────────────────────────────────── */
+
+  /* 标题不要吊在页底，图与图注不要被拆到两页 */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  figure,
+  pre,
+  blockquote,
+  table,
+  .md-callout,
+  .md-banner {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 长代码块与表格允许跨页：强行不拆会把内容切掉，比拆页更糟 */
+  pre,
+  table {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  /* 图片：不超出纸宽，且不因为 `width` 属性被撑成原尺寸 */
+  img,
+  svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* 首屏标题区与正文之间的空隙在纸上是浪费 */
+  main {
+    padding: 0 !important;
+  }
+}

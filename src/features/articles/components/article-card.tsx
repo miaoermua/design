@@ -64,7 +64,7 @@ export function ArticleCard({ article, timeZone, variant = 'card', priority }: A
           <p
             className={cn(
               'mt-2 text-small text-[var(--text-secondary)]',
-              variant === 'card' ? 'line-clamp-3' : 'max-w-[var(--container-prose)]',
+              variant === 'card' ? 'line-clamp-3' : 'max-w-[var(--measure-copy)]',
             )}
           >
             {article.summary}

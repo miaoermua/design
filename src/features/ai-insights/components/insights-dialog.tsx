@@ -4,13 +4,16 @@ import type { MouseEvent, RefObject } from 'react'
 import { Dialog, DialogClose } from '@/components/ui/dialog'
 import { Prose } from '@/components/ui/prose'
 import { languageLabel } from '@/lib/i18n/config'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf, type MessageKey } from '@/lib/i18n/dictionary'
 import type { InsightsDifficulty } from '@/lib/content/insights'
 import type { AiInsightsView } from '../read'
 
-const DIFFICULTY_LABEL: Record<InsightsDifficulty, string> = {
-  easy: '轻松',
-  medium: '适中',
-  hard: '费力',
+/** 只存字典键：难度文案在渲染时按当前 locale 取 */
+const DIFFICULTY_KEY: Record<InsightsDifficulty, MessageKey> = {
+  easy: 'insights.easy',
+  medium: 'insights.medium',
+  hard: 'insights.hard',
 }
 
 export interface InsightsDialogProps {
@@ -42,12 +45,19 @@ export function InsightsDialog({
   onClose,
   onJumpToRef,
 }: InsightsDialogProps) {
+  const locale = useLocale()
   const { meta, refs, isFallback, isTranslation, lang } = insights
 
   const facts = [
-    meta.readingMinutes ? `约 ${meta.readingMinutes} 分钟` : null,
-    meta.difficulty ? DIFFICULTY_LABEL[meta.difficulty] : null,
-    isTranslation ? '译本' : isFallback ? `原文 ${languageLabel(lang)}` : null,
+    meta.readingMinutes
+      ? tf(locale, 'insights.minutes', { count: meta.readingMinutes })
+      : null,
+    meta.difficulty ? t(locale, DIFFICULTY_KEY[meta.difficulty]) : null,
+    isTranslation
+      ? t(locale, 'insights.translation')
+      : isFallback
+        ? tf(locale, 'summary.original', { lang: languageLabel(lang) })
+        : null,
   ].filter((item): item is string => Boolean(item))
 
   const unresolved = refs.total - refs.resolved
@@ -87,11 +97,11 @@ export function InsightsDialog({
       <header className="ai-insights__head">
         <div>
           <h2 id={titleId} className="ai-insights__title">
-            AI 精读
+            {t(locale, 'insights.title')}
           </h2>
           {facts.length > 0 ? <p className="ai-insights__facts">{facts.join(' · ')}</p> : null}
         </div>
-        <DialogClose label="关闭 AI 精读" onClose={onClose} />
+        <DialogClose label={t(locale, 'insights.close')} onClose={onClose} />
       </header>
 
       <div className="ai-insights__body" onClick={handleBodyClick}>
@@ -104,9 +114,9 @@ export function InsightsDialog({
       </div>
 
       <p className="ai-insights__foot">
-        由 Mix Space Core 生成
-        {refs.total > 0 ? ` · ${refs.total} 处原文引用` : null}
-        {unresolved > 0 ? `（其中 ${unresolved} 处无法在原文定位）` : null}
+        {t(locale, 'insights.source')}
+        {refs.total > 0 ? tf(locale, 'insights.references', { count: refs.total }) : null}
+        {unresolved > 0 ? tf(locale, 'insights.unresolved', { count: unresolved }) : null}
       </p>
     </Dialog>
   )

@@ -16,6 +16,8 @@
  * 因此这里不枚举、不解析语义，只按通用 Markdown 处理。
  */
 
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t } from '@/lib/i18n/dictionary'
 import { escapeAttribute } from './escape'
 
 export type InsightsDifficulty = 'easy' | 'medium' | 'hard'
@@ -226,6 +228,7 @@ export function resolveInsightRefs(
   body: string,
   source: string,
   toc: ReadonlyArray<{ id: string; text?: string }>,
+  locale: Locale = DEFAULT_LOCALE,
 ): InsightRefRewrite {
   // 两处扫描针对不同文本：标题位置来自原文（ref 指向原文），
   // 代码块区间来自精读正文（要屏蔽的是正文里被误写进代码块的 ref）。
@@ -252,7 +255,7 @@ export function resolveInsightRefs(
     // `quote` 缺失或原文里找不到：不制造跳转
     const position = quote ? source.indexOf(quote) : -1
     const headingId = position >= 0 ? findHeadingId(position, headingOffsets, toc) : null
-    const label = section || '原文'
+    const label = section || t(locale, 'insights.originalSection')
 
     if (!headingId) {
       return `<sup class="insight-ref insight-ref--plain" title="${escapeAttribute(label)}">§</sup>`

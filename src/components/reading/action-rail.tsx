@@ -4,6 +4,8 @@ import { useState } from 'react'
 import type { DonateQrcode } from '@/features/donate'
 import type { SubscribeOptions } from '@/features/interactions'
 import { DonateAction } from '@/features/donate'
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 import { notify } from '@/lib/notifications/store'
 import { cn } from '@/lib/utils/cn'
 import { SubscribePanel } from './subscribe-panel'
@@ -43,6 +45,7 @@ export function ActionRail({
   donate,
   className,
 }: ActionRailProps) {
+  const locale = useLocale()
   const [like, setLike] = useState<LikeState>('idle')
 
   const handleLike = async () => {
@@ -60,15 +63,15 @@ export function ActionRail({
       setLike('done')
       notify({
         level: 'success',
-        title: '喜欢已记录',
-        description: '同一地址的重复点赞不会重复计数。',
+        title: t(locale, 'notify.likeSaved'),
+        description: t(locale, 'notify.likeSavedHint'),
       })
     } catch {
       setLike('idle')
       notify({
         level: 'error',
-        title: '没能记录这次喜欢',
-        description: '稍后再试，或检查网络连接。',
+        title: t(locale, 'notify.likeFailed'),
+        description: t(locale, 'notify.likeFailedHint'),
       })
     }
   }
@@ -89,9 +92,13 @@ export function ActionRail({
 
     try {
       await navigator.clipboard.writeText(url)
-      notify({ level: 'success', title: '链接已复制' })
+      notify({ level: 'success', title: t(locale, 'notify.linkCopied') })
     } catch {
-      notify({ level: 'error', title: '复制失败', description: '可以直接复制浏览器地址栏。' })
+      notify({
+        level: 'error',
+        title: t(locale, 'notify.copyFailed'),
+        description: t(locale, 'notify.copyFailedHint'),
+      })
     }
   }
 
@@ -100,7 +107,7 @@ export function ActionRail({
   return (
     <div
       className={cn('flex flex-row items-center justify-between gap-1', className)}
-      aria-label="文章操作"
+      aria-label={t(locale, 'article.actions')}
       role="group"
     >
       {likeEnabled ? (
@@ -112,13 +119,13 @@ export function ActionRail({
           className="action-rail-button"
         >
           <HeartIcon filled={liked} />
-          <span>{liked ? '已喜欢' : '喜欢'}</span>
+          <span>{liked ? t(locale, 'article.liked') : t(locale, 'article.like')}</span>
         </button>
       ) : null}
 
       <button type="button" onClick={handleShare} className="action-rail-button">
         <ShareIcon />
-        <span>分享</span>
+        <span>{t(locale, 'article.share')}</span>
       </button>
 
       {subscribe.enabled || subscribe.channels.length > 0 ? (

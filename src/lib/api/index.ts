@@ -9,8 +9,11 @@ export * from './domain/article'
 export * from './domain/ai'
 export * from './domain/comment'
 export * from './domain/diary'
+export * from './domain/disclosure'
 export * from './domain/taxonomy'
 export * from './domain/common'
+export * from './domain/say'
+export * from './domain/project'
 
 export * from './errors'
 
@@ -41,9 +44,13 @@ export { getPageBySlug, listPages, type PageContent, type PageSummary } from './
 export { listTopics, getTopicById, type Topic } from './repositories/topics'
 export {
   likeRecord,
+  getSiteLikeCount,
+  likeSite,
   getSubscribeCapability,
   subscribeEmail,
   type SubscribeCapability,
 } from './repositories/interactions'
+export { listSays } from './repositories/says'
+export { listProjects } from './repositories/projects'
 
 export { API_VERSION, getSiteTimezone, getSiteUrl, isApiConfigured } from './config'

@@ -67,7 +67,7 @@
 
 .tag-note:hover .tag-note__body {
   transform: translateY(-1.5px);
-  background-color: color-mix(in srgb, var(--note-bg) 90%, var(--text-primary));
+  background-color: color-mix(in srgb, var(--note-bg) 92%, var(--text-primary));
 }
 
 .tag-note__label {
@@ -83,8 +83,10 @@
 .tag-note__count {
   font-size: var(--text-meta);
   font-variant-numeric: tabular-nums;
-  /* 不用 --text-secondary：它在五档纸色上只有 3.5–4.1:1，12px 达不到 AA 4.5。
-     层级交给字号（12 vs 15）与衬线/非衬线的差别，不靠把字压灰。 */
+  /* 不用 --text-secondary：它在五档便利贴纸色上只有 3.94–4.64:1（最深的 blue 仍 <4.5），
+     12px 达不到 AA。标签名同理只用 --text-heading（5.99–7.04）。
+     层级交给字号（12 vs 15）与衬线/非衬线的差别，不靠把字压灰。
+     见 DESIGN-SYSTEM §11「特殊表面文字选择」。 */
   color: var(--text-primary);
   white-space: nowrap;
 }

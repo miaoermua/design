@@ -1,5 +1,6 @@
 import type { V2PostDetail, V2PostRow } from '../contracts/v2/post'
 import type { Article, ArticleDetail, ArticleCategoryRef } from '../domain/article'
+import { readAiDisclosure } from './disclosure'
 import {
   readArray,
   readNumber,
@@ -7,6 +8,7 @@ import {
   stringArray,
   stringOrNull,
   toAttachment,
+  toAttachments,
 } from './common'
 
 function toCategoryRef(row: V2PostRow): ArticleCategoryRef | null {
@@ -32,7 +34,8 @@ function pickContent(row: V2PostRow): string {
 
 export function toArticle(row: V2PostRow): Article {
   // 实测封面在 meta.cover（字符串 URL）；没有时才退回 images[0]
-  const meta = row.meta && typeof row.meta === 'object' ? (row.meta as Record<string, unknown>) : null
+  const meta =
+    row.meta && typeof row.meta === 'object' ? (row.meta as Record<string, unknown>) : null
   const metaCover = stringOrNull(meta?.cover)
   return {
     id: String(row.id),
@@ -63,8 +66,11 @@ export function toArticleDetail(row: V2PostDetail): ArticleDetail {
     text: null,
     content: pickContent(row),
     contentFormat: stringOrNull(row.content_format) ?? 'markdown',
+    // 正文图尺寸来源：core 的 images 带 width/height，正文里同一张图共用同一地址
+    images: toAttachments(row.images),
     copyright: Boolean(row.copyright),
     related: related.map((item) => toArticle(item as V2PostRow)),
     liked: typeof row.liked === 'boolean' ? row.liked : null,
+    aiDisclosure: readAiDisclosure(row.meta),
   }
 }

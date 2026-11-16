@@ -16,6 +16,8 @@
  */
 
 import { useEffect, useRef, type ReactElement } from 'react'
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 import { locateProseScope } from './content-scope'
 
 const BLOCK_SELECTOR = '.code-block'
@@ -66,11 +68,11 @@ function legacyCopy(text: string): boolean {
 }
 
 /** 复制按钮：图标两层叠放，状态只切 `data-state`，不在 JS 里改内容 */
-function createCopyButton(): HTMLButtonElement {
+function createCopyButton(label: string): HTMLButtonElement {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'code-block__copy'
-  button.setAttribute('aria-label', '复制代码')
+  button.setAttribute('aria-label', label)
   button.innerHTML = [
     `<span class="code-block__copy-icon">${COPY_ICON}</span>`,
     `<span class="code-block__copy-done">${CHECK_ICON}</span>`,
@@ -80,6 +82,7 @@ function createCopyButton(): HTMLButtonElement {
 }
 
 export function CodeBlockEnhancer(): ReactElement {
+  const locale = useLocale()
   const markerRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -92,12 +95,14 @@ export function CodeBlockEnhancer(): ReactElement {
       (block) => !block.closest(MERMAID_SELECTOR),
     )
 
+    const copyLabel = t(locale, 'code.copy')
+
     /** 复制成功后短暂展示状态 */
     const flash = (button: HTMLButtonElement, state: 'copied' | 'failed'): void => {
       button.dataset.state = state
       const timer = window.setTimeout(() => {
         delete button.dataset.state
-        button.setAttribute('aria-label', '复制代码')
+        button.setAttribute('aria-label', copyLabel)
         timers.delete(timer)
       }, 1800)
       timers.add(timer)
@@ -116,13 +121,13 @@ export function CodeBlockEnhancer(): ReactElement {
       const text = readCode(block)
 
       const done = (): void => {
-        button.setAttribute('aria-label', '已复制')
+        button.setAttribute('aria-label', t(locale, 'code.copied'))
         flash(button, 'copied')
       }
       const fail = (): void => {
         if (legacyCopy(text)) done()
         else {
-          button.setAttribute('aria-label', '复制失败，请手动选择代码')
+          button.setAttribute('aria-label', t(locale, 'code.copyFailed'))
           flash(button, 'failed')
         }
       }
@@ -182,7 +187,7 @@ export function CodeBlockEnhancer(): ReactElement {
       mounted.push(block)
 
       const header = block.querySelector<HTMLElement>('.code-block__header')
-      if (header) header.appendChild(createCopyButton())
+      if (header) header.appendChild(createCopyButton(copyLabel))
 
       // 行号只是给眼睛的刻度：读屏念出「1 2 3 …」是纯噪声。
       // 属性在这里补而不是服务端写死 —— 安全边界不放行 `aria-*`，
@@ -194,7 +199,7 @@ export function CodeBlockEnhancer(): ReactElement {
       expand.type = 'button'
       expand.className = 'code-block__expand'
       expand.hidden = true
-      expand.innerHTML = '<span>展开</span>'
+      expand.innerHTML = `<span>${t(locale, 'code.expand')}</span>`
       block.appendChild(expand)
 
       measure(block)
@@ -232,7 +237,7 @@ export function CodeBlockEnhancer(): ReactElement {
       }
       delete scope.dataset[SCOPE_FLAG]
     }
-  }, [])
+  }, [locale])
 
   return <span ref={markerRef} hidden />
 }

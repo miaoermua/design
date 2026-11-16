@@ -1,6 +1,7 @@
 import type { V2NoteRow } from '../contracts/v2/note'
 import type { Diary, DiaryTopic } from '../domain/diary'
 import { readField, readNumber, readString, stringOrNull, toAttachments } from './common'
+import { readAiDisclosure } from './disclosure'
 
 function toTopic(row: V2NoteRow): DiaryTopic | null {
   const topic = row.topic
@@ -34,5 +35,6 @@ export function toDiary(row: V2NoteRow): Diary {
     images: toAttachments(row.images),
     readCount: readNumber(row, 'read_count', 'readCount'),
     likeCount: readNumber(row, 'like_count', 'likeCount'),
+    aiDisclosure: readAiDisclosure(row.meta),
   }
 }

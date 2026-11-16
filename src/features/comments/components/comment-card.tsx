@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import type { CommentItem } from '@/lib/api'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { formatDate } from '@/lib/utils/date'
 import { CommentComposer } from './comment-composer'
 
@@ -38,6 +40,7 @@ export function CommentCard({
   onChanged,
   onLoadThread,
 }: CommentCardProps) {
+  const locale = useLocale()
   const [replying, setReplying] = useState(false)
 
   const name = comment.author.url ? (
@@ -76,8 +79,14 @@ export function CommentCard({
             <time className="comment__time" dateTime={comment.createdAt}>
               {formatDate(comment.createdAt, timeZone)}
             </time>
-            {comment.pinned ? <span className="comment__pin">置顶</span> : null}
-            {replyTo ? <span className="comment__target">{`回复 ${replyTo}`}</span> : null}
+            {comment.pinned ? (
+              <span className="comment__pin">{t(locale, 'comments.pinned')}</span>
+            ) : null}
+            {replyTo ? (
+              <span className="comment__target">
+                {tf(locale, 'comments.replyTo', { name: replyTo })}
+              </span>
+            ) : null}
           </p>
 
           <p className="comment__text">{comment.text}</p>
@@ -90,7 +99,7 @@ export function CommentCard({
                 className="comment__action"
                 aria-expanded={replying}
               >
-                {replying ? '收起' : '回复'}
+                {replying ? t(locale, 'comments.collapse') : t(locale, 'comments.reply')}
               </button>
             ) : null}
 
@@ -100,7 +109,7 @@ export function CommentCard({
                 onClick={() => onLoadThread(rootId)}
                 className="comment__action comment__action--accent"
               >
-                还有 {comment.hiddenCount} 条回复
+                {tf(locale, 'comments.hiddenCount', { count: comment.hiddenCount })}
               </button>
             ) : null}
           </div>

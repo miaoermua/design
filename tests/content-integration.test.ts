@@ -40,7 +40,9 @@ describe('Blog / Note：摘要 + 精读 + 评论', () => {
   it('摘要卡是「有才渲染」，取不到就什么都不留（精读入口随之消失）', () => {
     for (const path of [ARTICLE_PAGE, DIARY_PAGE]) {
       const code = source(path)
-      expect(code).toMatch(/summary \? \(/)
+      // 条件渲染即可：prettier 会把短表达式压成 `summary ? <Card …` 一行，
+      // 断言写法而不断言换行，避免格式化工具决定这条契约的成败
+      expect(code).toMatch(/summary \? [\(<]/)
       expect(code).toContain('<AISummaryCard')
       // 精读不再单独成块渲染在正文之后
       expect(code).not.toContain('ArticleInsightsBlock')

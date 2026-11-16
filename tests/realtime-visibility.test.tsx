@@ -133,7 +133,7 @@ function serverDisconnectNamespace(): void {
 
 beforeEach(async () => {
   await startServer()
-  document.documentElement.lang = 'zh'
+  document.documentElement.lang = 'zh-CN'
 })
 
 afterEach(async () => {
@@ -151,7 +151,7 @@ afterEach(async () => {
 
 describe('页面重新可见时的恢复', () => {
   it('服务端断开后隐藏再可见：建立新连接并重新 join 原房间', async () => {
-    render(<RealtimeRuntime origin={baseUrl} lang="zh" />)
+    render(<RealtimeRuntime origin={baseUrl} lang="zh-CN" />)
     await waitForStatus('online')
 
     const release = realtimeBus.joinArticle('p1')
@@ -171,14 +171,14 @@ describe('页面重新可见时的恢复', () => {
 
     await waitFor(() => expect(handshakes).toHaveLength(2))
     await waitForStatus('online')
-    expect(new URL(handshakes[1]!.url, baseUrl).searchParams.get('lang')).toBe('zh')
+    expect(new URL(handshakes[1]!.url, baseUrl).searchParams.get('lang')).toBe('zh-CN')
     expect(joinsOf(handshakes[1]!)).toEqual(['article-p1'])
 
     release()
   })
 
   it('已经 online 时触发 visibilitychange：不调用 resume、不产生连接', async () => {
-    render(<RealtimeRuntime origin={baseUrl} lang="zh" />)
+    render(<RealtimeRuntime origin={baseUrl} lang="zh-CN" />)
     await waitForStatus('online')
     const resume = vi.spyOn(heldClient(), 'resume')
 
@@ -194,7 +194,7 @@ describe('页面重新可见时的恢复', () => {
   })
 
   it('connecting 时触发 visibilitychange：不并发发起第二次恢复', async () => {
-    render(<RealtimeRuntime origin={baseUrl} lang="zh" />)
+    render(<RealtimeRuntime origin={baseUrl} lang="zh-CN" />)
     // 首次握手还没完成
     expect(state().status).toBe('connecting')
     const resume = vi.spyOn(heldClient(), 'resume')
@@ -207,7 +207,7 @@ describe('页面重新可见时的恢复', () => {
   })
 
   it('reconnecting 时触发 visibilitychange：不插手 Manager 的重连', async () => {
-    render(<RealtimeRuntime origin={baseUrl} lang="zh" />)
+    render(<RealtimeRuntime origin={baseUrl} lang="zh-CN" />)
     await waitForStatus('online')
     const resume = vi.spyOn(heldClient(), 'resume')
 
@@ -229,7 +229,7 @@ describe('页面重新可见时的恢复', () => {
     const winAdd = vi.spyOn(window, 'addEventListener')
     const winRemove = vi.spyOn(window, 'removeEventListener')
 
-    const { unmount } = render(<RealtimeRuntime origin={baseUrl} lang="zh" />)
+    const { unmount } = render(<RealtimeRuntime origin={baseUrl} lang="zh-CN" />)
     await waitForStatus('online')
     const client = heldClient()
     const resume = vi.spyOn(client, 'resume')

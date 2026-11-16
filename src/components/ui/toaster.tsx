@@ -14,25 +14,28 @@
 import Link from 'next/link'
 import { notificationStore, type NotificationLevel } from '@/lib/notifications/store'
 import { useNotifications } from '@/lib/notifications/use-notifications'
-import type { Locale } from '@/lib/i18n/config'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, type MessageKey } from '@/lib/i18n/dictionary'
 
 const TONE: Record<NotificationLevel, string> = {
-  info: 'var(--color-info)',
-  success: 'var(--color-success)',
-  warning: 'var(--color-warning)',
-  error: 'var(--color-danger)',
+  info: 'var(--state-info)',
+  success: 'var(--state-success)',
+  warning: 'var(--state-warning)',
+  error: 'var(--state-danger)',
 }
 
-const LABEL: Record<Locale, Record<NotificationLevel, string>> = {
-  zh: { info: '提示', success: '成功', warning: '注意', error: '错误' },
-  en: { info: 'Notice', success: 'Done', warning: 'Warning', error: 'Error' },
+const LABEL_KEY: Record<NotificationLevel, MessageKey> = {
+  info: 'notify.info',
+  success: 'notify.success',
+  warning: 'notify.warning',
+  error: 'notify.error',
 }
 
 export interface ToasterProps {
   locale?: Locale
 }
 
-export function Toaster({ locale = 'zh' }: ToasterProps) {
+export function Toaster({ locale = DEFAULT_LOCALE }: ToasterProps) {
   const items = useNotifications()
 
   if (items.length === 0) return null
@@ -41,7 +44,7 @@ export function Toaster({ locale = 'zh' }: ToasterProps) {
     <div
       className="pointer-events-none relative flex w-full flex-col items-stretch gap-2"
       role="region"
-      aria-label={locale === 'en' ? 'Notifications' : '通知'}
+      aria-label={t(locale, 'notify.region')}
     >
       {items.map((item) => {
         const urgent = item.level === 'warning' || item.level === 'error'
@@ -59,8 +62,8 @@ export function Toaster({ locale = 'zh' }: ToasterProps) {
               style={{ backgroundColor: TONE[item.level] }}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-meta text-[var(--text-tertiary)]">
-                {LABEL[locale][item.level]}
+              <p className="text-meta text-[var(--text-secondary)]">
+                {t(locale, LABEL_KEY[item.level])}
               </p>
               <p className="text-body mt-0.5 break-words text-[var(--text-primary)]">
                 {item.title}
@@ -82,8 +85,8 @@ export function Toaster({ locale = 'zh' }: ToasterProps) {
             <button
               type="button"
               onClick={() => notificationStore.dismiss(item.id)}
-              aria-label={locale === 'en' ? 'Dismiss notification' : '关闭通知'}
-              className="text-meta shrink-0 px-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              aria-label={t(locale, 'notify.dismiss')}
+              className="text-meta shrink-0 px-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
             >
               ×
             </button>

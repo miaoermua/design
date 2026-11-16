@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import type { Pagination as PaginationModel } from '@/lib/api'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
 
 interface PaginationProps {
   pagination: PaginationModel
   /** 由调用方决定 URL 形状（保留现有查询参数） */
   buildHref: (page: number) => string
+  locale?: Locale
+  /** 覆写默认文案：日记列表用「更新的一页 / 更早的一页」表达时间方向 */
   prevLabel?: string
   nextLabel?: string
   className?: string
@@ -18,18 +22,21 @@ interface PaginationProps {
 export function Pagination({
   pagination,
   buildHref,
-  prevLabel = '上一页',
-  nextLabel = '下一页',
+  locale = DEFAULT_LOCALE,
+  prevLabel,
+  nextLabel,
   className,
 }: PaginationProps) {
   if (pagination.totalPages <= 1) return null
 
+  const previous = prevLabel ?? t(locale, 'pagination.previous')
+  const following = nextLabel ?? t(locale, 'pagination.next')
   const linkClass = 'link-quiet text-small text-[var(--text-secondary)]'
   const disabledClass = 'text-small text-[var(--text-tertiary)]'
 
   return (
     <nav
-      aria-label="分页"
+      aria-label={t(locale, 'pagination.label')}
       className={cn(
         'mt-10 flex items-center justify-between gap-4 border-t border-[var(--edge)] pt-5',
         className,
@@ -37,26 +44,29 @@ export function Pagination({
     >
       {pagination.hasPrev ? (
         <Link href={buildHref(pagination.page - 1)} rel="prev" className={linkClass}>
-          ← {prevLabel}
+          ← {previous}
         </Link>
       ) : (
         <span className={disabledClass} aria-disabled="true">
-          ← {prevLabel}
+          ← {previous}
         </span>
       )}
 
       <p className="meta">
-        第 {pagination.page} / {pagination.totalPages} 页
-        {pagination.total > 0 ? ` · 共 ${pagination.total} 篇` : null}
+        {tf(locale, 'pagination.position', {
+          page: pagination.page,
+          pages: pagination.totalPages,
+        })}
+        {pagination.total > 0 ? tf(locale, 'pagination.total', { total: pagination.total }) : null}
       </p>
 
       {pagination.hasNext ? (
         <Link href={buildHref(pagination.page + 1)} rel="next" className={linkClass}>
-          {nextLabel} →
+          {following} →
         </Link>
       ) : (
         <span className={disabledClass} aria-disabled="true">
-          {nextLabel} →
+          {following} →
         </span>
       )}
     </nav>

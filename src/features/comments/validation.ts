@@ -6,6 +6,9 @@
  * 也不能在 Core 改上限时静默失配。写在同一处，表单与服务端路由共用。
  */
 
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
+
 export const COMMENT_LIMITS = {
   author: 20,
   text: 500,
@@ -48,9 +51,12 @@ function isHttpUrl(value: string): boolean {
  * 与 core 的规则一一对应，但**不做过度限制**：不做敏感词、不做频率判断，
  * 那些属于后端策略；前端只保证「发出去不会被 422 打回来」。
  */
-export function validateCommentDraft(input: unknown): CommentValidation {
+export function validateCommentDraft(
+  input: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): CommentValidation {
   if (!input || typeof input !== 'object') {
-    return { ok: false, field: 'text', message: '提交内容格式不正确' }
+    return { ok: false, field: 'text', message: t(locale, 'comments.invalidText') }
   }
 
   const record = input as Record<string, unknown>
@@ -59,25 +65,33 @@ export function validateCommentDraft(input: unknown): CommentValidation {
   const mail = text(record.mail)
   const url = text(record.url)
 
-  if (!author) return { ok: false, field: 'author', message: '请填写昵称' }
+  if (!author) return { ok: false, field: 'author', message: t(locale, 'comments.invalidAuthor') }
   if (author.length > COMMENT_LIMITS.author) {
-    return { ok: false, field: 'author', message: `昵称不得超过 ${COMMENT_LIMITS.author} 个字符` }
+    return {
+      ok: false,
+      field: 'author',
+      message: tf(locale, 'comments.invalidAuthorLength', { count: COMMENT_LIMITS.author }),
+    }
   }
 
-  if (!mail) return { ok: false, field: 'mail', message: '请填写邮箱' }
+  if (!mail) return { ok: false, field: 'mail', message: t(locale, 'comments.invalidMail') }
   if (mail.length > COMMENT_LIMITS.mail || !EMAIL.test(mail)) {
-    return { ok: false, field: 'mail', message: '请填写正确的邮箱' }
+    return { ok: false, field: 'mail', message: t(locale, 'comments.invalidMailFormat') }
   }
 
   if (url) {
     if (url.length > COMMENT_LIMITS.url || !isHttpUrl(url)) {
-      return { ok: false, field: 'url', message: '网址需以 http:// 或 https:// 开头' }
+      return { ok: false, field: 'url', message: t(locale, 'comments.invalidUrl') }
     }
   }
 
-  if (!body) return { ok: false, field: 'text', message: '请写点什么' }
+  if (!body) return { ok: false, field: 'text', message: t(locale, 'comments.invalidBody') }
   if (body.length > COMMENT_LIMITS.text) {
-    return { ok: false, field: 'text', message: `评论内容不得超过 ${COMMENT_LIMITS.text} 个字符` }
+    return {
+      ok: false,
+      field: 'text',
+      message: tf(locale, 'comments.invalidBodyLength', { count: COMMENT_LIMITS.text }),
+    }
   }
 
   return {

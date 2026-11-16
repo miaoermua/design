@@ -14,7 +14,7 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('@/lib/i18n/server', () => ({
-  getLocale: async () => 'zh',
+  getLocale: async () => 'zh-CN',
 }))
 
 const ARTICLE = {

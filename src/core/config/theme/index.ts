@@ -22,6 +22,7 @@ export {
   parseHomepage,
   parseDonateQrcodes,
   safeHttpUrl,
+  safeNavHref,
 } from './parser'
 export { normalizeCustomCssList, normalizeCssUrl, type CustomCssUrlResult } from './css-url'
 export {
@@ -41,8 +42,13 @@ export {
   DONATE_NAME_MAX,
   DONATE_QRCODE_MAX,
   DONATE_URL_MAX_LENGTH,
+  FOOTER_LINK_MAX,
+  FOOTER_LINK_TITLE_MAX,
+  FOOTER_LINK_URL_MAX_LENGTH,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
+  HOME_MORE_ITEM_MAX,
+  HOME_MORE_TITLE_MAX,
   SOCIAL_ICON_CLASS_MAX,
   SOCIAL_ICON_CLASS_PARTS_MAX,
   SOCIAL_ICON_STYLESHEET_MAX,
@@ -58,7 +64,10 @@ export type {
   ThemeDonate,
   ThemeDonateQrcode,
   ThemeFooter,
+  ThemeFooterLink,
   ThemeHomepage,
+  ThemeHomepageMore,
+  ThemeHomepageMoreItem,
   ThemeHomepageSection,
   ThemeIcp,
   ThemeSocial,

@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { footerSinceYear, getThemeConfig } from '@/core/config/theme'
 import type { SiteIdentity } from '@/lib/api'
 import { siteDescription, siteTitle } from '@/lib/site'
+import { FooterSettings } from './footer-settings'
 
 /**
  * 站点级固定信息
@@ -23,18 +25,21 @@ const ICP_QUERY_URL = 'https://beian.miit.gov.cn/'
 /**
  * 页脚
  *
- * 明确的两排，都靠左：
+ * 靠左的三排：
  *   - 第一排：`© 2021–2026  名字 ｜ 个性签名`
  *   - 第二排：`Powered by Mix-Space. Design. ｜ ICP`
+ *   - 第三排：Theme Snippet 的 `footer.links`（可选，追加不覆盖）
  *
  * 三处内容全部来自真实接口，不写死：
  *   - 名字 / 个性签名 → `identity.owner.name` / `identity.owner.introduce`
  *   - 起始年份 → Theme Snippet 的 `footer.since`
  * 年份区间用起始年与当前年拼出；两者相同时只显示一个年份，避免「2026–2026」。
  *
+ * `footer.links` 是**追加**的一排，不是替换：原有版权行、Powered by、ICP
+ * 无论配置里写了什么都保持原样。这样「加两个友链」不会意外抹掉版权信息。
+ *
  * 刻意不再放：页脚导航（与顶栏重复）、社交图标（正文已有 Social 组件）、
- * RSS（走 /feed，由站点元信息暴露）、项目宣传链接列表。
- * 页脚是收束，不是第二个导航。
+ * RSS（走 /feed，由站点元信息暴露）。
  */
 export async function SiteFooter({ identity }: { identity: SiteIdentity | null }) {
   const theme = await getThemeConfig()
@@ -47,63 +52,104 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
   const sinceYear = footerSinceYear(theme.footer.since, currentYear)
   const yearRange = sinceYear === currentYear ? `${currentYear}` : `${sinceYear}–${currentYear}`
 
-  const { icp } = theme.footer
+  const { icp, links } = theme.footer
+
+  /*
+   * `footer.links` 排在署名行**上方**——它接着设置行，再往下才是身份与出处。
+   * 链接为空时整块不渲染，署名行自然上移，不留空行。
+   */
+  const linksRow =
+    links.length > 0 ? (
+      <p className="text-meta flex flex-wrap items-center gap-x-1 gap-y-1 text-[var(--text-secondary)]">
+        {links.map((link, index) => (
+          <span key={link.url} className="inline-flex items-center gap-x-1">
+            {index > 0 ? (
+              <span aria-hidden="true" className="footer-sep">
+                ｜
+              </span>
+            ) : null}
+            {link.url.startsWith('/') && !link.url.startsWith('//') ? (
+              // 站内路径走客户端路由：页脚里的 /about 不该整页刷新
+              <Link href={link.url} className="link-quiet whitespace-nowrap">
+                {link.title}
+              </Link>
+            ) : (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="link-quiet whitespace-nowrap"
+              >
+                {link.title}
+              </a>
+            )}
+          </span>
+        ))}
+      </p>
+    ) : null
 
   return (
     <footer className="mt-[var(--spacing-section)] border-t border-[var(--edge)]">
       <Container width="wide">
-        <div className="flex flex-col gap-1.5 py-10">
-          <p>
-            <span className="meta">© {yearRange}</span>{' '}
-            <span className="text-body font-serif font-medium text-[var(--text-heading)]">
-              {authorName}
-            </span>
-            {authorSign ? (
-              <>
-                <span aria-hidden="true" className="footer-sep">
-                  ｜
-                </span>
-                <span className="text-small text-[var(--text-secondary)]">{authorSign}</span>
-              </>
-            ) : null}
-          </p>
+        <div className="site-footer__inner flex flex-col gap-7 py-10">
+          {/* 全站唯一的设置入口：语言与三态主题紧挨成一组。 */}
+          <FooterSettings />
 
-          <p className="text-meta text-[var(--text-secondary)]">
-            Powered by{' '}
-            <a
-              href={PROJECT_LINKS.core}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="link-quiet"
-            >
-              Mix-Space
-            </a>
-            .{' '}
-            <a
-              href={PROJECT_LINKS.theme}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="link-quiet"
-            >
-              Design
-            </a>
-            .
-            {icp.enabled && icp.label ? (
-              <>
-                <span aria-hidden="true" className="footer-sep">
-                  ｜
-                </span>
-                <a
-                  href={icp.url ?? ICP_QUERY_URL}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="link-quiet whitespace-nowrap"
-                >
-                  {icp.label}
-                </a>
-              </>
-            ) : null}
-          </p>
+          <div className="flex flex-col gap-1.5">
+            {linksRow}
+
+            <p>
+              <span className="meta">© {yearRange}</span>{' '}
+              <span className="text-body font-serif font-medium text-[var(--text-heading)]">
+                {authorName}
+              </span>
+              {authorSign ? (
+                <>
+                  <span aria-hidden="true" className="footer-sep">
+                    ｜
+                  </span>
+                  <span className="text-small text-[var(--text-secondary)]">{authorSign}</span>
+                </>
+              ) : null}
+            </p>
+
+            <p className="text-meta text-[var(--text-secondary)]">
+              Powered by{' '}
+              <a
+                href={PROJECT_LINKS.core}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="link-quiet"
+              >
+                Mix-Space
+              </a>
+              .{' '}
+              <a
+                href={PROJECT_LINKS.theme}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="link-quiet"
+              >
+                Design
+              </a>
+              .
+              {icp.enabled && icp.label ? (
+                <>
+                  <span aria-hidden="true" className="footer-sep">
+                    ｜
+                  </span>
+                  <a
+                    href={icp.url ?? ICP_QUERY_URL}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="link-quiet whitespace-nowrap"
+                  >
+                    {icp.label}
+                  </a>
+                </>
+              ) : null}
+            </p>
+          </div>
         </div>
       </Container>
     </footer>

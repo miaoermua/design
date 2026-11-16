@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import type { Diary } from '@/lib/api'
+import { t } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { formatCompact } from '@/lib/utils/date'
 import { excerpt } from '@/lib/utils/text'
@@ -10,7 +12,8 @@ interface DiaryCardProps {
 }
 
 /** 首页用的轻量摘要：不渲染完整 Markdown，只取纯文本前两行 */
-export function DiaryCard({ diary, timeZone }: DiaryCardProps) {
+export async function DiaryCard({ diary, timeZone }: DiaryCardProps) {
+  const locale = await getLocale()
   const preview = diary.hasPassword ? null : excerpt(diary.content, 80)
   const chips = [diary.mood, diary.weather].filter((chip): chip is string => Boolean(chip))
 
@@ -26,7 +29,7 @@ export function DiaryCard({ diary, timeZone }: DiaryCardProps) {
         </Link>
       </h3>
       {diary.hasPassword ? (
-        <p className="meta mt-2">受密码保护</p>
+        <p className="meta mt-2">{t(locale, 'diary.protectedTitle')}</p>
       ) : preview ? (
         <p className="mt-2 line-clamp-2 text-small text-[var(--text-secondary)]">
           {preview}

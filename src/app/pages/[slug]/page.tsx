@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -7,8 +6,10 @@ import { Prose } from '@/components/ui/prose'
 import { requireFeature } from '@/core/registry/guard'
 import { CommentsSection } from '@/features/comments'
 import { getPageBySlug, isNotFound } from '@/lib/api'
+import { imageSizeIndex } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { formatDate } from '@/lib/utils/date'
 
@@ -34,7 +35,8 @@ export async function generateMetadata({ params }: PageDetailProps): Promise<Met
     }
   } catch {
     // metadata 失败不应让页面整体报错：交给页面本身去决定 404
-    return { title: '页面' }
+    const locale = await getLocale()
+    return { title: t(locale, 'page.meta') }
   }
 }
 
@@ -63,19 +65,26 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
   }
 
   const isMarkdown = page.contentFormat === 'markdown'
-  const rendered = isMarkdown && page.content.trim() ? await renderMarkdown(page.content) : null
+  const rendered =
+    isMarkdown && page.content.trim()
+      ? await renderMarkdown(page.content, locale, {
+          imageSizes: imageSizeIndex(page.images),
+        })
+      : null
 
   return (
     <Container width="prose">
       <PageHeader
-        kicker="页面"
+        kicker={t(locale, 'page.kicker')}
         title={page.title}
         description={page.subtitle}
         meta={
           page.updatedAt ? (
             <p className="meta">
               <time dateTime={page.updatedAt}>
-                更新于 {formatDate(page.updatedAt, 'Asia/Shanghai')}
+                {tf(locale, 'meta.updated', {
+                  date: formatDate(page.updatedAt, 'Asia/Shanghai'),
+                })}
               </time>
             </p>
           ) : null
@@ -88,22 +97,16 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
         ) : (
           <div className="border border-dashed border-[var(--edge)] px-5 py-6">
             <p className="text-small text-[var(--text-heading)]">
-              这个页面的正文格式是「{page.contentFormat}」。
+              {tf(locale, 'page.unsupportedFormat', { format: page.contentFormat })}
             </p>
-            <p className="mt-2 text-caption text-[var(--text-secondary)]">
-              Folio 目前只渲染 Markdown 正文。
+            <p className="text-caption mt-2 text-[var(--text-secondary)]">
+              {t(locale, 'page.unsupportedFormatHint')}
             </p>
           </div>
         )}
       </div>
 
       <CommentsSection refId={page.id} />
-
-      <p className="mt-14 border-t border-[var(--edge)] pt-6">
-        <Link href="/pages" className="link-quiet meta">
-          ← 全部页面
-        </Link>
-      </p>
     </Container>
   )
 }

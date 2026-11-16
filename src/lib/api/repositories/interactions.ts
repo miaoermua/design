@@ -11,6 +11,33 @@ export async function likeRecord(input: LikeInput): Promise<void> {
   await postV2<unknown>('/activity/like', { id: input.id, type: input.type })
 }
 
+/**
+ * `GET /like_this` —— 站点总「喜欢」数
+ *
+ * core 把它存在 config 的 `like` 选项里（`ConfigsService.getOptionValue`），
+ * 返回的是一个裸数字而不是对象。取不到时返回 null：
+ * 计数是附加信息，缺失就不显示，不伪造 0。
+ */
+export async function getSiteLikeCount(): Promise<number | null> {
+  try {
+    const body = await requestV2<unknown>('/like_this', { revalidate: 0 })
+    return typeof body === 'number' && Number.isFinite(body) ? body : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * `POST /like_this` —— 喜欢本站
+ *
+ * core 用 Redis 按 IP 做「一天一次」的限制：重复提交会抛 400
+ * 「Once a day is enough」。因此调用方要把 400 与网络错误区分开，
+ * 前者是「今天已经赞过」，不是失败。
+ */
+export async function likeSite(): Promise<void> {
+  await postV2<unknown>('/like_this', {})
+}
+
 export interface SubscribeCapability {
   enabled: boolean
   /** core 允许订阅的类型（post_c = 新文章，note_c = 新日记） */

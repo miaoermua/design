@@ -5,6 +5,8 @@ import { useEffect } from 'react'
 import { Container } from '@/components/ui/container'
 // 客户端错误边界只依赖纯错误工具，避免把服务端数据层打进客户端包
 import { describeError } from '@/lib/api/errors'
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 
 /**
  * 错误边界
@@ -19,6 +21,8 @@ export default function ErrorBoundary({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const locale = useLocale()
+
   useEffect(() => {
     console.error('[folio] render failed:', error)
   }, [error])
@@ -26,11 +30,11 @@ export default function ErrorBoundary({
   return (
     <Container>
       <div className="py-24">
-        <p className="meta">出错了</p>
+        <p className="meta">{t(locale, 'error.kicker')}</p>
         <h1 className="mt-3 font-serif text-title text-[var(--text-heading)]">
-          这个页面没能完成渲染
+          {t(locale, 'error.title')}
         </h1>
-        <p className="mt-4 max-w-[var(--container-prose)] font-mono text-caption break-words text-[var(--text-secondary)]">
+        <p className="mt-4 max-w-[var(--measure-copy)] font-mono text-caption break-words text-[var(--text-secondary)]">
           {describeError(error)}
         </p>
         {error.digest ? <p className="meta mt-2">digest: {error.digest}</p> : null}
@@ -41,10 +45,10 @@ export default function ErrorBoundary({
             onClick={reset}
             className="border border-[var(--text-primary)] bg-[var(--text-primary)] px-4 py-2 text-small text-[var(--surface)]"
           >
-            重试
+            {t(locale, 'action.retry')}
           </button>
           <Link href="/" className="link-quiet text-small">
-            回到首页
+            {t(locale, 'action.backHome')}
           </Link>
         </div>
       </div>

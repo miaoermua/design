@@ -29,11 +29,9 @@ export function PageHeader({
           {kicker}
         </p>
       ) : null}
-      <h1 className="mt-4 font-serif text-title leading-[1.24] tracking-[-0.02em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.92)]">
-        {title}
-      </h1>
+      <h1 className="text-pageheading mt-4 font-serif text-[var(--text-heading)]">{title}</h1>
       {description ? (
-        <p className="mt-4 max-w-[var(--container-prose)] font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)]">
+        <p className="mt-4 max-w-[var(--measure-copy)] font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)]">
           {description}
         </p>
       ) : null}

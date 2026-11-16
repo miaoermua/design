@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { TagNoteList } from '@/features/taxonomy'
 import { listCategories, listTags } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { categoryPath } from '@/lib/routes'
 
 /**
@@ -17,14 +19,18 @@ import { categoryPath } from '@/lib/routes'
  * 数据模型没有合并：标签来自 `/categories?type=1`，分类来自 `?type=0`，
  * 与 /explore 的标签分区调用的是同一组接口，但职责仍是各自独立的。
  */
-export const metadata: Metadata = {
-  title: '标签',
-  description: '按分类与标签浏览文章。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'tags.title'),
+    description: t(locale, 'tags.description'),
+  }
 }
 
 export default async function TagsPage() {
   requireFeature('taxonomy')
 
+  const locale = await getLocale()
   const [tags, categories] = await Promise.all([listTags(), listCategories()])
   const sortedTags = [...tags].sort(
     (a, b) => (b.count ?? 0) - (a.count ?? 0) || a.name.localeCompare(b.name, 'zh-CN'),
@@ -33,25 +39,31 @@ export default async function TagsPage() {
   return (
     <Container>
       <PageHeader
-        kicker="标签"
-        title="按主题翻阅"
-        description="标签按文章数从多到少排列，名字后面的数字是该标签下的文章数。"
+        kicker={t(locale, 'tags.kicker')}
+        title={t(locale, 'tags.heading')}
+        description={t(locale, 'tags.description')}
         meta={
           <p className="meta">
-            {sortedTags.length} 个标签 · {categories.length} 个分类
+            {tf(locale, 'tags.summary', {
+              tags: sortedTags.length,
+              categories: categories.length,
+            })}
           </p>
         }
       />
 
       <section aria-labelledby="tag-list">
         <h2 id="tag-list" className="meta border-b border-[var(--edge)] pb-3">
-          标签
+          {t(locale, 'tags.sectionTags')}
         </h2>
         {sortedTags.length > 0 ? (
-          <TagNoteList tags={sortedTags} className="mt-5" />
+          <TagNoteList tags={sortedTags} className="mt-5" locale={locale} />
         ) : (
           <div className="mt-5">
-            <EmptyState title="还没有标签" description="文章还没打上任何标签。" />
+            <EmptyState
+              title={t(locale, 'tags.emptyTitle')}
+              description={t(locale, 'tags.emptyHint')}
+            />
           </div>
         )}
       </section>
@@ -61,7 +73,7 @@ export default async function TagsPage() {
         aria-labelledby="category-list"
       >
         <h2 id="category-list" className="meta border-b border-[var(--edge)] pb-3">
-          分类
+          {t(locale, 'tags.sectionCategories')}
         </h2>
         {categories.length > 0 ? (
           <ul className="grid gap-x-12 sm:grid-cols-2">
@@ -81,7 +93,7 @@ export default async function TagsPage() {
                         className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
                       />
                       <span className="text-meta tabular-nums text-[var(--text-secondary)]">
-                        {category.count} 篇
+                        {tf(locale, 'categories.countArticles', { count: category.count })}
                       </span>
                     </>
                   ) : null}
@@ -91,7 +103,10 @@ export default async function TagsPage() {
           </ul>
         ) : (
           <div className="mt-5">
-            <EmptyState title="还没有分类" description="文章还没有归入任何分类。" />
+            <EmptyState
+              title={t(locale, 'tags.categoriesEmptyTitle')}
+              description={t(locale, 'tags.categoriesEmptyHint')}
+            />
           </div>
         )}
       </section>

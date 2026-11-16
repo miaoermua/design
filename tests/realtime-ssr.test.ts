@@ -45,7 +45,7 @@ describe('SSR 安全', () => {
     let connects = 0
     const client = createRealtimeClient({
       origin: 'https://api.example.com',
-      lang: 'zh',
+      lang: 'zh-CN',
       onEvent: () => {},
       createTransport: () => ({
         connect: () => {
@@ -83,9 +83,9 @@ describe('实时 Origin 解析（服务端）', () => {
     vi.stubEnv('MX_SERVER_URL', 'https://api.example.com/api/v2')
 
     const { resolveRealtimeConfig } = await load()
-    expect(resolveRealtimeConfig('zh')).toEqual({
+    expect(resolveRealtimeConfig('zh-CN')).toEqual({
       origin: 'https://api.example.com',
-      lang: 'zh',
+      lang: 'zh-CN',
     })
   })
 
@@ -106,7 +106,7 @@ describe('实时 Origin 解析（服务端）', () => {
     vi.stubEnv('MX_REALTIME_URL', 'https://gateway.example.com')
 
     const { resolveRealtimeConfig } = await load()
-    expect(resolveRealtimeConfig('zh').origin).toBe('https://gateway.example.com')
+    expect(resolveRealtimeConfig('zh-CN').origin).toBe('https://gateway.example.com')
   })
 
   it('带路径的覆盖地址一律拒绝，不让环境变量拼出旧的 /ws/web', async () => {
@@ -115,7 +115,7 @@ describe('实时 Origin 解析（服务端）', () => {
     vi.stubEnv('MX_REALTIME_URL', 'https://example.com/ws/web')
 
     const { resolveRealtimeConfig } = await load()
-    expect(resolveRealtimeConfig('zh').origin).toBeNull()
+    expect(resolveRealtimeConfig('zh-CN').origin).toBeNull()
   })
 
   it('旧协议的 ws:// / wss:// 一律拒绝，不猜一个地址', async () => {
@@ -124,10 +124,10 @@ describe('实时 Origin 解析（服务端）', () => {
 
     const first = await load()
     vi.stubEnv('MX_REALTIME_URL', 'wss://example.com/ws/web')
-    expect(first.resolveRealtimeConfig('zh').origin).toBeNull()
+    expect(first.resolveRealtimeConfig('zh-CN').origin).toBeNull()
 
     vi.stubEnv('MX_REALTIME_URL', 'https://example.com/ws/web')
-    expect(first.resolveRealtimeConfig('zh').origin).toBeNull()
+    expect(first.resolveRealtimeConfig('zh-CN').origin).toBeNull()
   })
 
   it('MX_REALTIME=off 整体关闭', async () => {
@@ -136,7 +136,7 @@ describe('实时 Origin 解析（服务端）', () => {
     vi.stubEnv('MX_REALTIME', 'off')
 
     const { isRealtimeEnabled, resolveRealtimeConfig } = await load()
-    expect(resolveRealtimeConfig('zh').origin).toBeNull()
+    expect(resolveRealtimeConfig('zh-CN').origin).toBeNull()
     expect(isRealtimeEnabled()).toBe(false)
   })
 
@@ -154,6 +154,6 @@ describe('实时 Origin 解析（服务端）', () => {
     vi.stubEnv('MX_SERVER_URL', '')
 
     const { resolveRealtimeConfig } = await load()
-    expect(resolveRealtimeConfig('zh').origin).toBeNull()
+    expect(resolveRealtimeConfig('zh-CN').origin).toBeNull()
   })
 })

@@ -7,6 +7,8 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
 import { getSiteTimezone, listArticlesByTag } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { pageHref, tagPath } from '@/lib/routes'
 
 interface TagPageProps {
@@ -24,9 +26,10 @@ function decodeParam(value: string): string {
 
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const { tag } = await params
+  const locale = await getLocale()
   return {
     title: `#${decodeParam(tag)}`,
-    description: `带有 ${decodeParam(tag)} 标签的文章。`,
+    description: tf(locale, 'tag.description', { tag: decodeParam(tag) }),
   }
 }
 
@@ -37,6 +40,7 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
   const tag = decodeParam(rawTag)
   const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
+  const locale = await getLocale()
 
   // 标签没有独立详情接口，v2 的 /posts 也不支持按 tag 过滤：
   // 仓库层会翻文章列表自己筛，未知标签得到空列表而不是 404
@@ -46,16 +50,16 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
   return (
     <Container>
       <PageHeader
-        kicker="标签"
+        kicker={t(locale, 'tags.kicker')}
         title={`#${tagName}`}
         description={
           pagination.total > 0
-            ? `带有该标签的文章，共 ${pagination.total} 篇。`
-            : '这个标签下还没有文章。'
+            ? tf(locale, 'tag.summary', { total: pagination.total })
+            : t(locale, 'tag.empty')
         }
         meta={
           <Link href={tagPath(tagName)} className="meta link-quiet">
-            这个标签的固定链接
+            {t(locale, 'tag.permalink')}
           </Link>
         }
       />
@@ -63,25 +67,26 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
       {items.length > 0 ? (
         <div className="divide-y divide-dashed divide-[var(--edge)] border-t border-dashed border-[var(--edge-strong)]">
           {items.map((article) => (
-            <ArticleRow key={article.id} article={article} timeZone={timeZone} />
+            <ArticleRow key={article.id} article={article} timeZone={timeZone} locale={locale} />
           ))}
         </div>
       ) : (
         <EmptyState
-          title={page > 1 ? '这一页没有文章' : '这个标签下还没有文章'}
+          title={page > 1 ? t(locale, 'articles.emptyTitle') : t(locale, 'tag.empty')}
           description={
-            page > 1 ? '页码超出了结果范围，请回到第 1 页。' : '这个标签下还没有文章。'
+            page > 1 ? t(locale, 'category.emptyOutOfRange') : t(locale, 'tag.empty')
           }
         />
       )}
 
       <Pagination
         pagination={pagination}
+        locale={locale}
         buildHref={(target) => pageHref(tagPath(tagName), target)}
       />
 
       <Link href="/tags" className="link-quiet meta mt-10 inline-block">
-        ← 所有标签
+        {t(locale, 'tag.backAll')}
       </Link>
     </Container>
   )

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
 
 import type { DonateQrcode } from '../config'
@@ -31,6 +33,7 @@ type OpenedBy = 'hover' | 'click'
  * 因此不会干扰页面正常滚动与阅读位置。
  */
 export function DonateAction({ label, qrcodes, className, variant = 'inline' }: DonateActionProps) {
+  const locale = useLocale()
   const [open, setOpen] = useState(false)
   const [openedBy, setOpenedBy] = useState<OpenedBy>('click')
   const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(() => new Set())
@@ -166,7 +169,7 @@ export function DonateAction({ label, qrcodes, className, variant = 'inline' }: 
         <div
           id={panelId}
           role="dialog"
-          aria-label={`${label}二维码`}
+          aria-label={tf(locale, 'donate.qrAlt', { name: label })}
           // pb-2 是「鼠标从入口移向浮层」的过渡带：没有它，两者之间的空隙
           // 会触发 pointerleave，浮层闪烁关闭。
           className="absolute bottom-full left-0 z-30 w-max max-w-[calc(100vw-2.5rem)] pb-2"
@@ -178,13 +181,13 @@ export function DonateAction({ label, qrcodes, className, variant = 'inline' }: 
               return (
                 <li key={qrcode.url} className="flex w-[7rem] flex-col items-center gap-1.5">
                   {failed ? (
-                    <span className="text-meta flex size-28 items-center justify-center border border-dashed border-[var(--edge)] bg-[var(--surface-sunk)] px-2 text-center text-[var(--text-tertiary)]">
-                      二维码加载失败
+                    <span className="text-meta flex size-28 items-center justify-center border border-dashed border-[var(--edge)] bg-[var(--surface-sunk)] px-2 text-center text-[var(--text-secondary)]">
+                      {t(locale, 'donate.qrFailed')}
                     </span>
                   ) : (
                     <img
                       src={qrcode.url}
-                      alt={`${qrcode.name}赞赏二维码`}
+                      alt={tf(locale, 'donate.qrAlt', { name: qrcode.name })}
                       width={112}
                       height={112}
                       loading="lazy"

@@ -1,6 +1,8 @@
 'use client'
 
 import { useId, useMemo, useState, useSyncExternalStore } from 'react'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { commentFailureMessage, type CommentFailureReason } from '../errors'
 import { COMMENT_LIMITS, validateCommentDraft, type CommentField } from '../validation'
 
@@ -81,6 +83,7 @@ export function CommentComposer({
   onCancel,
   variant = 'root',
 }: CommentComposerProps) {
+  const locale = useLocale()
   // 记住的昵称/网址只在客户端存在：用 useSyncExternalStore 读取，
   // 服务端快照是空串，水合时与服务端输出一致。
   const storedIdentity = useSyncExternalStore(
@@ -100,6 +103,7 @@ export function CommentComposer({
   const setDraft = setEditedDraft
 
   const [text, setText] = useState('')
+  const [isWhispers, setIsWhispers] = useState(false)
   const [pending, setPending] = useState(false)
   const [invalidField, setInvalidField] = useState<CommentField | null>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
@@ -121,7 +125,7 @@ export function CommentComposer({
     event.preventDefault()
     if (pending) return
 
-    const checked = validateCommentDraft({ ...draft, text })
+    const checked = validateCommentDraft({ ...draft, text }, locale)
     if (!checked.ok) {
       setInvalidField(checked.field)
       setMessage({ kind: 'error', text: checked.message })
@@ -133,7 +137,9 @@ export function CommentComposer({
     setMessage(null)
 
     const endpoint = parentId ? '/api/comments/reply' : '/api/comments'
-    const payload = parentId ? { parentId, ...checked.value } : { refId, ...checked.value }
+    const payload = parentId
+      ? { parentId, ...checked.value, ...(isWhispers ? { isWhispers: true } : {}) }
+      : { refId, ...checked.value, ...(isWhispers ? { isWhispers: true } : {}) }
 
     try {
       const response = await fetch(endpoint, {
@@ -151,7 +157,7 @@ export function CommentComposer({
       if (result.status === 'ok') {
         remember(draft)
         setText('')
-        setMessage({ kind: 'ok', text: '评论已提交' })
+        setMessage({ kind: 'ok', text: t(locale, 'comments.submitted') })
         onSuccess()
         return
       }
@@ -160,10 +166,14 @@ export function CommentComposer({
       setMessage({
         kind: 'error',
         // 服务端把字段级提示算好了（与 core 的约束同源），有就直接用
-        text: result.message ?? (result.reason ? commentFailureMessage(result.reason) : '提交失败'),
+        text:
+          result.message ??
+          (result.reason
+            ? commentFailureMessage(result.reason, locale)
+            : t(locale, 'comments.submitFailed')),
       })
     } catch {
-      setMessage({ kind: 'error', text: '网络异常，请稍后再试' })
+      setMessage({ kind: 'error', text: t(locale, 'comments.networkFailed') })
     } finally {
       setPending(false)
     }
@@ -173,22 +183,30 @@ export function CommentComposer({
     <form
       onSubmit={submit}
       className={compact ? 'comment-composer comment-composer--reply' : 'comment-composer'}
-      aria-label={compact ? `回复 ${replyTo ?? ''}` : '发表评论'}
+      aria-label={
+        compact
+          ? tf(locale, 'comments.replyLabel', { name: replyTo ?? '' })
+          : t(locale, 'comments.composerLabel')
+      }
     >
       <div className="comment-composer__head">
         <p className="comment-composer__title">
-          {compact ? `回复 ${replyTo ?? '这条评论'}` : '写一条评论'}
+          {compact
+            ? replyTo
+              ? tf(locale, 'comments.replyTo', { name: replyTo })
+              : t(locale, 'comments.reply')
+            : t(locale, 'comments.writePlaceholder')}
         </p>
         {onCancel ? (
           <button type="button" onClick={onCancel} className="comment-composer__cancel">
-            取消回复
+            {t(locale, 'comments.cancelReply')}
           </button>
         ) : null}
       </div>
 
       <div className="comment-composer__fields">
         <label className="comment-composer__field">
-          <span>昵称</span>
+          <span>{t(locale, 'comments.name')}</span>
           <input
             value={draft.author}
             onChange={(event) => setDraft({ ...draft, author: event.target.value })}
@@ -202,7 +220,7 @@ export function CommentComposer({
         </label>
 
         <label className="comment-composer__field">
-          <span>邮箱（不公开）</span>
+          <span>{t(locale, 'comments.mail')}</span>
           <input
             value={draft.mail}
             onChange={(event) => setDraft({ ...draft, mail: event.target.value })}
@@ -217,7 +235,7 @@ export function CommentComposer({
         </label>
 
         <label className="comment-composer__field">
-          <span>网址（可选）</span>
+          <span>{t(locale, 'comments.url')}</span>
           <input
             value={draft.url}
             onChange={(event) => setDraft({ ...draft, url: event.target.value })}
@@ -232,7 +250,7 @@ export function CommentComposer({
       </div>
 
       <label className="comment-composer__field comment-composer__field--wide">
-        <span>评论</span>
+        <span>{t(locale, 'comments.body')}</span>
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
@@ -246,12 +264,31 @@ export function CommentComposer({
         />
       </label>
 
+      <label className="comment-composer__whisper">
+        <input
+          type="checkbox"
+          checked={isWhispers}
+          onChange={(event) => setIsWhispers(event.target.checked)}
+          className="comment-composer__whisper-check"
+        />
+        <span className="comment-composer__whisper-label">
+          {t(locale, 'comments.whisper')}
+        </span>
+        <span className="comment-composer__whisper-hint">
+          {t(locale, 'comments.whisperHint')}
+        </span>
+      </label>
+
       <div className="comment-composer__foot">
         <button type="submit" disabled={pending} className="comment-composer__submit">
-          {pending ? '提交中…' : parentId ? '回复' : '发表评论'}
+          {pending
+            ? t(locale, 'comments.submitting')
+            : parentId
+              ? t(locale, 'comments.reply')
+              : t(locale, 'comments.submit')}
         </button>
 
-        <span className="comment-composer__hint">邮箱仅用于识别身份，不会公开显示。</span>
+        <span className="comment-composer__hint">{t(locale, 'comments.mailHint')}</span>
 
         <span className="comment-composer__count">
           {text.length}/{COMMENT_LIMITS.text}

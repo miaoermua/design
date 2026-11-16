@@ -18,6 +18,7 @@
 
 import type { MarkedExtension, Token, Tokens } from 'marked'
 import { renderNoticeHtml, type NoticeType } from './notice'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
 
 /** 首行：[!TYPE] 独占一行 */
 const ALERT_HEADER = /^ {0,3}>[ \t]?\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*$/i
@@ -77,7 +78,7 @@ export function scanAlert(src: string): ScannedAlert | null {
   return { notice, body: body.join('\n'), raw: src.slice(0, offset) }
 }
 
-export function createAlertExtension(): MarkedExtension {
+export function createAlertExtension(locale: Locale = DEFAULT_LOCALE): MarkedExtension {
   return {
     extensions: [
       {
@@ -104,7 +105,7 @@ export function createAlertExtension(): MarkedExtension {
         renderer(token) {
           const alert = token as AlertToken
           const body = alert.tokens.length ? this.parser.parse(alert.tokens) : ''
-          return renderNoticeHtml('alert', alert.notice, '', body)
+          return renderNoticeHtml('alert', alert.notice, '', body, locale)
         },
       },
     ],

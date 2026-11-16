@@ -72,10 +72,23 @@ export const SOCIAL_ICON_CLASS_MAX = 48
 /** CSS 图标最多由几个 class 组成：`fa fa-at fa-lg` 已经是 3 个 */
 export const SOCIAL_ICON_CLASS_PARTS_MAX = 4
 
+/** 页脚自定义链接条数上限 */
+export const FOOTER_LINK_MAX = 8
+/** 页脚链接标题长度上限 */
+export const FOOTER_LINK_TITLE_MAX = 32
+/** 页脚链接地址长度上限 */
+export const FOOTER_LINK_URL_MAX_LENGTH = 2048
+
+/** 首页「更多」区块条目上限 */
+export const HOME_MORE_ITEM_MAX = 12
+/** 首页更多入口标题长度上限 */
+export const HOME_MORE_TITLE_MAX = 32
+
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   footer: {
     since: null,
     icp: { enabled: false, label: null, url: null },
+    links: [],
   },
   social: {
     enabled: true,
@@ -89,6 +102,15 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
     profile: { enabled: true, limit: 0 },
     articles: { enabled: true, limit: HOME_RECENT_ARTICLES },
     notes: { enabled: true, limit: HOME_RECENT_DIARIES },
+    more: {
+      enabled: true,
+      // 未配置时的最小可用组合：喜欢本站 + 订阅。两者都不依赖作者额外填 URL，
+      // 所以「什么都不配」也能得到一排能点、有反馈的入口。
+      items: [
+        { title: '点赞', type: 'like', url: null, icon: null, color: null },
+        { title: '订阅', type: 'subscribe', url: null, icon: null, color: null },
+      ],
+    },
   },
   donate: {
     enabled: false,

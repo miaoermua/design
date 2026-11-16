@@ -1,5 +1,7 @@
 import { isFeatureEnabled } from '@/core/registry/features'
 import { getCommentOptions, getSiteTimezone, listComments } from '@/lib/api'
+import { getLocale } from '@/lib/i18n/server'
+import { t } from '@/lib/i18n/dictionary'
 import { CommentsThread } from './comments-thread'
 
 interface CommentsSectionProps {
@@ -25,6 +27,7 @@ interface CommentsSectionProps {
 export async function CommentsSection({ refId, timeZone }: CommentsSectionProps) {
   if (!isFeatureEnabled('comments')) return null
 
+  const locale = await getLocale()
   const options = await getCommentOptions()
   const zone = timeZone ?? getSiteTimezone()
 
@@ -33,12 +36,10 @@ export async function CommentsSection({ refId, timeZone }: CommentsSectionProps)
       <section aria-labelledby="comments-heading" className="comments">
         <header className="comments__head">
           <h2 id="comments-heading" className="comments__title">
-            评论
+            {t(locale, 'comments.title')}
           </h2>
         </header>
-        <p className="comments__notice">
-          本站已关闭评论，暂时不能在这里留言。此前留下的评论也不再展示。
-        </p>
+        <p className="comments__notice">{t(locale, 'comments.disabled')}</p>
       </section>
     )
   }
@@ -53,10 +54,10 @@ export async function CommentsSection({ refId, timeZone }: CommentsSectionProps)
       <section aria-labelledby="comments-heading" className="comments">
         <header className="comments__head">
           <h2 id="comments-heading" className="comments__title">
-            评论
+            {t(locale, 'comments.title')}
           </h2>
         </header>
-        <p className="comments__notice">评论加载失败，稍后刷新可重试。</p>
+        <p className="comments__notice">{t(locale, 'comments.sectionFailed')}</p>
       </section>
     )
   }

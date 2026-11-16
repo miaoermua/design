@@ -5,24 +5,30 @@ import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { FriendCard } from '@/features/friends/friend-card'
 import { listFriendLinks } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 
-export const metadata: Metadata = {
-  title: '友链',
-  description: '这里记录长期互相阅读的站点。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'friends.title'),
+    description: t(locale, 'friends.description'),
+  }
 }
 
 export default async function FriendsPage() {
   requireFeature('friends')
 
+  const locale = await getLocale()
   const links = await listFriendLinks()
 
   return (
     <Container>
       <PageHeader
-        kicker="友链"
-        title="朋友们"
-        description="这里只展示已通过审核且未被隐藏的友链；审核中、已过期与已拒绝的条目不会出现。"
-        meta={<p className="meta">{links.length} 个站点</p>}
+        kicker={t(locale, 'friends.kicker')}
+        title={t(locale, 'friends.heading')}
+        description={t(locale, 'friends.description')}
+        meta={<p className="meta">{tf(locale, 'friends.count', { count: links.length })}</p>}
       />
 
       {links.length > 0 ? (
@@ -34,7 +40,10 @@ export default async function FriendsPage() {
           ))}
         </ul>
       ) : (
-        <EmptyState title="还没有公开的友链" description="还没有通过审核的友链。" />
+        <EmptyState
+          title={t(locale, 'friends.emptyTitle')}
+          description={t(locale, 'friends.emptyHint')}
+        />
       )}
     </Container>
   )

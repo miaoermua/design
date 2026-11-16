@@ -6,12 +6,14 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
 import { SocialIcon } from '@/components/ui/social-icon'
+import { HomeMore } from '@/components/home/home-more'
 import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
 import { DiaryCard } from '@/features/diaries'
 import {
   ConfigurationError,
+  getSiteLikeCount,
   getSiteTimezone,
   isApiConfigured,
   listArticles,
@@ -20,7 +22,6 @@ import {
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
-import { diaryPath } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
 import { toSocialItems } from '@/lib/social'
 import { cn } from '@/lib/utils/cn'
@@ -45,21 +46,23 @@ export async function generateMetadata(): Promise<Metadata> {
  * 没有把所有内容都堆在首页——归档、标签、页面各有自己的入口。
  */
 export default async function HomePage() {
+  const locale = await getLocale()
+
   if (!isApiConfigured()) {
     return (
       <Container>
         <div className="py-20">
           <ErrorState
-            title="尚未连接 Mix Space 后端"
+            title={t(locale, 'state.backendMissingTitle')}
             error={new ConfigurationError('缺少环境变量 MX_SERVER_URL')}
-            hint="在 .env.local 中设置 MX_SERVER_URL，或设置 MX_MOCK=1 用内置数据离线预览。"
+            hint={t(locale, 'state.backendMissingHint')}
+            locale={locale}
           />
         </div>
       </Container>
     )
   }
 
-  const locale = await getLocale()
   const lang = toContentLang(locale)
   const timeZone = getSiteTimezone()
   const [{ identity }, theme] = await Promise.all([loadSiteContext(), getThemeConfig()])
@@ -98,80 +101,84 @@ export default async function HomePage() {
     : []
   const name = owner?.name ?? siteTitle(identity)
 
+  // 「更多」区块里只要出现 `like` 入口，才去读站点总赞数：
+  // 入口被配置删掉时这次请求就是白花的，而首页每条请求都在首屏关键路径上。
+  const showMore = theme.homepage.more.enabled && theme.homepage.more.items.length > 0
+  const needsLikeCount =
+    showMore &&
+    isFeatureEnabled('interactions') &&
+    theme.homepage.more.items.some((item) => item.type === 'like')
+  const siteLikeCount = needsLikeCount ? await getSiteLikeCount() : null
+
   return (
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
       {showProfile ? (
         <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
-        <div className="flex items-start gap-5 sm:gap-6">
-          {owner?.avatar ? (
-            <CoverImage
-              src={owner.avatar}
-              alt={name}
-              width={72}
-              height={72}
-              priority
-              // 圆形头像，尺寸克制：它是身份的一部分，不是首屏主视觉
-              className="size-14 shrink-0 rounded-full border border-[var(--edge)] sm:size-[4.5rem]"
-            />
-          ) : null}
-
-          <div className="min-w-0 flex-1">
-            {/* 作者名是首页最大的字：它是这个空间的身份标识，
-                用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
-            <h1 className="max-w-[22ch] text-balance font-serif text-display leading-[1.2] text-[var(--text-heading)]">
-              {name}
-            </h1>
-            {owner?.introduce ?? identity?.description ? (
-              <p className="mt-2 max-w-[34rem] text-pretty text-lead leading-[1.7] text-[var(--text-secondary)]">
-                {owner?.introduce ?? identity?.description}
-              </p>
+          <div className="flex items-start gap-5 sm:gap-6">
+            {owner?.avatar ? (
+              <CoverImage
+                src={owner.avatar}
+                alt={name}
+                width={72}
+                height={72}
+                priority
+                // 圆形头像，尺寸克制：它是身份的一部分，不是首屏主视觉
+                className="size-14 shrink-0 rounded-full border border-[var(--edge)] sm:size-[4.5rem]"
+              />
             ) : null}
 
-            {socials.length > 0 ? (
-              <ul className="mt-4 flex flex-wrap items-center gap-1.5">
-                {socials.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={item.url}
-                      rel="me noopener noreferrer"
-                      target={item.url.startsWith('mailto:') ? undefined : '_blank'}
-                      title={item.title}
-                      aria-label={item.title}
-                      // 品牌色作为前景色：图标行本身是安静的，
-                      // 用大块背景色会把这行变成按钮墙
-                      style={item.color ? { color: item.color } : undefined}
-                      className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
-                    >
-                      <SocialIcon icon={item.icon} className="size-[1.05rem]" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
+            <div className="min-w-0 flex-1">
+              {/* 作者名是首页最大的字：它是这个空间的身份标识，
+                用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
+              <h1 className="text-display max-w-[22ch] font-serif text-balance text-[var(--text-heading)]">
+                {name}
+              </h1>
+              {(owner?.introduce ?? identity?.description) ? (
+                <p className="text-lead mt-2 max-w-[34rem] leading-[1.7] text-pretty text-[var(--text-secondary)]">
+                  {owner?.introduce ?? identity?.description}
+                </p>
+              ) : null}
+
+              {socials.length > 0 ? (
+                <ul className="mt-4 flex flex-wrap items-center gap-1.5">
+                  {socials.map((item) => (
+                    <li key={item.id}>
+                      <a
+                        href={item.url}
+                        rel="me noopener noreferrer"
+                        target={item.url.startsWith('mailto:') ? undefined : '_blank'}
+                        title={item.title}
+                        aria-label={item.title}
+                        // 品牌色作为前景色：图标行本身是安静的，
+                        // 用大块背景色会把这行变成按钮墙
+                        style={item.color ? { color: item.color } : undefined}
+                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
+                      >
+                        <SocialIcon icon={item.icon} className="size-[1.05rem]" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
+            {articles ? (
+              <Link href="/articles" className="link-quiet">
+                {tf(locale, 'home.countArticles', { count: articles.pagination.total })}
+              </Link>
+            ) : null}
+            {diaries ? (
+              <Link href="/diaries" className="link-quiet">
+                <span className={articles ? 'meta-sep' : undefined}>
+                  {tf(locale, 'home.countDiaries', { count: diaries.pagination.total })}
+                </span>
+              </Link>
             ) : null}
           </div>
-        </div>
-
-        <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
-          {articles ? (
-            <Link href="/articles" className="link-quiet">
-              {tf(locale, 'home.countArticles', { count: articles.pagination.total })}
-            </Link>
-          ) : null}
-          {diaries ? (
-            <Link href="/diaries" className="link-quiet">
-              <span className={articles ? 'meta-sep' : undefined}>
-                {tf(locale, 'home.countDiaries', { count: diaries.pagination.total })}
-              </span>
-            </Link>
-          ) : null}
-          {identity?.latestDiaryId ? (
-            <Link href={diaryPath(identity.latestDiaryId)} className="link-quiet">
-              <span className="meta-sep">{t(locale, 'home.latestDiary')}</span>
-            </Link>
-          ) : null}
-        </div>
-      </section>
+        </section>
       ) : null}
 
       {/* ── Latest Blogs ───────────────────────────────────────── */}
@@ -196,7 +203,12 @@ export default async function HomePage() {
           {articles.items.length > 0 ? (
             <div className="mt-2 divide-y divide-dashed divide-[var(--edge)]">
               {articles.items.map((article) => (
-                <ArticleRow key={article.id} article={article} timeZone={timeZone} />
+                <ArticleRow
+                  key={article.id}
+                  article={article}
+                  timeZone={timeZone}
+                  locale={locale}
+                />
               ))}
             </div>
           ) : (
@@ -245,6 +257,26 @@ export default async function HomePage() {
               />
             </div>
           )}
+        </section>
+      ) : null}
+
+      {/* ── More ───────────────────────────────────────────────── */}
+      {showMore ? (
+        <section
+          className={cn(
+            'motion-fade-in mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10 pb-4',
+            // 延迟：根据前面有几个区块递增
+            showProfile && articles && diaries
+              ? 'motion-delay-3'
+              : (showProfile && articles) || (showProfile && diaries) || (articles && diaries)
+                ? 'motion-delay-2'
+                : (showProfile || articles || diaries) && 'motion-delay-1',
+          )}
+        >
+          <SectionHeading title={t(locale, 'home.more')} />
+          <div className="mt-6">
+            <HomeMore items={theme.homepage.more.items} siteLikeCount={siteLikeCount} />
+          </div>
         </section>
       ) : null}
     </Container>

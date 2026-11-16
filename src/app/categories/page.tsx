@@ -5,25 +5,31 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { listCategories } from '@/lib/api'
+import { t, tf } from '@/lib/i18n/dictionary'
+import { getLocale } from '@/lib/i18n/server'
 import { categoryPath } from '@/lib/routes'
 
-export const metadata: Metadata = {
-  title: '分类',
-  description: '按分类浏览文章。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'categories.title'),
+    description: t(locale, 'categories.description'),
+  }
 }
 
 export default async function CategoriesPage() {
   requireFeature('taxonomy')
 
+  const locale = await getLocale()
   const categories = await listCategories()
 
   return (
     <Container>
       <PageHeader
-        kicker="分类"
-        title="全部分类"
-        description="分类由作者在 Mix Space 后台维护，主题不做重命名或合并。"
-        meta={<p className="meta">{categories.length} 个分类</p>}
+        kicker={t(locale, 'categories.kicker')}
+        title={t(locale, 'categories.heading')}
+        description={t(locale, 'categories.description')}
+        meta={<p className="meta">{tf(locale, 'categories.count', { count: categories.length })}</p>}
       />
 
       {categories.length > 0 ? (
@@ -37,17 +43,22 @@ export default async function CategoriesPage() {
                 {category.name}
               </Link>
               {category.count !== null ? (
-                <span className="meta tabular-nums">{category.count} 篇</span>
+                <span className="meta tabular-nums">
+                  {tf(locale, 'categories.countArticles', { count: category.count })}
+                </span>
               ) : null}
             </li>
           ))}
         </ul>
       ) : (
-        <EmptyState title="还没有分类" description="后端返回的分类列表为空。" />
+        <EmptyState
+          title={t(locale, 'categories.emptyTitle')}
+          description={t(locale, 'categories.emptyHint')}
+        />
       )}
 
       <Link href="/tags" className="link-quiet meta mt-10 inline-block">
-        查看标签 →
+        {t(locale, 'categories.viewTags')}
       </Link>
     </Container>
   )

@@ -9,6 +9,8 @@
  */
 
 import katex from 'katex'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t } from '@/lib/i18n/dictionary'
 import { Marked, Renderer, type MarkedExtension, type Tokens } from 'marked'
 import { createAlertExtension } from './alerts'
 import { parseFenceInfo } from './code-meta'
@@ -22,6 +24,7 @@ import {
 } from './footnotes'
 import { createGalleryExtension } from './gallery'
 import { highlightCode, plainCodeBlock } from './highlight'
+import type { ImageSize } from './inline-media'
 import { createInlineMarkExtensions } from './inline-marks'
 import { createMentionExtension } from './mentions'
 import { safeUrl, sanitizeRenderedHtml } from './sanitize'
@@ -120,6 +123,8 @@ function createMathExtensions(): MarkedExtension {
 
 /** 一次渲染任务的全部可变状态（不允许跨任务复用） */
 interface RenderState {
+  /** 界面语言：正文里由主题生成的标签（锚点、提示、脚注）跟着它走 */
+  locale: Locale
   toc: TocItem[]
   /** 渲染器真实产出的标题 id（含不进 TOC 的 h1 / h4+），安全边界据此保留 id */
   headingIds: Set<string>
@@ -133,6 +138,19 @@ interface RenderState {
   footnotes: FootnoteState
   /** 渲染器真实产出的提及链接：安全边界据此只保留 `md-mention*` 样式类 */
   mentionHrefs: Set<string>
+  /**
+   * 正文图的原始宽高，按地址索引（来自 core 的附件元数据）。
+   *
+   * 命中就给 `<img>` 输出 `width` / `height`，浏览器据此在下载前算出
+   * `aspect-ratio` 并占好位；没命中就什么都不加——**不猜比例**。
+   */
+  imageSizes: ReadonlyMap<string, ImageSize>
+}
+
+/** `renderMarkdown` 的可选输入，现在只有「正文图尺寸」一项 */
+export interface RenderOptions {
+  /** 见 `imageSizeIndex()`；不传则所有图都不带尺寸（旧行为） */
+  imageSizes?: ReadonlyMap<string, ImageSize>
 }
 
 /**
@@ -170,7 +188,9 @@ function createRenderer(state: RenderState): Renderer {
     return [
       `<h${depth} id="${escapeAttribute(id)}">`,
       inner,
-      `<a class="heading-anchor" href="#${escapeAttribute(id)}" aria-label="链接到本节">#</a>`,
+      `<a class="heading-anchor" href="#${escapeAttribute(id)}" aria-label="${escapeAttribute(
+        t(state.locale, 'markdown.anchor'),
+      )}">#</a>`,
       `</h${depth}>`,
     ].join('')
   }
@@ -204,7 +224,11 @@ function createRenderer(state: RenderState): Renderer {
     if (!src) return ''
 
     const alt = token.text ?? ''
-    const img = `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" loading="lazy" decoding="async"${token.title ? ` title="${escapeAttribute(token.title)}"` : ''} />`
+    // 命中附件元数据才写尺寸。`height: auto` 的排版规则配合这两个属性，
+    // 浏览器用它们推出的比例占位，图片下载完成不再推动下面的内容。
+    const size = state.imageSizes.get(src)
+    const dimensions = size ? ` width="${size.width}" height="${size.height}"` : ''
+    const img = `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}"${dimensions} loading="lazy" decoding="async"${token.title ? ` title="${escapeAttribute(token.title)}"` : ''} />`
     if (!alt) return img
     return `<figure>${img}<figcaption>${escapeText(alt)}</figcaption></figure>`
   }
@@ -227,10 +251,10 @@ function createMarkdownEngine(state: RenderState): Marked {
   // 行内标记要先于块级容器注册：`|| … ||` 只可能出现在行内位置
   engine.use(createInlineMarkExtensions())
   // 提示块 / 横幅 / 折叠块（`:::`）与 GitHub Alerts（`> [!NOTE]`）各自独立成块
-  engine.use(createContainerExtension())
-  engine.use(createAlertExtension())
+  engine.use(createContainerExtension(state.locale))
+  engine.use(createAlertExtension(state.locale))
   // 相册/轮播：解析与 HTML 产出在 ./gallery，这里只把登记回调接进当前任务的状态
-  engine.use(createGalleryExtension((id) => state.galleryIds.add(id)))
+  engine.use(createGalleryExtension((id) => state.galleryIds.add(id), state.imageSizes))
   // 脚注：定义与编号都挂在本次渲染的状态上，id 走文档级 claimId（与标题共用占用表）
   engine.use(createFootnoteExtension(state.footnotes, (base) => claimId(state, base)))
   // 提及：URL 由平台常量表拼出，登记真实产出的 href 供清洗阶段校验样式类
@@ -260,15 +284,21 @@ function createMarkdownEngine(state: RenderState): Marked {
  * 渲染器只输出受控标签，但正文允许手写原始 HTML，最终统一过一遍安全边界
  * （见 `./sanitize`）：标签/属性白名单 + URL 协议白名单 + 事件处理器清除。
  */
-export async function renderMarkdown(markdown: string): Promise<RenderedContent> {
+export async function renderMarkdown(
+  markdown: string,
+  locale: Locale = DEFAULT_LOCALE,
+  options: RenderOptions = {},
+): Promise<RenderedContent> {
   const state: RenderState = {
+    locale,
     toc: [],
     headingIds: new Set(),
     mermaidSources: new Set(),
     galleryIds: new Set(),
     usedIds: new Set(),
-    footnotes: createFootnoteState(),
+    footnotes: createFootnoteState(locale),
     mentionHrefs: new Set(),
+    imageSizes: options.imageSizes ?? new Map(),
   }
   const engine = createMarkdownEngine(state)
   const html = await engine.parse(markdown)

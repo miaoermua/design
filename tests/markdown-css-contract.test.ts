@@ -13,7 +13,14 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { renderMarkdown } from '@/lib/content/markdown'
-import { SRC, TOKENS, contrast, palette, stripCssComments } from './helpers/design-tokens'
+import {
+  SRC,
+  TOKENS,
+  contrast,
+  normalizeEol,
+  palette,
+  stripCssComments,
+} from './helpers/design-tokens'
 
 const STYLES = join(SRC, 'design-system/styles')
 const STYLE_FILES = [
@@ -25,9 +32,18 @@ const STYLE_FILES = [
   'material.css',
 ] as const
 
-/** 去掉注释后的样式原文；注释里的说明文字不得参与选择器判定 */
+/**
+ * 去掉注释后的样式原文；注释里的说明文字不得参与选择器判定。
+ *
+ * 这里同时把 CRLF 归一成 LF：本文件多处用 `'.md-callout,\n.md-banner'` 这样带换行的
+ * 选择器去 `indexOf`。仓库存 LF、`core.autocrlf=true` 的 Windows 检出是 CRLF，不归一的话
+ * 这些断言在 Windows 上恒 miss —— 报「样式里找不到某选择器」，而它其实就在那儿。
+ */
 const cssText = new Map<string, string>(
-  STYLE_FILES.map((name) => [name, stripCssComments(readFileSync(join(STYLES, name), 'utf8'))]),
+  STYLE_FILES.map((name) => [
+    name,
+    normalizeEol(stripCssComments(readFileSync(join(STYLES, name), 'utf8'))),
+  ]),
 )
 const allCss = [...cssText.values()].join('\n')
 
@@ -69,9 +85,14 @@ function classesInHtml(html: string): Set<string> {
   return result
 }
 
-/** 取某个精确选择器的声明块，用于验证属性确实挂在该组件上 */
+/**
+ * 取某个精确选择器的声明块，用于验证属性确实挂在该组件上。
+ *
+ * 入参选择器也过一遍行尾归一：调用方写的是 `'.md-callout,\n.md-banner'` 这种
+ * 源码形态，在 CRLF 文件上用编辑器复制过来的可能是 `\r\n`，两边必须先对齐。
+ */
 function declarationsFor(css: string, selector: string): string | null {
-  const head = `${selector} {`
+  const head = `${normalizeEol(selector)} {`
   const at = css.indexOf(head)
   if (at < 0) return null
   const open = css.indexOf('{', at)
@@ -212,9 +233,14 @@ describe('图片预览与材质边界', () => {
     expect(preview).toContain('backdrop-filter: blur(8px)')
 
     const material = cssText.get('material.css') as string
-    // 材质层仍以 --material-glass-* 参数驱动，且没有把组件专属数值写进来
-    expect(material).toContain('var(--material-glass-blur)')
-    expect(selectorsIn(material).some((s) => s.includes('.glass-bar'))).toBe(true)
+    // .glass-control 已随工具组改用 .toolbar-dock 的 .glass-nav 而删除：
+    // 不允许复活，其专用参数也不允许重新定义；存活的玻璃契约仍须在场
+    expect(selectorsIn(material).some((s) => s.includes('.glass-control'))).toBe(false)
+    expect(material).not.toContain('--material-glass-tint')
+    expect(material).not.toContain('--material-glass-alpha-control')
+    expect(material).not.toContain('--material-glass-blur')
+    expect(material).not.toContain('--material-glass-saturate')
+    expect(selectorsIn(material).some((s) => s.includes('.glass-nav'))).toBe(true)
     expect(selectorsIn(material).some((s) => s.includes('.glass-panel'))).toBe(true)
     expect(material, '材质层混入了组件专属 blur 数值').not.toMatch(/blur\((?:6|8)px\)/)
   })

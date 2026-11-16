@@ -1,12 +1,17 @@
 import { normalizeCustomCssList } from './css-url'
-import { parseIconStylesheets, parseSocialItems } from './social'
+import { parseIconStylesheets, parseSocialIcon, parseSocialItems, safeSocialColor } from './social'
 import {
   DONATE_LABEL_MAX,
   DONATE_NAME_MAX,
   DONATE_QRCODE_MAX,
   DONATE_URL_MAX_LENGTH,
+  FOOTER_LINK_MAX,
+  FOOTER_LINK_TITLE_MAX,
+  FOOTER_LINK_URL_MAX_LENGTH,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
+  HOME_MORE_ITEM_MAX,
+  HOME_MORE_TITLE_MAX,
   SINCE_MIN,
   cloneDefaultThemeConfig,
 } from './defaults'
@@ -16,7 +21,10 @@ import type {
   ThemeDonate,
   ThemeDonateQrcode,
   ThemeFooter,
+  ThemeFooterLink,
   ThemeHomepage,
+  ThemeHomepageMore,
+  ThemeHomepageMoreItem,
   ThemeHomepageSection,
   ThemeIcp,
   ThemeSocial,
@@ -111,11 +119,61 @@ function parseFooterIcp(value: unknown): ThemeIcp {
   }
 }
 
+/**
+ * 站内路径或 http(s) 绝对地址。
+ *
+ * 页脚链接的**主要用途是站内导航**（线上实例配置的就是 `/about`、`/friends`
+ * 这种根相对路径），所以不能只收绝对 URL。安全边界仍然明确：
+ *   - 允许 `https://…` / `http://…`
+ *   - 允许以单个 `/` 开头的根相对路径
+ *   - 拒绝 `//host`（协议相对，会继承当前协议并指向外部主机）
+ *   - 拒绝 `javascript:` / `data:` 等一切非 http 协议
+ */
+export function safeNavHref(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  // 根相对路径：必须以单个 / 开头，且不能是 //host
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//')) return null
+    // 退格符 / 制表符换行等控制字符会让 URL 解析与展示产生分歧，直接拒绝
+    if (/[\u0000-\u001f\u007f]/.test(trimmed)) return null
+    return trimmed
+  }
+
+  return safeHttpUrl(trimmed)
+}
+
+function parseFooterLinks(value: unknown): ThemeFooterLink[] {
+  if (!Array.isArray(value)) return []
+  const links: ThemeFooterLink[] = []
+  const seen = new Set<string>()
+
+  for (const item of value) {
+    if (links.length >= FOOTER_LINK_MAX) break
+    if (!isRecord(item)) continue
+
+    const title = readString(item.title, FOOTER_LINK_TITLE_MAX)
+    if (!title) continue
+
+    if (typeof item.url !== 'string' || item.url.length > FOOTER_LINK_URL_MAX_LENGTH) continue
+    const url = safeNavHref(item.url)
+    if (!url || seen.has(url)) continue
+    seen.add(url)
+
+    links.push({ title, url })
+  }
+
+  return links
+}
+
 export function parseFooter(value: unknown, currentYear: number): ThemeFooter {
   const source = record(value)
   return {
     since: parseSince(source.since, currentYear),
     icp: parseFooterIcp(source.icp),
+    links: parseFooterLinks(source.links),
   }
 }
 
@@ -167,7 +225,53 @@ export function parseHomepage(value: unknown, fallback: ThemeHomepage): ThemeHom
     profile: parseHomepageSection(source.profile, fallback.profile),
     articles: parseHomepageSection(source.articles, fallback.articles),
     notes: parseHomepageSection(source.notes, fallback.notes),
+    more: parseHomepageMore(source.more, fallback.more),
   }
+}
+
+/* ── homepage.more ─────────────────────────────────────────── */
+
+const VALID_MORE_TYPES = new Set(['like', 'subscribe', 'link'])
+
+function parseHomepageMoreItem(value: unknown): ThemeHomepageMoreItem | null {
+  if (!isRecord(value)) return null
+
+  const title = readString(value.title, HOME_MORE_TITLE_MAX)
+  if (!title) return null
+
+  const rawType = typeof value.type === 'string' ? value.type : 'link'
+  const type = VALID_MORE_TYPES.has(rawType) ? (rawType as ThemeHomepageMoreItem['type']) : 'link'
+
+  // link 类型需要有效地址（站内路径或 http(s)）；like/subscribe 是内置入口
+  let url: string | null = null
+  if (type === 'link') {
+    url = safeNavHref(value.url)
+    if (!url) return null
+  }
+
+  const rawIcon = record(value.icon)
+  const icon = rawIcon.type && rawIcon.name ? parseSocialIcon(rawIcon) : null
+  const color = safeSocialColor(value.color)
+
+  return { title, type, url, icon, color }
+}
+
+function parseHomepageMore(value: unknown, fallback: ThemeHomepageMore): ThemeHomepageMore {
+  const source = record(value)
+  const enabled = readBool(source.enabled, fallback.enabled)
+
+  if (!Array.isArray(source.items)) {
+    return { enabled, items: fallback.items }
+  }
+
+  const items: ThemeHomepageMoreItem[] = []
+  for (const raw of source.items) {
+    if (items.length >= HOME_MORE_ITEM_MAX) break
+    const item = parseHomepageMoreItem(raw)
+    if (item) items.push(item)
+  }
+
+  return { enabled, items: items.length > 0 ? items : fallback.items }
 }
 
 /* ── donate ─────────────────────────────────────────────────── */

@@ -225,7 +225,7 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
     expect(p).not.toBeNull()
     expect(p?.textContent).toBe(long)
     expect(p?.className).toContain('line-clamp-1')
-    expect(p?.className).toContain('max-w-[var(--container-prose)]')
+    expect(p?.className).toContain('max-w-[var(--measure-copy)]')
     expect(p?.className).toContain('text-small')
     expect(p?.className).toContain('text-[var(--text-secondary)]')
     expect(p?.className).not.toContain('truncate') // 是 line-clamp，不是 JS/单行 overflow 截断
@@ -242,7 +242,9 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
   it('原有标题、日期栏、间距与次级色保持不变', () => {
     const { container } = renderRow(makeArticle({ text: '正文概览一行' }))
     expect(container.querySelector('article')?.className).toContain('sm:grid-cols-[7.5rem_1fr]')
-    expect(container.querySelector('article')?.className).toContain('py-8')
+    // 列表行间距是 py-6（compact 变体是 py-5，见上一条断言）；断言写成 py-8 是
+    // 测试诞生时就写错的值——引入该测试的提交里源码已经是 py-6
+    expect(container.querySelector('article')?.className).toContain('py-6')
     expect(container.querySelector('.meta')?.className).toContain('pt-1')
     expect(container.querySelector('[data-excerpt="text"]')?.className).toContain('mt-2.5')
     expect(container.querySelector('[data-excerpt="text"]')?.className).toContain(
@@ -259,7 +261,9 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
     expect(container.querySelector('[data-excerpt="text"]')).toBeNull()
     expect(container.querySelector('h3')?.textContent).toBe('纸张、留白与呼吸')
     expect(container.querySelector('time')).not.toBeNull()
-    expect(container.querySelector('article')?.className).toContain('py-8')
+    // 列表行间距是 py-6（compact 变体是 py-5，见上一条断言）；断言写成 py-8 是
+    // 测试诞生时就写错的值——引入该测试的提交里源码已经是 py-6
+    expect(container.querySelector('article')?.className).toContain('py-6')
   })
 
   it('未开启 withExcerpt 时官方 summary 仍按原语义显示，不受开关影响', () => {

@@ -97,4 +97,6 @@ export interface V2CommentCreateBody {
   text: string
   mail: string
   url?: string
+  /** 悄悄话：仅站长可见，回复通过邮件通知 */
+  isWhispers?: boolean
 }

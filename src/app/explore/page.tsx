@@ -6,14 +6,17 @@ import { requireFeature } from '@/core/registry/guard'
 import { ArchiveSection, ExploreTabs, buildYears, type ExploreTab } from '@/features/explore'
 import { TagNoteList } from '@/features/taxonomy'
 import { getSiteTimezone, getTimeline, listCategories, listTags } from '@/lib/api'
-import { t } from '@/lib/i18n/dictionary'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { categoryPath } from '@/lib/routes'
 import Link from 'next/link'
 
-export const metadata: Metadata = {
-  title: '探索',
-  description: '归档与标签的统一入口：按时间找文章，或者按主题找文章。',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  return {
+    title: t(locale, 'explore.title'),
+    description: t(locale, 'explore.pageDescription'),
+  }
 }
 
 interface ExplorePageProps {
@@ -50,12 +53,13 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
     <Container>
       <PageHeader
         kicker={t(locale, 'explore.kicker')}
-        title={t(locale, 'explore.title')}
+        title={t(locale, 'explore.heading')}
         description={t(locale, 'explore.description')}
       />
 
       <ExploreTabs
         active={active}
+        label={t(locale, 'explore.modes')}
         labels={{
           archives: t(locale, 'explore.tabArchives'),
           tags: t(locale, 'explore.tabTags'),
@@ -65,20 +69,28 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
             <h2 id="explore-archives-heading" className="sr-only">
               {t(locale, 'explore.archivesTitle')}
             </h2>
-            <ArchiveSection years={years} total={total} idPrefix="explore-year" />
+            <ArchiveSection
+              years={years}
+              total={total}
+              idPrefix="explore-year"
+              locale={locale}
+            />
           </section>
         }
         tags={
           <div className="space-y-12">
             <section aria-labelledby="explore-tags-heading">
               <h2 id="explore-tags-heading" className="meta border-b border-[var(--edge)] pb-3">
-                标签
+                {t(locale, 'explore.tags')}
               </h2>
               {sortedTags.length > 0 ? (
-                <TagNoteList tags={sortedTags} className="mt-4" />
+                <TagNoteList tags={sortedTags} className="mt-4" locale={locale} />
               ) : (
                 <div className="mt-5">
-                  <EmptyState title="还没有标签" description="文章还没打上任何标签。" />
+                  <EmptyState
+                    title={t(locale, 'explore.noTags')}
+                    description={t(locale, 'explore.noTagsHint')}
+                  />
                 </div>
               )}
             </section>
@@ -88,7 +100,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 id="explore-categories-heading"
                 className="meta border-b border-[var(--edge)] pb-3"
               >
-                分类
+                {t(locale, 'explore.categories')}
               </h2>
               {categories.length > 0 ? (
                 <ul className="mt-1 grid gap-x-12 sm:grid-cols-2">
@@ -108,7 +120,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                               className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
                             />
                             <span className="text-meta tabular-nums text-[var(--text-secondary)]">
-                              {category.count} 篇
+                              {tf(locale, 'explore.countArticles', { count: category.count })}
                             </span>
                           </>
                         ) : null}
@@ -118,7 +130,10 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                 </ul>
               ) : (
                 <div className="mt-5">
-                  <EmptyState title="还没有分类" description="文章还没有归入任何分类。" />
+                  <EmptyState
+                    title={t(locale, 'explore.noCategories')}
+                    description={t(locale, 'explore.noCategoriesHint')}
+                  />
                 </div>
               )}
             </section>

@@ -90,8 +90,8 @@ const TARGETS = [
 
 /** 只在移动断点出现的导航元素（玻璃栏，半透明底），单独一轮测量 */
 const NAV_TARGETS = [
-  { key: 'nav-brand', selector: '.glass-bar a', label: '导航站名' },
-  { key: 'nav-toggle', selector: '.glass-bar button.meta', label: '导航「目录」按钮' },
+  { key: 'nav-brand', selector: '.glass-nav a', label: '导航站名' },
+  { key: 'nav-toggle', selector: '.glass-nav button.meta', label: '导航「目录」按钮' },
 ]
 
 const MEASURE = (targets) => `(() => {

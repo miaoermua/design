@@ -110,8 +110,8 @@ describe('默认 Socket.IO transport', () => {
     client.start()
     // 模拟客户端写入初始 query
     managerMock.opts.query = { lang: 'en' }
-    client.setLang('zh')
-    expect(managerMock.opts.query).toEqual({ lang: 'zh' })
+    client.setLang('zh-CN')
+    expect(managerMock.opts.query).toEqual({ lang: 'zh-CN' })
     expect(ioMock).toHaveBeenCalledTimes(1)
     expect(socketMock.disconnect).toHaveBeenCalled()
     expect(socketMock.connect).toHaveBeenCalledTimes(2)

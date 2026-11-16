@@ -5,5 +5,5 @@ export const searchFeature: FeatureManifest = {
   name: '搜索',
   description: '服务端全文搜索，片段高亮只保留后端插入的 <mark>。',
   routes: ['/search'],
-  endpoints: ['GET /search/post'],
+  endpoints: ['GET /search'],
 }

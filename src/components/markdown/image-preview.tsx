@@ -16,6 +16,8 @@
 import { useEffect, useRef, useSyncExternalStore, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import type { GalleryImage } from '@/lib/content/gallery'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 
 export interface PreviewState {
   images: readonly GalleryImage[]
@@ -83,6 +85,7 @@ interface ImagePreviewProps {
  * 预览浮层本体：只受 props 驱动，卸载即清理监听、滚动锁与焦点。
  */
 export function ImagePreview({ images, index, onClose, onStep }: ImagePreviewProps): ReactElement {
+  const locale = useLocale()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const total = images.length
@@ -154,14 +157,18 @@ export function ImagePreview({ images, index, onClose, onStep }: ImagePreviewPro
         className="md-preview__dialog"
         role="dialog"
         aria-modal="true"
-        aria-label={image?.alt ? `图片预览：${image.alt}` : '图片预览'}
+        aria-label={
+          image?.alt
+            ? tf(locale, 'image.previewAlt', { alt: image.alt })
+            : t(locale, 'image.preview')
+        }
         onKeyDown={handleTab}
       >
         <button
           ref={closeRef}
           type="button"
           className="md-preview__close"
-          aria-label="关闭预览"
+          aria-label={t(locale, 'image.close')}
           onClick={onClose}
         >
           ×
@@ -172,7 +179,7 @@ export function ImagePreview({ images, index, onClose, onStep }: ImagePreviewPro
             <button
               type="button"
               className="md-preview__nav md-preview__nav--prev"
-              aria-label="上一张"
+              aria-label={t(locale, 'gallery.previous')}
               onClick={() => onStep(-1)}
             >
               ‹
@@ -180,7 +187,7 @@ export function ImagePreview({ images, index, onClose, onStep }: ImagePreviewPro
             <button
               type="button"
               className="md-preview__nav md-preview__nav--next"
-              aria-label="下一张"
+              aria-label={t(locale, 'gallery.next')}
               onClick={() => onStep(1)}
             >
               ›

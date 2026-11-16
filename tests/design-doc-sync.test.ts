@@ -12,6 +12,7 @@ import {
   cssDefinitions,
   cssVarReferences,
   docSections,
+  normalizeEol,
   palette,
   plain,
   sectionGroup,
@@ -22,18 +23,24 @@ import {
   walk,
 } from './helpers/design-tokens'
 
-const doc = readFileSync(DOC, 'utf8')
+/**
+ * 文档与源码都按 LF 读入。
+ *
+ * 文档是 LF、`tokens.css` / `globals.css` 在 `core.autocrlf=true` 的 Windows 检出里是
+ * CRLF —— 两边行尾不一致时，任何跨行的正则或 `indexOf` 都会得出错误结论。
+ */
+const doc = normalizeEol(readFileSync(DOC, 'utf8'))
 const sec = docSections(doc)
 const light = palette('light')
 const dark = palette('dark')
 const aliases = aliasDefinitions()
 const theme = themeValues()
-const tokensDefined = cssDefinitions(stripCssComments(readFileSync(TOKENS, 'utf8')))
+const tokensDefined = cssDefinitions(stripCssComments(normalizeEol(readFileSync(TOKENS, 'utf8'))))
 
 /** 组件层源码（不含 tokens.css）：判断某个 Token 是否真的被用起来 */
 const consumerText = walk(join(ROOT, 'src'))
   .filter((file) => /\.(css|ts|tsx)$/.test(file) && !file.endsWith('tokens.css'))
-  .map((file) => readFileSync(file, 'utf8'))
+  .map((file) => normalizeEol(readFileSync(file, 'utf8')))
   .join('\n')
 
 function isConsumed(name: string): boolean {
@@ -391,7 +398,9 @@ describe('文档 §6：版心 / 间距 / 圆角 / 阴影 / 动效', () => {
   })
 
   it('断点口径：Tailwind 默认三档，仓库里没有自定义覆盖', () => {
-    expect(stripCssComments(readFileSync(TOKENS, 'utf8'))).not.toMatch(/--breakpoint-/)
+    expect(normalizeEol(stripCssComments(readFileSync(TOKENS, 'utf8')))).not.toMatch(
+      /--breakpoint-/,
+    )
     expect(existsSync(join(ROOT, 'tailwind.config.ts'))).toBe(false)
     expect(existsSync(join(ROOT, 'tailwind.config.js'))).toBe(false)
     expect(sectionGroup(sec, '6')).toContain('断点')

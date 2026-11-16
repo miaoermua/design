@@ -19,6 +19,9 @@ interface SearchPanelProps {
     failed: string
     hint: string
     openFull: string
+    /** 结果条目的类型标签：文章 / 日记 */
+    kindPost: string
+    kindNote: string
   }
 }
 
@@ -151,7 +154,7 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="search-panel fixed inset-0 z-50">
       {/* 遮罩：点击关闭；不使用黑色蒙版，用纸面 + 轻模糊，保持「纸上浮起」的层次 */}
       <button
         type="button"
@@ -203,9 +206,9 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
             placeholder={labels.placeholder}
             autoComplete="off"
             spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent py-1 font-serif text-lead text-[var(--text-heading)] outline-none placeholder:font-sans placeholder:text-small placeholder:text-[var(--text-tertiary)]"
+            className="min-w-0 flex-1 bg-transparent py-1 font-serif text-lead text-[var(--text-heading)] outline-none placeholder:font-sans placeholder:text-small placeholder:text-[var(--text-secondary)]"
           />
-          <kbd className="meta hidden shrink-0 rounded-[var(--radius-xs)] border border-[var(--edge)] px-1.5 py-0.5 text-[var(--text-tertiary)] sm:block">
+          <kbd className="meta hidden shrink-0 rounded-[var(--radius-xs)] border border-[var(--edge)] px-1.5 py-0.5 text-[var(--text-secondary)] sm:block">
             Esc
           </kbd>
         </div>
@@ -228,8 +231,8 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
                     onClick={onClose}
                     className="group flex flex-col gap-1 px-4 py-3 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]"
                   >
-                    <span className="flex items-center gap-2 text-meta text-[var(--text-tertiary)]">
-                      <span>{hit.kind === 'post' ? '文章' : '日记'}</span>
+                    <span className="flex items-center gap-2 text-meta text-[var(--text-secondary)]">
+                      <span>{hit.kind === 'post' ? labels.kindPost : labels.kindNote}</span>
                       {hit.categoryName ? <span>· {hit.categoryName}</span> : null}
                     </span>
                     <span className="font-serif text-body leading-[1.5] text-[var(--text-heading)]">
@@ -250,7 +253,7 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-[var(--edge)] px-4 py-2.5">
-          <p className="meta text-[var(--text-tertiary)]">{labels.hint}</p>
+          <p className="meta text-[var(--text-secondary)]">{labels.hint}</p>
           <button
             type="button"
             onClick={submit}

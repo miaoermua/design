@@ -19,6 +19,8 @@ import {
   type KeyboardEvent,
   type ReactElement,
 } from 'react'
+import { useLocale } from '@/lib/i18n/client'
+import { t, tf } from '@/lib/i18n/dictionary'
 import type { GalleryImage, GalleryVariant } from '@/lib/content/gallery'
 import { openPreview } from './image-preview'
 
@@ -59,6 +61,7 @@ export function Gallery({
   autoplay = false,
   autoplayDelay = DEFAULT_AUTOPLAY_DELAY,
 }: GalleryProps): ReactElement {
+  const locale = useLocale()
   const trackRef = useRef<HTMLUListElement>(null)
   const indexRef = useRef(0)
   const frameRef = useRef<number | null>(null)
@@ -185,7 +188,7 @@ export function Gallery({
       className="md-gallery__root"
       role="group"
       aria-roledescription={isCarousel ? 'carousel' : 'gallery'}
-      aria-label={isCarousel ? '图片轮播' : '图片相册'}
+      aria-label={tf(locale, isCarousel ? 'gallery.carousel' : 'gallery.album', {})}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onPointerDown={stopAutoplay}
@@ -195,7 +198,9 @@ export function Gallery({
         {images.map((image, position) => (
           <li className="md-gallery__item" key={`${image.src}#${position}`}>
             {failed.has(position) ? (
-              <span className="md-gallery__broken">{image.alt || '图片加载失败'}</span>
+              <span className="md-gallery__broken">
+                {image.alt || t(locale, 'gallery.broken')}
+              </span>
             ) : (
               <a
                 className="md-gallery__link"
@@ -212,6 +217,10 @@ export function Gallery({
                   src={image.src}
                   alt={image.alt}
                   title={image.title}
+                  /* 宽高来自服务端静态轨道上的同名属性（media-enhancer 回读）。
+                     带上它们，浏览器在下载前就能算出 aspect-ratio 并占位。 */
+                  width={image.width}
+                  height={image.height}
                   loading="lazy"
                   decoding="async"
                   draggable={false}
@@ -234,7 +243,7 @@ export function Gallery({
           <button
             type="button"
             className="md-gallery__nav md-gallery__nav--prev"
-            aria-label="上一张"
+            aria-label={t(locale, 'gallery.previous')}
             onClick={() => {
               stopAutoplay()
               step(-1)
@@ -245,7 +254,7 @@ export function Gallery({
           <button
             type="button"
             className="md-gallery__nav md-gallery__nav--next"
-            aria-label="下一张"
+            aria-label={t(locale, 'gallery.next')}
             onClick={() => {
               stopAutoplay()
               step(1)
@@ -267,7 +276,7 @@ export function Gallery({
               type="button"
               key={`${image.src}#dot-${position}`}
               className="md-gallery__dot"
-              aria-label={`第 ${position + 1} 张`}
+              aria-label={tf(locale, 'gallery.position', { count: position + 1 })}
               aria-current={position === index ? 'true' : undefined}
               onClick={() => {
                 stopAutoplay()

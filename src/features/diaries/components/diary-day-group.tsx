@@ -29,7 +29,7 @@ export function DiaryDayGroupView({ group, timeZone }: DiaryDayGroupViewProps) {
           {year}.{month}
         </p>
         {first ? (
-          <p className="meta text-[var(--text-tertiary)]">
+          <p className="meta text-[var(--text-secondary)]">
             {formatWeekday(first.publishedAt, timeZone)}
           </p>
         ) : null}

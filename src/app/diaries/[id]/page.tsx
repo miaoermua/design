@@ -5,6 +5,8 @@ import { Container } from '@/components/ui/container'
 import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
 import { ActionRail } from '@/components/reading/action-rail'
+import { AiDisclosure } from '@/components/reading/ai-disclosure'
+import { ArticleInfo } from '@/components/reading/article-info'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
@@ -15,8 +17,10 @@ import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
 import { getDiary, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
+import { imageSizeIndex, inlineMediaSources } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
-import { toContentLang } from '@/lib/i18n/config'
+import { toContentLang, type Locale } from '@/lib/i18n/config'
+import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { diaryPath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
@@ -46,26 +50,31 @@ export async function generateMetadata({ params }: DiaryPageProps): Promise<Meta
   } catch (error) {
     // 404 要在 metadata 阶段抛，否则流式布局会先发出 200（软 404）
     if (isNotFound(error)) notFound()
-    return { title: isPasswordRequired(error) ? '受保护的日记' : '日记' }
+    const locale = await getLocale()
+    return {
+      title: isPasswordRequired(error)
+        ? t(locale, 'diary.protectedTitle')
+        : t(locale, 'diary.meta'),
+    }
   }
 }
 
 /** 密码门槛：不通过时不渲染任何正文，也不把 403 当成「内容不存在」 */
-function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
+function PasswordGate({ id, wrong, locale }: { id: string; wrong: boolean; locale: Locale }) {
   return (
     <Container width="narrow">
       <div className="py-24">
-        <p className="meta">日记</p>
+        <p className="meta">{t(locale, 'diary.meta')}</p>
         <h1 className="text-title mt-3 font-serif text-[var(--text-heading)]">
-          这篇日记受密码保护
+          {t(locale, 'diary.protectedHeading')}
         </h1>
         <p className="text-small mt-3 text-[var(--text-secondary)]">
-          {wrong ? '密码不正确，或后端仍未通过校验。' : '输入作者设置的密码后可以阅读。'}
+          {wrong ? t(locale, 'diary.wrongPassword') : t(locale, 'diary.passwordHint')}
         </p>
 
         <form action={diaryPath(id)} method="get" className="mt-8 flex gap-3">
           <label htmlFor="password" className="sr-only">
-            密码
+            {t(locale, 'diary.password')}
           </label>
           <input
             id="password"
@@ -79,13 +88,13 @@ function PasswordGate({ id, wrong }: { id: string; wrong: boolean }) {
             type="submit"
             className="text-small border border-[var(--text-primary)] bg-[var(--text-primary)] px-4 py-2 text-[var(--surface)]"
           >
-            阅读
+            {t(locale, 'diary.read')}
           </button>
         </form>
 
-        <p className="meta mt-4">密码不会保存在主题侧，每次访问都需要重新带上。</p>
+        <p className="meta mt-4">{t(locale, 'diary.passwordNote')}</p>
         <Link href="/diaries" className="link-quiet meta mt-8 inline-block">
-          ← 全部日记
+          {t(locale, 'diary.backAll')}
         </Link>
       </div>
     </Container>
@@ -99,24 +108,37 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   const { password } = await searchParams
   if (!isDiaryId(id)) notFound()
 
+  const locale = await getLocale()
+
   let diary: Diary
   try {
     diary = await getDiary(id, password)
   } catch (error) {
     if (isNotFound(error)) notFound()
-    if (isPasswordRequired(error)) return <PasswordGate id={id} wrong={Boolean(password)} />
+    if (isPasswordRequired(error)) {
+      return <PasswordGate id={id} wrong={Boolean(password)} locale={locale} />
+    }
     throw error
   }
 
   const timeZone = getSiteTimezone()
   const isMarkdown = diary.contentFormat === 'markdown'
-  const rendered = isMarkdown && diary.content.trim() ? await renderMarkdown(diary.content) : null
+  const rendered =
+    isMarkdown && diary.content.trim()
+      ? await renderMarkdown(diary.content, locale, {
+          imageSizes: imageSizeIndex(diary.images),
+        })
+      : null
+  // core 的 `images` 是正文里抽出来的全部图片（`::: gallery` / `::: carousel`
+  // 里的也在其中）。正文已经渲染过的不在文末再铺一遍，否则用相册的日记会把
+  // 同一批图显示两次；这里只补正文里没出现过的附件。
+  const inlineSources = rendered ? inlineMediaSources(rendered.html) : new Set<string>()
+  const trailingImages = diary.images.filter((image) => !inlineSources.has(image.src))
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
     (chip): chip is string => Boolean(chip),
   )
 
   // 笔记同样只有 post/note 支持 AI 资源；受密码保护时正文为空，不请求
-  const locale = await getLocale()
   const contentLang = toContentLang(locale)
   const [summary, insights] = await Promise.all([
     rendered ? readArticleSummary(diary.id, contentLang) : Promise.resolve(null),
@@ -126,6 +148,7 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
           lang: contentLang,
           source: diary.content,
           toc: rendered.toc,
+          locale,
         })
       : Promise.resolve(null),
   ])
@@ -141,15 +164,15 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   return (
     <Container width="wide">
-      <div className="mx-auto mt-10 grid max-w-[calc(var(--container-prose)+7rem)] gap-10 sm:mt-14 xl:max-w-[var(--container-wide)] xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-x-9">
+      <div className="mx-auto mt-10 grid max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] gap-10 sm:mt-14 xl:max-w-[var(--shell-note)] xl:grid-cols-[minmax(0,calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline)))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
         <article
           id="diary-content"
-          className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0 xl:col-start-1 xl:row-start-1"
+          className="reading-sheet mx-auto w-full max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] min-w-0 xl:col-start-1 xl:row-start-1"
         >
           <header>
             <p className="meta flex flex-wrap items-center gap-x-1">
               <Link href="/diaries" className="link-quiet">
-                日记
+                {t(locale, 'diary.meta')}
               </Link>
               <time className="meta-sep" dateTime={diary.publishedAt}>
                 {formatDate(diary.publishedAt, timeZone)}
@@ -158,19 +181,17 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
               <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
             </p>
 
-            <h1 className="text-title mt-4 font-serif leading-[1.28] text-[var(--text-heading)]">
-              {diary.title}
-            </h1>
+            <h1 className="text-title mt-4 font-serif text-[var(--text-heading)]">{diary.title}</h1>
 
             <p className="meta mt-3 flex flex-wrap items-center gap-x-1">
               {chips.length > 0 ? <span>{chips.join(' · ')}</span> : null}
-              {diary.bookmark ? <span className="meta-sep">收藏</span> : null}
+              {diary.bookmark ? (
+                <span className="meta-sep">{t(locale, 'diary.bookmark')}</span>
+              ) : null}
             </p>
           </header>
 
-          {summary ? (
-            <AISummaryCard key={diary.id} summary={summary} insights={insights} />
-          ) : null}
+          {summary ? <AISummaryCard key={diary.id} summary={summary} insights={insights} /> : null}
 
           <ReadingInline items={rendered?.toc ?? []} targetId="diary-content" />
 
@@ -180,25 +201,25 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             ) : (
               <div className="border border-dashed border-[var(--edge)] px-5 py-6">
                 <p className="text-small text-[var(--text-heading)]">
-                  这篇日记的正文格式是「{diary.contentFormat}」。
+                  {tf(locale, 'diary.unsupportedFormat', { format: diary.contentFormat })}
                 </p>
                 <p className="text-caption mt-2 text-[var(--text-secondary)]">
-                  Folio 目前只渲染 Markdown，因此不展示结构化 JSON 原文。
+                  {t(locale, 'diary.unsupportedFormatHint')}
                 </p>
               </div>
             )}
           </div>
 
-          {diary.images.length > 0 ? (
+          {trailingImages.length > 0 ? (
             <div
               className={cn(
                 'mt-8 grid gap-2',
-                diary.images.length === 1
+                trailingImages.length === 1
                   ? 'max-w-[26rem] grid-cols-1'
                   : 'grid-cols-2 sm:grid-cols-3',
               )}
             >
-              {diary.images.map((image) =>
+              {trailingImages.map((image) =>
                 image.kind === 'video' ? (
                   <video
                     key={image.src}
@@ -211,7 +232,7 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
                   <CoverImage
                     key={image.src}
                     src={image.src}
-                    alt={`${diary.title} 配图`}
+                    alt={tf(locale, 'diary.coverAlt', { title: diary.title })}
                     width={image.width}
                     height={image.height}
                     className="aspect-[4/3] w-full border border-[var(--edge)]"
@@ -221,20 +242,37 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             </div>
           ) : null}
 
+          <AiDisclosure disclosure={diary.aiDisclosure} locale={locale} />
+
           <footer className="mt-14 border-t border-dashed border-[var(--edge-strong)] pt-6">
-            <p className="meta flex flex-wrap items-center gap-x-1">
+            <ArticleInfo
+              title={diary.title}
+              author={identity?.owner.name ?? null}
+              url={canonical}
+              publishedAt={diary.publishedAt}
+              modifiedAt={diary.modifiedAt}
+              timeZone={timeZone}
+              locale={locale}
+            />
+
+            <p className="meta mt-6 flex flex-wrap items-center gap-x-1">
               {diary.readCount !== null ? (
-                <span>{diary.readCount.toLocaleString('zh-CN')} 次阅读</span>
+                <span>
+                  {tf(locale, 'meta.readCount', {
+                    count: diary.readCount.toLocaleString('zh-CN'),
+                  })}
+                </span>
               ) : null}
               {diary.likeCount !== null ? (
-                <span className="meta-sep">{diary.likeCount.toLocaleString('zh-CN')} 次喜欢</span>
-              ) : null}
-              {diary.modifiedAt && diary.modifiedAt !== diary.publishedAt ? (
-                <span className="meta-sep">更新于 {formatDate(diary.modifiedAt, timeZone)}</span>
+                <span className="meta-sep">
+                  {tf(locale, 'meta.likeCount', {
+                    count: diary.likeCount.toLocaleString('zh-CN'),
+                  })}
+                </span>
               ) : null}
             </p>
             <Link href="/diaries" className="link-quiet meta mt-5 inline-block">
-              ← 全部日记
+              {t(locale, 'diary.backAll')}
             </Link>
           </footer>
         </article>
@@ -254,10 +292,12 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
             />
           }
         />
-      </div>
 
-      {/* 评论在 #diary-content 之外：阅读进度只算正文 */}
-      <CommentsSection refId={diary.id} timeZone={timeZone} />
+        {/* 评论区在 grid 内左列：侧栏空间自然延伸至旁边 */}
+        <div className="xl:col-start-1">
+          <CommentsSection refId={diary.id} timeZone={timeZone} />
+        </div>
+      </div>
     </Container>
   )
 }

@@ -55,25 +55,15 @@
      混的是 --surface-lift（纯白）时，颗粒会把纸的暖调冲淡 —— 满屏细砂盖在
      米色纸上一平均，色温就往中性灰拉，眼睛读成「偏蓝」。换成同样带暖调的
      --surface 之后，颗粒只压亮度、不改色温，纸是白的，灰不是发青的灰。
-     刻意避开带青蓝的 --text-heading（#344f58），那是标题色，铺满整张会成蓝雾。
+     刻意避开 --text-heading：那是标题色，铺满整张会压成一层雾。
+     （v2 起标题已退回中性深灰，不再带青蓝；这条约束仍然成立 —— 标题比正文更重。）
      亮色：以正文墨为主、掺暖纸；暗色在文件末尾覆盖成暖白。 */
   --pc-grain-ink: color-mix(in oklab, var(--text-primary) 46%, var(--surface));
-  /* 纸纹：明信片自带，不复用全站的 --material-grain-image —— 那张图是 240px 的
-     细噪点、SVG 内 opacity 只有 0.05，贴到 312px 宽的小卡上被进一步压平，
-     完全读不出纸质。
-     试过三条错路，都记在这里免得再走一遍：
-       ① 单纯高频噪声（baseFrequency 0.7 以上）—— 1px 级的等大细点，
-          满屏均匀，眼睛读成「数字噪点」。
-       ② 两组斜线叠纤维 —— 交叉处形成菱形网格，读成「织物」。
-       ③ 低频大团块 + 大面积模糊 —— 出现一朵朵云，纸不像纸，像阴天。
-     现在的做法是**两层不同频率相乘**，这是纸与云的分界：
-       底噪 baseFrequency 0.62（约 1.6px）：真实纸张的颗粒，是「纸」的主要质感。
-       调制 baseFrequency 0.035（约 28px）：只用来让上面那层颗粒**疏密不均** ——
-         有的地方颗粒密、有的地方稀。读者不会看到「云」，只会觉得纸面不平整。
-     两层用 feComposite arithmetic k1=1 **相乘**（不是相加），
-     结果是一层有呼吸感的细砂，而不是均匀噪点、也不是云团。
-     输出只保留 alpha（RGB 恒为 0），颜色在 CSS 里另给 —— 见 __paper::after。 */
-  --pc-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='3' seed='4' stitchTiles='stitch' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.15 0 0 0 0.06' result='fA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='12' stitchTiles='stitch' result='coarse'/%3E%3CfeColorMatrix in='coarse' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0.45' result='cA'/%3E%3CfeComposite in='fA' in2='cA' operator='arithmetic' k1='1' k2='0' k3='0' k4='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* 纸纹：明信片自带，不复用全站的 --material-grain-image。
+     两层不同频率 feTurbulence 通过 arithmetic 相乘，产出有呼吸感的细砂。
+     只保留 alpha（RGB 恒为 0），颜色在 CSS 里另给 —— 见 __paper::after。
+     400×400 比 200×200 更自然：小图 repeat 时接缝更频繁。 */
+  --pc-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='2' seed='4' stitchTiles='stitch' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.15 0 0 0 0.06' result='fA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='1' seed='12' stitchTiles='stitch' result='coarse'/%3E%3CfeColorMatrix in='coarse' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0.45' result='cA'/%3E%3CfeComposite in='fA' in2='cA' operator='arithmetic' k1='1' k2='0' k3='0' k4='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23g)'/%3E%3C/svg%3E");
   /* 小邮票的齿孔更细：齿距 6px、凹口 1.9px */
   --perf-step: 6px;
   --perf-hole: 1.9px;
@@ -131,15 +121,18 @@
   padding: var(--pc-pad-block) var(--pc-pad);
   overflow: hidden;
   border-radius: var(--radius-xs);
-  transition: transform var(--duration-base) var(--ease-out-soft);
+  /* 屏外卡片跳过渲染：65+ 张卡片只有可见区域内的参与布局与合成 */
+  content-visibility: auto;
+  contain-intrinsic-size: var(--pc-w) 9rem;
 }
 
 /* 明信片纸面：暖白纸 + 极轻的顶部受光 + 发丝边，只有一层极轻的投影。
    底色在 --surface-raised（米白）与 --surface-lift（纯白）之间取，
    纯白占 45% —— 卡片本身要读成「白纸」，只剩一点点米调托住暖纸的气质；
    再压就更接近页面底色，白与米并排时反而显出一层青灰。
-   **不掺 --surface-sunk**：那一级在暗色下是更冷的深墨（#101315），
-   掺进去会把整张卡往青色推，正是之前「纸偏蓝」的第二个来源。 */
+   **不掺 --surface-sunk**：那一级在暗色下比页面还暗一档（v2 起为 #0f0e11），
+   掺进去会把卡面压到页面之下，卡片就从「浮起的一张纸」变成「挖下去的一个洞」，
+   方向与 --shadow-raise 直接打架。 */
 .friend-postcard__paper {
   position: absolute;
   z-index: 0;
@@ -154,12 +147,14 @@
   );
   border: 1px solid color-mix(in srgb, var(--edge-strong) 60%, var(--edge));
   box-shadow: var(--shadow-raise);
+  transition: box-shadow var(--duration-fast) var(--ease-out-soft);
 }
 
 /* 纸纹颗粒：噪声只当遮罩，颜色由 --pc-grain-ink 给。
-   **不能用 --text-heading**：那是青蓝的标题色（#344f58），铺到整张纸上会把纸
-   染成蓝调，暗色模式下更明显。这里取 --text-primary（暖灰墨）+ --surface
-   的暖调混色 —— 落在暖灰上，不带色相，只压亮度。
+   **不能用 --text-heading**：那是比正文更重的标题色（v2 起为中性 #2c2a26），
+   铺到整张纸上会压成一层雾，卡片上的字就没有「印在纸上」的层次了。
+   这里取 --text-primary（中性暖灰墨）+ --surface 的暖调混色 ——
+   落在暖灰上，不带色相，只压亮度。
    opacity 0.26（原 0.32，减两成）：颗粒层的平均墨量从约一成半降到一成二，
    近看仍是细砂，退到一个手臂的距离就只剩「纸不平」的感觉，不再是一层噪点壳。 */
 .friend-postcard__paper::after {
@@ -185,8 +180,10 @@
   height: var(--pc-stamp);
   justify-self: end;
   align-self: start;
-  /* drop-shadow 跟随齿孔后的 alpha 形状，凹口边缘也有纸的厚度 */
-  filter: drop-shadow(0 1px 2px rgb(var(--shadow-color) / 0.22));
+  /* 邮票投影：用 box-shadow 替代 drop-shadow —— drop-shadow 要遍历齿孔蒙版后的
+     alpha 形状逐像素投射，65 张卡片同时在视口内时是 GPU 的热点。
+     box-shadow 只算矩形，视觉差异在 96px 的小邮票上几乎看不出。 */
+  box-shadow: 0 1px 3px rgb(var(--shadow-color) / 0.18);
 }
 
 /* 邮票纸边：齿孔蒙版 + 比明信片亮一档的纸色 + 纸纤维，
@@ -220,7 +217,9 @@
 }
 
 /* 模糊底：同一张头像只铺满画面区本身，不向外扩张；
-   缩放只留 1.05 盖住模糊后的软边，不让模糊色块漫到整枚邮票 */
+   缩放只留 1.05 盖住模糊后的软边，不让模糊色块漫到整枚邮票。
+   blur 本身已触发合成层，不额外加 will-change——否则 65 张卡片
+   同时常驻 130+ 个合成层，主题切换时全要重新栅格化 */
 .friend-postcard__glow {
   position: absolute;
   inset: 0;
@@ -277,7 +276,7 @@
   justify-content: center;
   border-radius: var(--radius-pill);
   background-color: var(--surface-sunk);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-serif);
   font-size: 1rem;
 }
@@ -296,7 +295,11 @@
   right: calc(var(--pc-pad) + var(--pc-stamp) + var(--pc-mark-ox) - var(--pc-mark));
   width: var(--pc-mark);
   height: var(--pc-mark);
-  opacity: 0.8;
+  /* 全站唯一一档墨量（暗色另覆盖）。实测与纸面合成后的对比度：
+     亮色 4.31:1、暗色 3.48:1，都高于非文本装饰的 3:1 下限；
+     改前是 0.8×0.72=0.576 / 0.55×0.72=0.396，只有 2.75:1 与 2.07:1 —— 暗色那档
+     已经把印章压到「纸下面的影子」。 */
+  opacity: 0.72;
   pointer-events: none;
 }
 
@@ -318,23 +321,35 @@
   gap: 0.375rem;
 }
 
-/* 站点名称：最多两行 */
+/* 站点名称：`--text-h3`（18px / 1.5）。§5.1 把「卡片标题」直接映射到 H3，
+   这里原本写死 1.1875rem（19px / 1.35）—— 一个既不在 Token 里、也不在任何
+   段落体系里的孤立字号；换回 H3 后标题与简介的层级由「衬线↔无衬线 + 字号」共同承担。
+   行高随之从 1.35 变成 Token 的 1.5：两行标题 54px，仍装得进 132px 的内容区
+   （实测 44 张真实友链，18px 下 0 张标题被截断）。 */
 .friend-postcard__title {
   min-width: 0;
   margin: 0;
   font-family: var(--font-serif);
-  font-size: 1.1875rem;
+  font-size: var(--text-h3);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: var(--text-h3--line-height);
   color: var(--text-heading);
 }
 
-/* 简介：跟在名称下方，最多两行 */
+/* 简介：跟在名称下方，最多两行。用 `--text-caption`（13px / 1.6）。
+   这里比较过三档：`--text-meta`（12px）是「日期、阅读数、kicker」的 meta 档，
+   一段要读的句子挂在这个档位上偏小，手机上尤其要凑近看；`--text-small`（15px）
+   在 148px 的文字列里只有约 9.4 个汉字/行，`From codes to clouds` 这种短句也要
+   折成两行、行高 1.7 让两行之间空出一整行，层级反而被抹平（实测 44 张卡横排时
+   与 18px 标题几乎同重）。Caption 的 13px 在保留可读性的同时守住了「标题 → 简介」
+   的落差，44 条真实简介里只有 2 条按既有规则两行截断。
+   行高吃 Token 的 1.6、不手写压缩值：卡片最紧时（两行标题 54px + 两行简介 41.6px
+   + 间距 6px）占 102px，内容区 132px，仍有余量。 */
 .friend-postcard__desc {
   min-width: 0;
   margin: 0;
-  font-size: var(--text-meta);
-  line-height: 1.55;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
   color: var(--text-secondary);
 }
 
@@ -345,14 +360,17 @@
   overflow-wrap: anywhere;
 }
 
-/* 邮戳是印在纸上的墨迹，不是第二个可点控件 */
+/* 邮戳是印在纸上的墨迹，不是第二个可点控件。
+   旋转角度由 seed 确定性派生（-7° ~ +7°），每张卡片略有不同，
+   是纯 CSS transform，在合成阶段完成，不触发重排/重绘，零额外开销。
+   **墨量只在这一处降一次透明度**：早先 SVG 自己 0.72、外层 __mark 再 0.8，
+   叠起来实际只有 0.576，配上亚像素线宽就是一层灰雾；现在统一由 __mark 给一档。 */
 .friend-postmark {
-  --postmark-rotate: 0deg;
-  --postmark-opacity: 0.82;
-  opacity: var(--postmark-opacity);
+  /* 实际角度由 postmark.tsx 以内联样式注入（每张卡片 -7°~+7°）；
+     这里写默认值只是让「未注入时」的表现有据可查，值与原 fallback 完全一致。 */
+  --postmark-rotate: -3deg;
   transform: rotate(var(--postmark-rotate));
   transform-origin: 50% 50%;
-  transition: transform var(--duration-base) var(--ease-out-soft);
 }
 
 /* 弧形字用正文字体的小字号；字号是 SVG 内部单位，随邮戳尺寸等比缩放 */
@@ -363,49 +381,68 @@
   letter-spacing: 0.2em;
 }
 
-.friend-postcard--link:hover {
-  transform: translateY(-2px);
-}
-
+/* 悬停只交回一个「纸被抬起来一点」的投影变化，不做位移、缩放或旋转：
+   明信片是压在桌面上的实物，指针经过时整体漂 2px 会立刻跳出印刷品的手感。
+   时间走 `--duration-fast`（140ms）—— 阴影是即时反馈，不需要页面级的 240ms。 */
 .friend-postcard--link:hover .friend-postcard__paper {
   box-shadow: var(--shadow-pop);
 }
 
+/* 焦点环复用全站唯一一套：`--focus-ring` + `--focus-ring-offset`，
+   不在组件里另写粗细或颜色。 */
 .friend-postcard--link:focus-visible {
   border-radius: var(--radius-xs);
-  outline-offset: 4px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
-/* 暗色下 --surface-lift 只比卡面亮一档，齿孔的纸色差会糊掉；
-   把邮票纸边往正文墨色里掺一档提亮，暗色也能看出这是一张撕下来贴上去的纸 */
-[data-theme='dark'] .friend-postcard__stamp-paper {
-  background-color: color-mix(in oklab, var(--surface-lift) 78%, var(--text-primary));
-}
+/* ── 暗色模式覆盖 ── */
 
-/* 暗色下的纸纹墨色：必须换成正向的暖白提亮。
-   若继续沿用亮色那档暖灰墨，暗底上叠深色 = 看不见纹理；
-   若改用 --text-heading，纸面会被染成青蓝 —— 暗色的 --text-heading 是
-   #c6d7d9 的浅青，铺满整张卡就是一层蓝雾，这正是「深色模式看更蓝」的原因。
-   这里改用 --text-primary（暗色下是 #d9dad2 的暖白）× 一点纸色，
-   提亮颗粒、不带色相，暗色下的纸因此是「深色纸」而不是「蓝色纸」。 */
+/* 所有暗色覆盖通过 CSS 变量集中定义在卡片根节点上，子元素直接消费变量。
+   好处：主题切换时浏览器只需重算一组变量、触发一轮重绘，
+   不需要逐元素展开 color-mix() —— 65 张卡片同时切主题时差别明显。 */
 [data-theme='dark'] .friend-postcard {
-  --pc-grain-ink: color-mix(in oklab, var(--text-primary) 76%, var(--surface-raised));
+  --pc-grain-ink: color-mix(in oklab, var(--text-primary) 60%, var(--surface-lift));
+  --pc-paper-bg: color-mix(in oklab, var(--surface-raised) 82%, var(--text-primary));
+  --pc-paper-grad: color-mix(in oklab, var(--surface-lift) 18%, transparent);
+  --pc-paper-edge: color-mix(in srgb, var(--edge-strong) 40%, var(--edge));
+  --pc-stamp-bg: color-mix(in oklab, var(--surface-lift) 62%, var(--text-primary));
+  --pc-portrait-ring: color-mix(in srgb, var(--accent-strong) 60%, var(--surface-lift));
 }
 
-/* 暗色纸面：把冷调深墨抬成「深灰纸」。
-   暗色 Token 是有意偏冷的（--surface-raised 为 #1b1f21，B 比 R 高 6），
-   整卡铺开就是一层青灰，读不出纸的暖。这里掺一成 --text-primary
-   （#d9dad2，B 反而比 R 低），一边把底抬亮一档、一边把青味压回去 ——
-   卡片从「蓝黑」变成「深灰」，与页面底色 #15181a 也拉开了层次。
-   只掺一成：再多卡片就会跳出暗色主题，变成一块中等灰的浮层。 */
+[data-theme='dark'] .friend-postcard__stamp-paper {
+  background-color: var(--pc-stamp-bg);
+  /* 原为 rgb(198 215 217 / 0.12) —— 那是旧暗色标题 #c6d7d9 的复制粘贴值，
+     带青绿倾向。改用 --text-heading 派生后，换主题时会跟着标题一起走。 */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-heading) 12%, transparent);
+}
+
 [data-theme='dark'] .friend-postcard__paper {
-  background-color: color-mix(in oklab, var(--surface-raised) 90%, var(--text-primary));
+  background-color: var(--pc-paper-bg);
+  background-image: linear-gradient(156deg, var(--pc-paper-grad) 0%, transparent 52%);
+  border-color: var(--pc-paper-edge);
+  /* 投影走 --shadow-color（暗色下就是 0 0 0），高光走 --text-heading ——
+     明信片是插画组件，但它压在页面纸面上，所以宁可派生也不要写死纯白。 */
+  box-shadow:
+    0 1px 3px rgb(var(--shadow-color) / 0.3),
+    0 0 0 1px color-mix(in srgb, var(--text-heading) 4%, transparent);
 }
 
-/* 暗色的颗粒比亮色多留 2 个百分点：颗粒在这里是「提亮」不是「压暗」，
-   跟亮色一起减到 0.26 会把整张纸拉回去、重新显出冷灰。 */
 [data-theme='dark'] .friend-postcard__paper::after {
-  opacity: 0.28;
+  opacity: 0.14;
+}
+
+[data-theme='dark'] .friend-postcard__stamp-inner {
+  background-color: var(--surface-raised);
+}
+
+[data-theme='dark'] .friend-postcard__portrait {
+  border-color: var(--pc-portrait-ring);
+  background-color: var(--surface-raised);
+}
+
+[data-theme='dark'] .friend-postcard__mark {
+  opacity: 0.62;
 }
 
 /* 窄屏改成一列一张（网格在 friends/page.tsx 里切换），卡片宽度回到 ~312px，
@@ -428,6 +465,7 @@
     --perf-step: 5px;
     --perf-hole: 1.7px;
     height: 8.75rem;
+    contain-intrinsic-size: var(--pc-w) 8.75rem;
   }
 
   .friend-postcard__stamp-inner {
@@ -448,22 +486,28 @@
     gap: 0.25rem;
   }
 
-  .friend-postcard__title {
-    font-size: 0.9375rem;
-  }
+  /* 名称与简介不再跟桌面分档：两者都已是语义 Token（H3 / Caption），
+     窄屏只收一点区块间距。早先这里把标题压到 0.9375rem（15px）、把简介
+     压回 --text-meta，等于在手机上另造一套「更小的字」；一列一张之后
+     横向空间够用，不需要靠缩字号换行数（实测 390px：18px 标题 0 张截断、
+     13px 简介 0 张截断）。 */
+}
 
-  .friend-postcard__desc {
-    font-size: 0.6875rem;
+/* 减少动效：只剩纸面投影的补间，直接瞬切即可 —— 悬停反馈本身（阴影加深）
+   是状态说明而不是装饰位移，保留，只是不再播放。 */
+@media (prefers-reduced-motion: reduce) {
+  .friend-postcard__paper {
+    transition: none;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .friend-postcard,
-  .friend-postmark {
-    transition: none;
-  }
-
-  .friend-postcard--link:hover {
-    transform: none;
-  }
+/* 主题切换过渡豁免：全局 `.theme-transition *` 让所有元素的颜色属性播放 240ms 过渡，
+   但友链页 65 张卡片 × ~10 个子元素/伪元素 = 650+ 个颜色动画同时跑，
+   叠上 blur、mask、box-shadow 一起补间，帧率直接掉到个位数。
+   这里把卡片内部全部改为瞬切：视觉上友链区域闪一下比卡成幻灯片好得多。 */
+html.theme-transition .friend-postcard,
+html.theme-transition .friend-postcard *,
+html.theme-transition .friend-postcard *::before,
+html.theme-transition .friend-postcard *::after {
+  transition-duration: 0s !important;
 }

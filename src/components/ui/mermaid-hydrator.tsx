@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useLocale } from '@/lib/i18n/client'
+import { t } from '@/lib/i18n/dictionary'
 
 /**
  * 从当前主题的 CSS 变量里取色：图表跟着 token 走，不写死颜色。
@@ -83,6 +85,8 @@ function readThemeVariables() {
  * 不跟随就会在深色纸面上留下一块浅色图表。
  */
 export function MermaidHydrator() {
+  const locale = useLocale()
+
   useEffect(() => {
     let cancelled = false
     let api: (typeof import('mermaid'))['default'] | null = null
@@ -122,7 +126,7 @@ export function MermaidHydrator() {
             node.dataset.rendered = 'error'
             node.insertAdjacentHTML(
               'beforeend',
-              '<p class="text-meta">图表渲染失败，上方为源码。</p>',
+              `<p class="text-meta">${t(locale, 'mermaid.failed')}</p>`,
             )
           }
         }
@@ -155,7 +159,7 @@ export function MermaidHydrator() {
       cancelled = true
       observer.disconnect()
     }
-  }, [])
+  }, [locale])
 
   return null
 }

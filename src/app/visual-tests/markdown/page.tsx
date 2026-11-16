@@ -35,15 +35,16 @@ export default async function MarkdownVisualTestsPage() {
   return (
     <Container>
       <article id="visual-tests-markdown" className="pb-[var(--spacing-section)]">
-        <div className="mx-auto grid max-w-[calc(var(--container-prose)+23.5rem)] gap-12 xl:grid-cols-[minmax(0,calc(var(--container-prose)+7rem))_13rem] xl:gap-14">
-          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--container-prose)+7rem)] min-w-0">
+        <div className="mx-auto grid max-w-[calc(var(--measure-post)+var(--pad-paper-inline)+var(--pad-paper-inline))] gap-12 xl:max-w-[calc(var(--shell-post)+var(--pad-paper-inline)+var(--pad-paper-inline))] xl:grid-cols-[minmax(0,calc(var(--measure-post)+var(--pad-paper-inline)+var(--pad-paper-inline)))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
+          <div className="reading-sheet mx-auto w-full max-w-[calc(var(--measure-post)+var(--pad-paper-inline)+var(--pad-paper-inline))] min-w-0">
             <header className="pt-10 sm:pt-0">
               <p className="meta">Phase 4D · VISUAL FIXTURE</p>
-              <h1 className="mt-5 font-serif text-[calc(var(--text-display)*0.78)] leading-[1.25] tracking-[-0.022em] text-[var(--text-heading)] sm:text-[calc(var(--text-display)*0.82)] sm:leading-[1.2]">
+              <h1 className="text-headline mt-5 font-serif text-[var(--text-heading)]">
                 Markdown 视觉验收样张
               </h1>
               <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
-                覆盖 Folio 实际支持的全部 Markdown 扩展。本页不是用户内容，仅用于截图比对。
+                覆盖 Folio 实际支持的全部 Markdown
+                扩展。正文按「喵二」博客的题材重写过，仍是演示样张而不是站上文章，仅用于截图比对。
               </p>
               <p className="meta mt-7 flex flex-wrap items-center gap-x-1 border-t border-dashed border-[var(--edge)] pt-4">
                 <span>来源 src/visual-tests/fixtures/markdown-full.md</span>
@@ -57,7 +58,7 @@ export default async function MarkdownVisualTestsPage() {
           </div>
 
           <aside className="hidden xl:block">
-            <p className="meta mb-2 text-[var(--text-tertiary)]">目录</p>
+            <p className="meta mb-2 text-[var(--text-secondary)]">目录</p>
             <Toc items={rendered.toc} />
           </aside>
         </div>

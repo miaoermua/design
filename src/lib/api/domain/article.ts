@@ -1,4 +1,5 @@
 import type { Attachment } from './common'
+import type { AiDisclosure } from './disclosure'
 
 /** 文章所属分类（官方 category 内嵌对象的最小投影） */
 export interface ArticleCategoryRef {
@@ -34,11 +35,21 @@ export interface ArticleDetail extends Article {
   /** Markdown 原文（contentFormat 为 markdown 时） */
   content: string
   contentFormat: string
+  /**
+   * 正文里全部图片的附件元数据（core 从正文抽出，含 `width` / `height`）。
+   *
+   * 与 `cover` 的关系：`cover` 是**渲染用**的封面（优先取 `meta.cover`），
+   * 这里则是**正文图尺寸**的来源，两者可能不是同一张图。详情页用它给
+   * `<img>` 补宽高，避免 475 张图的正文滚动时持续位移。
+   */
+  images: Attachment[]
   copyright: boolean
   /** 官方 related（core 侧计算），没有则为空数组 */
   related: Article[]
   /** null = 匿名请求，后端未给登录态 */
   liked: boolean | null
+  /** AI 参与声明（`meta.aiGen`）；null 表示作者未声明 */
+  aiDisclosure: AiDisclosure | null
 }
 
 export type ArticleSort = 'createdAt' | 'modifiedAt' | 'title'

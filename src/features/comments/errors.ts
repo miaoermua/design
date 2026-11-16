@@ -1,4 +1,6 @@
 import { ApiError } from '@/lib/api'
+import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
+import { t, type MessageKey } from '@/lib/i18n/dictionary'
 
 /**
  * 评论失败原因
@@ -43,16 +45,20 @@ export function toCommentFailureReason(error: unknown): CommentFailureReason {
   return 'network'
 }
 
-const MESSAGES: Record<CommentFailureReason, string> = {
-  disabled: '本站已关闭评论',
-  'guest-blocked': '本站当前不接受匿名评论',
-  'content-missing': '内容不存在，无法评论',
-  duplicate: '同样的内容刚刚已经提交过了',
-  invalid: '提交内容不符合要求，请检查昵称、邮箱与正文',
-  unauthorized: '本站暂时无法接收评论，请稍后再试',
-  network: '提交失败，请稍后再试',
+/** 失败原因 → 字典键。文案不写在这里：这里只保证「原因」与「界面文案」一一对应 */
+const MESSAGE_KEY: Record<CommentFailureReason, MessageKey> = {
+  disabled: 'comments.errorDisabled',
+  'guest-blocked': 'comments.errorGuestBlocked',
+  'content-missing': 'comments.errorContentMissing',
+  duplicate: 'comments.errorDuplicate',
+  invalid: 'comments.errorInvalid',
+  unauthorized: 'comments.errorUnauthorized',
+  network: 'comments.errorNetwork',
 }
 
-export function commentFailureMessage(reason: CommentFailureReason): string {
-  return MESSAGES[reason]
+export function commentFailureMessage(
+  reason: CommentFailureReason,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return t(locale, MESSAGE_KEY[reason])
 }

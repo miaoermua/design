@@ -85,7 +85,7 @@ export function TocList({ items, variant }: TocListProps) {
               {active ? (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0.5 bottom-0.5 -left-px w-px bg-[var(--accent)]"
+                  className="absolute top-0.5 bottom-0.5 -left-px w-[2px] rounded-full bg-[var(--accent)]"
                 />
               ) : null}
               {item.text}

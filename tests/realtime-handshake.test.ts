@@ -85,7 +85,7 @@ function joinsOf(record: HandshakeRecord): string[] {
     .map(([, payload]) => (payload as { payload: { roomName: string } }).payload.roomName)
 }
 
-async function boot(lang: 'zh' | 'en' = 'en', articleId?: string): Promise<RealtimeClient> {
+async function boot(lang: 'zh-CN' | 'en' = 'en', articleId?: string): Promise<RealtimeClient> {
   client = createRealtimeClient({
     origin: baseUrl,
     lang,
@@ -154,13 +154,13 @@ describe('真实 Engine.IO / Socket.IO 握手', () => {
 
     expect(joinsOf(handshakes[0]!)).toEqual(['article-p1'])
 
-    active.setLang('zh')
+    active.setLang('zh-CN')
     await waitFor(() => expect(handshakes).toHaveLength(2))
     await waitForStatus(active, 'online')
 
     const second = handshakes[1]!
     const url = new URL(second.url, baseUrl)
-    expect(url.searchParams.get('lang')).toBe('zh')
+    expect(url.searchParams.get('lang')).toBe('zh-CN')
     expect(url.searchParams.get('EIO')).toBe('4')
     expect(url.searchParams.get('transport')).toBe('websocket')
 
@@ -171,7 +171,7 @@ describe('真实 Engine.IO / Socket.IO 握手', () => {
   })
 
   it('传输层断开后重连：新会话只 join 一次，房间不丢', async () => {
-    const active = await boot('zh', 'p1')
+    const active = await boot('zh-CN', 'p1')
     expect(joinsOf(handshakes[0]!)).toEqual(['article-p1'])
 
     // 服务端主动切断传输层（模拟 ping timeout / transport close）
@@ -181,7 +181,7 @@ describe('真实 Engine.IO / Socket.IO 握手', () => {
     await waitForStatus(active, 'online')
 
     const reconnected = handshakes[handshakes.length - 1]!
-    expect(new URL(reconnected.url, baseUrl).searchParams.get('lang')).toBe('zh')
+    expect(new URL(reconnected.url, baseUrl).searchParams.get('lang')).toBe('zh-CN')
     expect(joinsOf(reconnected)).toEqual(['article-p1'])
   })
 

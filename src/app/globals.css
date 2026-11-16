@@ -9,6 +9,11 @@
 @import '../design-system/styles/footnotes.css';
 @import '../design-system/styles/mentions.css';
 @import '../design-system/styles/reading.css';
+/* 系统高对比度与增强对比：只在对应的媒体查询里生效，常规浏览零影响 */
+@import '../design-system/styles/forced-colors.css';
+/* 打印：整份文件只包一个 @media print，屏幕样式零影响。放在最后，
+   保证它能覆盖前面各层（同权重下后者胜） */
+@import '../design-system/styles/print.css';
 /* 组件专属样式：只服务单个页面/组件，不属于站点级设计系统，
    因此放在各自的 feature / components 目录、由这里汇总引入。
    新增时保持「一个组件一个文件」，不要在 globals.css 里续写组件规则。 */
@@ -144,19 +149,911 @@
   border-top: var(--border-rule) dashed var(--edge-strong);
 }
 
-/* 悬浮顶栏的位移过渡
-   写在这里而不是 Tailwind 工具类：隐藏位移是 calc() 表达式，
-   任意值类的解析在构建期静默失败过一次（state 变了但 transform 仍为 none），
-   这类关键交互不该依赖工具类能否生成。 */
-.site-header-bar {
-  transition: transform var(--duration-base) var(--ease-out-soft);
-  will-change: transform;
+/* ══ 导航：桌面双态（Editorial Bar / Floating Dock）═════════════════
+ *
+ * 一棵 DOM，三种状态，由 `<header data-mode>` 切换：
+ *
+ *   top      页面顶部 —— 通栏、透明、与页面容器同宽对齐的 Editorial Bar
+ *   hidden   向下滚动 —— 整块滑出视口，把阅读空间还给正文
+ *   floating 向上滚动 —— 收紧成居中悬浮的玻璃 Dock
+ *
+ * 状态机在 use-header-scroll.ts（阈值只有那一处），这里只描述「每种形态
+ * 长什么样」。切换靠 max-width / height / border-radius / transform /
+ * opacity 的过渡，不做第二棵 DOM：两套导航轮流出现会带来重复的 HTML ID、
+ * 两份菜单开关状态和两条 Tab 顺序，而这些代价换不来更好的视觉。
+ *
+ * 断点仍是项目已有的 md = 48rem：
+ *   <48rem  贴底悬浮（底部安全区之内，与物理边缘留出间距）。
+ *           三种状态的视觉规则**全部**写在桌面断点里，手机因此完全不受影响。
+ *   ≥48rem  贴顶；top / floating / hidden 三态生效。
+ *
+ * 为什么定位与尺寸全部写在 CSS 而不是工具类：隐藏位移是 calc() 表达式，
+ * 任意值类在构建期静默失败过一次（state 变了但 transform 仍是 none）；
+ * 而且「手机不随滚动隐藏」这件事只应该在桌面断点里存在——写在 CSS 里
+ * 天然只有一条规则生效，不需要 JS 判断视口。
+ */
+
+.site-nav {
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  bottom: calc(var(--nav-inset) + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nav-gap);
+  padding-inline: var(--spacing-gutter);
+  /* 容器横跨整屏时不能吃掉正文的点击：只有卡片本身可交互 */
+  pointer-events: none;
+}
+
+.nav-shell {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.nav-card {
+  /* 卡片横向内边距：菜单面板的右边缘也挂在同一个值上，两处不会走散 */
+  --nav-pad: 0.5rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  height: var(--nav-bar-height);
+  padding-block: 0.25rem;
+  padding-inline: var(--nav-pad);
+  border-radius: var(--radius-pill);
+  pointer-events: auto;
+  /* Spotlight 的默认落点：鼠标进入前光斑停在卡片中央，不闪烁 */
+  --nav-pointer-x: 50%;
+  --nav-pointer-y: 50%;
+}
+
+@media (min-width: 40rem) {
+  .site-nav {
+    padding-inline: var(--spacing-gutter);
+  }
+}
+
+@media (min-width: 48rem) {
+  /*
+   * 横向内边距从容器挪到卡片：`.site-nav` 只负责铺满视口，卡片自己取
+   * Container 的宽度（`--container-wide`）与内边距（`--spacing-gutter`），
+   * 于是顶部状态的导航内容与正文**逐像素对齐**，不需要再算第二套版心。
+   */
+  .site-nav {
+    top: 0;
+    bottom: auto;
+    padding-inline: 0;
+  }
+
+  /*
+   * 状态 A：Editorial Bar。
+   *
+   * 卡片本身就是那条通栏——透明、无边框、无圆角，直接落在纸面上。
+   * 玻璃层与光斑层在这一态被关掉（见下方 .nav-glass / .nav-spotlight 规则），
+   * 所以「轻盈、融入页面」不是再叠一层样式，而是**什么都不画**。
+   *
+   * 过渡列表里 `visibility` 排在最后一位，隐藏态按位次给它一个延迟
+   * （见 `[data-mode='hidden']`）：退场要等滑出动画走完才真正不可见，
+   * 进场则立刻可见。位次与 transition-property 一一对应，改列表必须同步改那里。
+   */
+  .nav-card {
+    --nav-pad: var(--spacing-gutter);
+    width: 100%;
+    max-width: var(--container-wide);
+    height: var(--nav-topbar-height);
+    margin-inline: auto;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0;
+    transition:
+      max-width var(--duration-base) var(--ease-out-soft),
+      height var(--duration-base) var(--ease-out-soft),
+      border-radius var(--duration-base) var(--ease-out-soft),
+      transform var(--duration-base) var(--ease-out-soft),
+      opacity var(--duration-base) var(--ease-out-soft),
+      visibility 0s linear;
+    will-change: transform;
+  }
+
+  .nav-quick {
+    flex: 1 1 auto;
+  }
+
+  /* 头像之后的所有空位都留给「头像 ↔ 链接」这段空白 */
+  .nav-quick__list > li:first-child {
+    margin-right: auto;
+  }
+
+  /*
+   * 状态 B：Floating Dock。
+   *
+   * 与状态 A 是**同一条横向导航**，只是容器收紧：宽度从版心收到 560px、
+   * 高度收到 50px、圆角与玻璃出现、整体下沉 14px。内部结构（头像贴左、
+   * 链接整组贴右、菜单键收尾）一个元素都不变——这正是「同一个导航系统在
+   * 不同滚动状态下换了个形态」，而不是两套导航轮流出现。
+   */
+  .site-nav[data-mode='floating'] .nav-card {
+    --nav-pad: 0.5rem;
+    max-width: var(--nav-dock-width);
+    height: var(--nav-dock-height);
+    border-radius: var(--nav-dock-radius);
+    transform: translate3d(0, var(--nav-dock-offset), 0);
+  }
+
+  /*
+   * 状态 C：隐藏。
+   *
+   * 整块（含已展开的下拉）滑出视口上缘并淡出，不改变页面布局。
+   * `visibility: hidden` 让这块不再进入 Tab 顺序、也不被屏幕阅读器读成
+   * 可用入口；延迟量与动画等长，所以退场动画不会被它截断。
+   */
+  .site-nav[data-mode='hidden'] .nav-card {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(0, calc(-100% - var(--nav-gap)), 0);
+    transition-delay: 0s, 0s, 0s, 0s, 0s, var(--duration-base);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-header-bar {
+  .nav-card {
     transition: none;
     will-change: auto;
+  }
+}
+
+/* 固定卡片不占文档流：≥48rem 时用占位块让正文不被顶部那条导航盖住
+   （移动端贴底，靠页面 padding 让位）。
+   占位高度 = Editorial Bar 高度，两种桌面状态切换时正文不会跳。 */
+.site-nav-spacer {
+  height: 0;
+}
+
+@media (min-width: 48rem) {
+  .site-nav-spacer {
+    height: var(--nav-topbar-height);
+  }
+}
+
+/* 移动端底部悬浮栏：给页面留出与栏高等量的下边距，
+   min-height:100dvh + border-box 会把这段内边距算进首屏，短页面不会因此多出滚动条。 */
+@media (max-width: 47.9375rem) {
+  .site-shell {
+    padding-bottom: calc(
+      var(--nav-bar-height) + var(--nav-gap) + var(--nav-inset) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+/* ── 卡片内部 ─────────────────────────────────────────────────── */
+
+/*
+ * 玻璃层：卡片自身的视觉载体，绝对定位于卡片之内。
+ *
+ * 为什么不让 .nav-card 直接吃 .glass-nav：带滤镜的元素会为 position: fixed 的
+ * 后代建立包含块，菜单面板（移动端 fixed 到视口）会被困在卡片里。玻璃下沉一层，
+ * 卡片本身保持无滤镜，面板的定位就仍以视口为准。
+ *
+ * 双态：Editorial Bar 里这一层整体透明（连发丝边与投影一起消失，因为
+ * opacity 作用于整个元素），Floating Dock 里才亮起来。淡入淡出解释的是
+ * 「同一块玻璃在两种形态之间显隐」，不是两个控件轮流出现。
+ */
+.nav-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
+}
+
+.site-nav[data-mode='top'] .nav-glass {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 玻璃的显隐也变成瞬时：减弱动效的用户不该再看到一层渐变的层次变化 */
+  .nav-glass {
+    transition: none;
+  }
+}
+
+.nav-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  /*
+   * 光斑半径按宿主尺寸给：`--nav-spotlight-size` 默认 11rem 是为导航卡片
+   * （704px 宽）定的，小宿主（如右下工具胶囊 48px 宽）要在自己的规则里
+   * 调小，否则半径盖满整个宿主，指针移动时光斑看起来是整块均匀变色，
+   * 而不是一团跟着鼠标走的光。
+   */
+  --nav-spotlight-size: 11rem;
+  background: radial-gradient(
+    var(--nav-spotlight-size) var(--nav-spotlight-size) at var(--nav-pointer-x) var(--nav-pointer-y),
+    var(--nav-spotlight),
+    transparent 72%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
+}
+
+.nav-card:hover .nav-spotlight {
+  opacity: 1;
+}
+
+/*
+ * Editorial Bar 不点光斑：那一态连玻璃都没有，光斑会变成纸面上的一团
+ * 无来由的色斑。`display: none` 而不是 opacity: 0——它同时省掉一层
+ * 不透明度合成，卡片只有 68px 高，没有保留下来的理由。
+ * 作用域限定在 `.site-nav` 内，右下工具胶囊的同一个类不受影响。
+ */
+.site-nav[data-mode='top'] .nav-spotlight {
+  display: none;
+}
+
+/* 触屏不模拟鼠标跟随；减弱动效时连这层光一起关掉 */
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .nav-spotlight {
+    display: none;
+  }
+}
+
+.nav-quick {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.nav-quick__list {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-avatar {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-sunk);
+  transition: box-shadow var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-avatar:hover {
+  box-shadow: 0 0 0 1px var(--nav-edge);
+}
+
+.nav-avatar__image {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+.nav-avatar__fallback {
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--nav-ink-strong);
+}
+
+/* 右侧动作区：分隔线 + 菜单按钮。桌面靠 space-between 贴到卡片另一端 */
+.nav-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.nav-rule {
+  position: relative;
+  z-index: 1;
+  width: 1px;
+  height: 1.25rem;
+  margin-inline: 0.15rem;
+  background-color: var(--nav-divider);
+}
+
+/* 快捷导航项：默认次级墨色，选中才用 Accent 洗底 */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding-inline: 0.7rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--nav-ink);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-link:hover {
+  color: var(--nav-ink-strong);
+  background-color: var(--nav-item-hover);
+}
+
+.nav-link[data-active='true'] {
+  color: var(--accent-strong);
+  background-color: transparent;
+  position: relative;
+}
+
+/*
+ * 选中态底部细线：两端渐隐到透明，中间是主题色。
+ * 不依赖 framer-motion 做位置滑动——每个选中项独立有自己的线，
+ * 切换时由 React 卸载/挂载完成，transition 给 opacity 一个淡入。
+ */
+.nav-link[data-active='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 0.125rem;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--accent-strong) 30%,
+    var(--accent-strong) 70%,
+    transparent
+  );
+}
+
+/*
+ * 只在桌面顶栏出现的入口（`inBar: 'desktop'`）。
+ *
+ * 收起而不是删除：菜单里仍有这条入口的完整一份。放在这里是为了让「哪些
+ * 入口两端都可见」只由数据决定，组件里不做视口判断、不产生第二棵 DOM。
+ */
+@media (max-width: 47.9375rem) {
+  .nav-link[data-compact='hide'],
+  .nav-flyout[data-compact='hide'],
+  .nav-quick__list > li[data-compact='hide'] {
+    display: none;
+  }
+}
+
+/*
+ * 悬停下拉（桌面专用）
+ *
+ * 鼠标移到「文章 / 日记」上就直接看到分类 / 专栏，不必先打开菜单。
+ * 移动端整段隐藏：触屏没有 hover，那端仍由菜单面板承载同一份 `branch`。
+ * 展开条件同时接受 `:focus-within`：键盘 Tab 进到入口时也会打开，
+ * 随后可以继续 Tab 进子项，不需要额外的开关按钮。
+ */
+.nav-flyout {
+  position: relative;
+}
+
+.nav-flyout__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 3;
+  /* 与卡片之间留出的缝用内边距补上：鼠标穿过去时不会掉出悬停区 */
+  padding-top: var(--nav-gap);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, -4px, 0);
+  transition:
+    opacity var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft),
+    visibility var(--duration-fast) linear;
+}
+
+.nav-flyout:hover > .nav-flyout__panel,
+.nav-flyout:focus-within > .nav-flyout__panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+}
+
+.nav-flyout__card {
+  min-width: 12.5rem;
+  max-width: 18rem;
+  max-height: min(24rem, calc(100dvh - 8rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 预留滚动条宽度避免内容跳动；用细滚动条减少视觉干扰 */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  padding: 0.4rem;
+  border: var(--border-hairline) solid var(--nav-edge);
+  border-radius: var(--radius-md);
+  /* 与菜单面板同一判断：浮层压在正文上，优先可读性，不做毛玻璃 */
+  background-color: var(--surface-raised);
+  box-shadow: var(--nav-shadow);
+}
+
+.nav-flyout__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-flyout__empty {
+  padding: 0.3rem 0.6rem;
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  color: var(--nav-ink);
+}
+
+/*
+ * 顶栏入口本身**不加**箭头 / more 图标：它读起来就是一条普通链接，
+ * 「还有一层」只在悬停后由下拉面板呈现，或进菜单抽屉里看折叠箭头
+ * （`.nav-group__chevron`）。装饰性符号会让人以为必须点开才能跳转。
+ */
+@media (min-width: 48rem) {
+  .nav-flyout {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-flyout__panel {
+    transition: none;
+  }
+}
+
+@media (max-width: 47.9375rem) {
+  /* 手机上「文章 / 日记」只是一条会跳转的链接：下拉面板不出现 */
+  .nav-flyout__panel {
+    display: none;
+  }
+}
+
+.nav-menu-trigger {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-pill);
+  color: var(--nav-ink);
+  /*
+   * 与旁边的导航链接同一套外观：常态无边框、无底色，hover 才铺一层浅底。
+   * 上一条版本给它单独加了一圈发丝边，结果菜单键跳出来像另一类控件；
+   * 现在它只是「最后一条没有文字的入口」。
+   */
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-menu-trigger:hover {
+  color: var(--nav-ink-strong);
+  background-color: var(--nav-item-hover);
+}
+
+.nav-menu-trigger[data-open='true'] {
+  color: var(--nav-item-active-ink);
+  background-color: var(--nav-item-active);
+}
+
+.nav-menu-trigger:focus-visible {
+  outline: var(--focus-ring-width) solid var(--nav-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* 菜单图标：两道横线收成叉。只有 200ms 的两段 transform，
+   没有持续旋转、没有整页缩放。 */
+.nav-menu-glyph {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.nav-menu-glyph > span {
+  display: block;
+  width: 100%;
+  height: 1.5px;
+  border-radius: 1px;
+  background-color: currentColor;
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.nav-menu-glyph[data-open='true'] > span:first-child {
+  transform: translateY(3.25px) rotate(45deg);
+}
+
+.nav-menu-glyph[data-open='true'] > span:last-child {
+  transform: translateY(-3.25px) rotate(-45deg);
+}
+
+/* ── 桌面：热区尺寸 ───────────────────────────────────────────────
+ *
+ * 必须写在基线规则之后：媒体查询不提高优先级，同权重下只按源码顺序取胜。
+ * 把这段挪到前面，桌面就会重新退回手机那套紧凑值（36px 热区、0.7rem
+ * 内边距）——实测卡片宽了、里面却还是挤的，正是要修的那个毛病。
+ */
+@media (min-width: 48rem) {
+  /*
+   * 头像两端都在（它是站点身份，也是最快的一条回首页路径）。
+   * 桌面此时同时有「首页」文字入口，两者指向同一路由是刻意的：
+   * 头像认身份、文字认导航，旧版就是这样并存的。
+   */
+  .nav-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  /* 链接与菜单键同高：一行里没有高低差，边框样式也才看起来一致 */
+  .nav-link {
+    height: 2.5rem;
+    padding-inline: 1rem;
+  }
+
+  .nav-actions {
+    gap: 0.25rem;
+  }
+
+  .nav-rule {
+    height: 1.25rem;
+    margin-inline: 0.1rem;
+  }
+
+  .nav-menu-trigger {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+/* ── 菜单面板 ─────────────────────────────────────────────────── */
+
+.nav-panel {
+  position: fixed;
+  right: var(--spacing-gutter);
+  bottom: calc(
+    var(--nav-bar-height) + var(--nav-gap) + var(--nav-inset) + env(safe-area-inset-bottom, 0px)
+  );
+  left: var(--spacing-gutter);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  max-height: var(--nav-panel-max);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  pointer-events: auto;
+  /*
+   * 面板刻意做实色，不走毛玻璃：卡片只有 60px 高，透一点无妨；
+   * 面板下面压着整段正文，即使 97% 不透明也能看见标题的淡影。
+   * 与 `material.css` 里 `.glass-panel` 的判断一致 —— 浮层优先可读性。
+   */
+  background-color: var(--surface-raised);
+  border: var(--border-hairline) solid var(--nav-edge);
+  box-shadow: var(--nav-shadow);
+}
+
+@media (min-width: 48rem) {
+  .nav-panel {
+    position: absolute;
+    top: calc(100% + var(--nav-gap));
+    /* 右边缘跟着卡片的内边距走，两种状态下都对齐菜单按钮 */
+    right: var(--nav-pad);
+    bottom: auto;
+    left: auto;
+    width: 21rem;
+    max-width: calc(100vw - 2rem);
+    max-height: min(32rem, calc(100dvh - 7rem));
+  }
+}
+
+/* 展开 / 收起：移动端自下而上，桌面端自上而下。
+   同一组类名，方向由断点决定，不靠 JS 判断视口。 */
+@keyframes nav-panel-up-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nav-panel-up-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes nav-panel-down-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nav-panel-down-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+.nav-panel[data-motion='enter'] {
+  animation: nav-panel-up-in var(--duration-base) var(--ease-out-soft) both;
+}
+
+.nav-panel[data-motion='leave'] {
+  animation: nav-panel-up-out var(--duration-fast) var(--ease-out-soft) both;
+  pointer-events: none;
+}
+
+@media (min-width: 48rem) {
+  .nav-panel[data-motion='enter'] {
+    animation-name: nav-panel-down-in;
+  }
+
+  .nav-panel[data-motion='leave'] {
+    animation-name: nav-panel-down-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-panel[data-motion='enter'],
+  .nav-panel[data-motion='leave'] {
+    animation: none;
+  }
+}
+
+/* 滚动只发生在这里：Settings 是面板的固定尾部，不会被内容挤走 */
+.nav-panel__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 预留滚动条宽度避免内容跳动；用细滚动条减少视觉干扰 */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.nav-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-identity:hover {
+  background-color: var(--nav-item-hover);
+}
+
+.nav-identity__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-sunk);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--nav-ink-strong);
+}
+
+.nav-identity__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nav-identity__name {
+  overflow: hidden;
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--nav-ink-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-identity__hint {
+  font-size: var(--text-meta);
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--nav-ink);
+}
+
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-top: 0.25rem;
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-row {
+  display: block;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--nav-ink);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-row:hover {
+  color: var(--nav-ink-strong);
+  background-color: var(--nav-item-hover);
+}
+
+.nav-row[data-active='true'] {
+  color: var(--nav-item-active-ink);
+  background-color: var(--nav-item-active);
+}
+
+.nav-row--child {
+  padding-left: 1.35rem;
+  font-size: var(--text-caption);
+}
+
+/* 分组：原生 details —— 触屏没有 hover，折叠列表是唯一能让
+   「几十个分类」不把菜单撑爆、又保留键盘与无 JS 可用性的形态。 */
+.nav-group {
+  border-radius: var(--radius-sm);
+}
+
+.nav-group__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--nav-ink);
+  cursor: pointer;
+  list-style: none;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.nav-group__summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group__summary:hover {
+  color: var(--nav-ink-strong);
+  background-color: var(--nav-item-hover);
+}
+
+/* 折叠头本身也需要选中态：它代表这条入口，而不是一个无关的展开控件 */
+.nav-group__summary[data-active='true'] {
+  color: var(--nav-item-active-ink);
+  background-color: var(--nav-item-active);
+}
+
+.nav-group__chevron {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--nav-ink);
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+details[open] > .nav-group__summary .nav-group__chevron {
+  transform: rotate(90deg);
+}
+
+.nav-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  margin: 0;
+  padding: 0 0 0.15rem;
+  list-style: none;
+}
+
+.nav-group__empty {
+  padding: 0.3rem 0.6rem 0.5rem 1.35rem;
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  color: var(--nav-ink);
+}
+
+/* 无 JS：菜单按钮不可用，这里给出完整入口（只在脚本禁用时出现） */
+.nav-noscript {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--text-small);
+  color: var(--nav-ink);
+  pointer-events: auto;
+}
+
+.nav-noscript a {
+  text-decoration: underline;
+  text-decoration-color: var(--nav-divider);
+  text-underline-offset: 0.25em;
+}
+
+/*
+  主题切换过渡
+
+  `.theme-transition` 由 ThemeToggle 在用户点击后临时加到 <html>，约 300ms 后移除：
+
+    - 只覆盖颜色类属性（背景 / 文字 / 边框 / 阴影 / 描边），
+      不动 transform、width、height、padding、font-size，因此不会引起位移或重排；
+    - 首帧没有这个类，所以加载时不播放；系统配色变化也不播放（只有点击才加）；
+    - 不常驻在 `*` 上：常驻的全局 transition 会把 hover 以外的所有变化都拖慢。
+*/
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition-property:
+      color, background-color, border-color, outline-color, box-shadow, fill, stroke,
+      text-decoration-color;
+    transition-duration: 240ms;
+    transition-timing-function: var(--ease-out-soft);
+    transition-delay: 0s;
   }
 }
 
@@ -177,36 +1074,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 可交互的元信息（导航「目录」按钮）。
-   `.meta` 的 secondary 在冰面玻璃上实测 4.07:1，按钮属于可读控件，提到标题墨色（同一背景 6.94:1）。
-   必须写在这里而不是 Tailwind 工具类：globals.css 的这段规则不在 @layer 内，优先级高于 utilities。 */
-.meta-interactive {
-  color: var(--text-heading);
-}
-
 .meta-sep::before {
   content: '·';
   margin-inline: 0.5em;
   color: var(--text-tertiary);
 }
 
-/* 主导航标签：与工具按钮同一档字号，靠 500 字重与收紧的行高从正文里立起来。
-   导航与下拉条目共用 --text-small，层级差在字重与行高，不新增平行字号 Token。 */
-.nav-label {
-  font-family: var(--font-sans);
-  font-size: var(--text-small);
-  line-height: 1.4;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-/* 下拉菜单条目：常规字重、行高回到 Small 的 1.7，比导航标签轻一档 */
-.nav-panel-link {
-  font-family: var(--font-sans);
-  font-size: var(--text-small);
-  line-height: var(--text-small--line-height);
-  font-weight: 400;
-}
+/* 导航标签的字号/字重已在 `.nav-link` / `.nav-row` 里各自定义：
+   快捷栏用 500 字重的 small，菜单条目用常规字重 —— 层级差在字重与行高，
+   不新增平行字号 Token，也不再保留旧的 `.nav-label` / `.nav-panel-link`
+   （它们只服务已移除的下拉选择器）。 */
 
 /* 右下工具浮标：贴边但避让圆角屏/刘海的安全区 */
 .toolbar-dock {
@@ -214,6 +1091,51 @@
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
   z-index: 50;
+  /*
+   * 与导航卡片同一块玻璃：材质层 `.nav-glass.glass-nav` 与光斑层
+   * `.nav-spotlight` 都是导航用的那两个类，由这个盒子提供尺寸与圆角
+   * （`border-radius: inherit` 让两层跟着走）。`padding` 是格子到玻璃
+   * 边缘的留白，和 `.nav-card` 一样是 0.25rem。
+   */
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  /* 光斑落点的默认值：指针还没进入时停在中央，不会先闪一下左上角 */
+  --nav-pointer-x: 50%;
+  --nav-pointer-y: 50%;
+  transition:
+    opacity var(--duration-fast) var(--ease-out-soft),
+    visibility var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 光斑只在鼠标进入时点亮，和 `.nav-card:hover .nav-spotlight` 同一行为 */
+.toolbar-dock:hover .nav-spotlight {
+  opacity: 1;
+}
+
+/*
+ * 胶囊只有 48px 宽，11rem 的光斑会盖满整块（看起来是均匀染色而不是光点）。
+ * 收到 5rem：大约是格子高度的两倍，指针在三个格子之间移动时能明显看到
+ * 光团跟着走，又不会亮成一片。
+ */
+.toolbar-dock .nav-spotlight {
+  --nav-spotlight-size: 5rem;
+}
+
+/*
+ * 菜单展开时让位：移动端面板几乎满宽，浮标原本会压在「日记专栏」那一行上。
+ * 用 visibility 而非 display，避免浮标瞬间消失造成的布局判断跳变；
+ * 同时撤掉指针事件，防止点穿到看不见的按钮。
+ */
+.toolbar-dock[data-nav-open='true'] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-dock {
+    transition: none;
+  }
 }
 
 @media (min-width: 40rem) {
@@ -262,18 +1184,242 @@ details[open] > .toc-summary .toc-chevron {
   font-weight: 300;
 }
 
+/* ── Footer settings ───────────────────────────────────────────
+   全站唯一的设置区：语言与三态主题紧挨成一组，靠左排。
+   两者是同一个「偏好」概念的两个维度，中间不插别的东西；
+   右下角浮标只剩「回到顶部」，导航菜单里的 Settings 已删除，
+   所以这里不需要与别处争夺层级，也不新增任何颜色——全部走语义 Token。 */
+
+.footer-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* 两者是一组的两个控件，不是同一个控件：间距要够读出「这是两个」，
+     又不能大到像分居两处 */
+  gap: 0.625rem 1.25rem;
+}
+
+/*
+ * 给右下角的回顶浮标让位：它是 fixed 且贴右，滚到页底时会正好压在
+ * 主题胶囊上（1024 / 768 实测横向重叠 40px，390 宽更明显——浮标盖住月亮）。
+ * 这里在**所有断点**预留「浮标宽度 + 边距」，而不是把浮标挪走：
+ * 那个位置属于全站导航，不该因为页脚多了一行而变。
+ */
+.footer-settings {
+  padding-right: 4.5rem;
+}
+
+/*
+ * 移动端底部空间：回顶浮标（bottom 7rem）与底部导航条都贴在视口下沿，
+ * 滚到页底时会压在「Powered by / 备案」那一行上。页脚自己让出这段高度，
+ * 而不是去动那两个固定元素的定位。
+ */
+@media (max-width: 39.999rem) {
+  .site-footer__inner {
+    padding-bottom: 6rem;
+  }
+}
+
+.footer-lang {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+/*
+ * 触发器：透明底、无完整胶囊边框，只有 hover 时铺一层很浅的沉面。
+ * 高度给到 2.5rem：文字只有 13px，点击区域必须自己撑起来。
+ */
+.footer-lang__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.5rem;
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  line-height: 1.3;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-lang__trigger:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__trigger[aria-expanded='true'] {
+  color: var(--text-heading);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__trigger:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* 空间紧张时先截断语言名，但始终保留一个可辨识的后缀宽度 */
+.footer-lang__name {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-lang__icon,
+.footer-lang__chevron {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.85;
+}
+
+.footer-lang__chevron {
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+/* 展开时箭头朝上：菜单本来就是向上弹的 */
+.footer-lang__chevron[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+/*
+ * 菜单向上展开：页脚在文档末尾，向下弹会被视口裁掉。
+ * 浮层用 lift（比页面高一级）+ edge 细边 + 纸感阴影，不用大面积品牌色。
+ */
+.footer-lang__menu {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 10.5rem;
+  max-width: min(18rem, calc(100vw - 2.5rem));
+  padding: 0.25rem;
+  border: var(--border-hairline) solid var(--edge);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-lift);
+  box-shadow: var(--shadow-pop);
+}
+
+.footer-lang__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  background-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-lang__option:hover {
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__option[data-active='true'] {
+  color: var(--text-heading);
+  background-color: var(--surface-sunk);
+}
+
+.footer-lang__option:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+/* 勾选标记：品牌色是这里唯一出现强调色的地方。
+   用 accent-strong 而不是 accent —— 设计系统规定 accent 只做边界与装饰，
+   任何「画出来的颜色」都走 strong（图标也算）。 */
+.footer-lang__check {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--accent-strong);
+}
+
+/*
+ * 三态主题：一枚横向胶囊装三个圆形格子。
+ * 选中项浮起成一张小纸片（lift + 细边 + 轻投影），未选中只有灰图标——
+ * 选中与否是「形状 + 表面」的差别，不只是颜色差别。
+ */
+.footer-theme {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.2rem;
+  border: var(--border-hairline) solid var(--edge);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-raised);
+}
+
+.footer-theme__option {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft),
+    box-shadow var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-theme__option:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunk);
+}
+
+.footer-theme__option[data-active='true'] {
+  color: var(--accent-strong);
+  background-color: var(--surface-lift);
+  box-shadow:
+    0 1px 2px rgb(var(--shadow-color) / 0.22),
+    inset 0 0 0 1px var(--edge);
+}
+
+/* 原生 radio 被视觉隐藏，焦点环落到圆形格子上 */
+.footer-theme__option:has(input:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.footer-theme__option svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 /* 阅读操作栏按钮
    四个操作始终是一排：移动端在文末、图标与文字横向排布；
-   ≥1280px 落在右侧目录列表下方，改为图标在上、文字在下，
-   这样四项能等距塞进 13rem 的窄栏而不挤成两行。
-   写成一条规则而不是两套工具类：形态切换只发生在这一个位置。 */
+   ≥1280px 落在右侧目录列表下方，改为纯图标横排——
+   文字隐藏只留图标，图标放大到 20px，用 accent-wash 底色悬停反馈。
+   参考 Shiro 的操作按钮做法：图标为主、无文字。 */
 .action-rail-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
   padding: 0.5rem 0.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: var(--text-meta);
   line-height: var(--text-meta--line-height);
@@ -284,7 +1430,7 @@ details[open] > .toc-summary .toc-chevron {
 }
 
 .action-rail-button:hover:not(:disabled) {
-  color: var(--text-heading);
+  color: var(--accent-strong);
   background-color: var(--accent-wash);
 }
 
@@ -297,14 +1443,153 @@ details[open] > .toc-summary .toc-chevron {
   opacity: 0.55;
 }
 
+/* 桌面端（≥80rem）：纯图标，隐藏文字标签，图标放大 */
 @media (min-width: 80rem) {
-  .action-rail-button {
-    flex-direction: column;
-    gap: 0.25rem;
+  .action-rail-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .action-rail-button svg {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 }
 
-/* 冰面玻璃由 material.css 提供（.glass-bar / .glass-control / .glass-panel） */
+/* 冰面玻璃由 material.css 提供（.glass-nav / .glass-panel） */
+
+/* ── 首页「更多」入口行 ──
+   药丸按钮，图标 + 文字，accent hover，与设计系统的药丸风格一致。 */
+.home-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.home-more__entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.85rem;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft),
+    background var(--duration-fast) var(--ease-out-soft);
+}
+
+.home-more__entry:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.home-more__entry:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.home-more__entry:disabled {
+  opacity: 0.55;
+}
+
+.home-more__entry[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* 计数是附属信息：等宽数字 + 略淡，避免和入口标题抢注意力 */
+.home-more__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
+.home-more__entry[aria-pressed='true'] .home-more__count {
+  color: var(--accent-strong);
+  opacity: 0.75;
+}
+
+/* 订阅入口：展开两条渠道。absolute 弹出，不参与这一行的布局，
+   所以面板再高也不会把「更多」整排推下去。 */
+.home-more__subscribe {
+  position: relative;
+  display: inline-flex;
+}
+
+.home-more__panel {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 0.35rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+}
+
+.home-more__panel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-out-soft);
+}
+
+.home-more__panel-row:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.home-more__panel-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+.home-more__panel-row:disabled {
+  cursor: not-allowed;
+}
+
+.home-more__panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-primary);
+}
+
+.home-more__panel-hint {
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* 权限状态是这一行的副标题，不抢标题的注意力 */
+.home-more__notify-state {
+  margin-left: auto;
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
+.home-more__panel-row[aria-pressed='true'] .home-more__notify-state {
+  color: var(--accent-strong);
+}
 
 /* 屏幕阅读器专用 */
 .sr-only {
