@@ -12,6 +12,16 @@
 
 支持 Mix-space [Markdown 扩展](https://shiro.innei.in/#/markdown),翻译，搜索，评论，友链……
 
+## 技术栈
+
+- Next.js 16
+- React 19
+- TypeScript 6
+- Tailwind CSS 4
+- marked / sanitize-html / shiki / katex / mermaid
+- Vitest 5 / jsdom / Testing Library
+- Node.js 22.12+ / pnpm 10
+
 ## 构建与运行
 
 需要 Node.js 22.12+ 与 pnpm 10.x（见 `package.json` 的 `engines` / `packageManager`）。

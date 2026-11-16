@@ -60,6 +60,14 @@ const CORE_JSON = {
   ],
 }
 
+/**
+ * `/api/v2/aggregate` 的最小形状：只提供 feed 需要的 `url.webUrl`。
+ *
+ * 它是「公开地址」的第二来源（`siteBaseUrl()` 在 env 缺失时的回退），
+ * 所以下面的用例会用它来验证 env 缺失时的改写行为。
+ */
+const IDENTITY = { url: { webUrl: 'https://blog.example.com' } }
+
 function rssResponse(body: string = RSS): Response {
   return new Response(body, {
     status: 200,
@@ -74,6 +82,14 @@ function jsonResponse(body: unknown = CORE_JSON): Response {
   })
 }
 
+/** `/aggregate`（站点身份）的响应；失败时 loadSiteContext 会吞掉异常 */
+function identityResponse(body: unknown = IDENTITY): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 interface FetchCall {
   url: URL
   init: RequestInit | undefined
@@ -82,7 +98,8 @@ interface FetchCall {
 /**
  * 装一个假 fetch 到全局：route 里用的是全局 fetch，没有依赖注入的口子。
  *
- * route 会按需打三类上游：XML `/feed`、JSON `/api/v2/aggregate/feed`、
+ * route 会按需打四类上游：XML `/feed`、JSON `/api/v2/aggregate/feed`、
+ * 站点身份 `GET /api/v2/aggregate`（公开地址的回退来源），
  * 以及正文引用了陌生 nid 时的 `GET /notes/nid/:nid` 补查。
  * 默认按路径分发，调用方只需要关心自己想要的那一支。
  */
@@ -90,6 +107,7 @@ function stubFetch(
   handlers: {
     feed?: (url: URL, init?: RequestInit) => Response | Promise<Response>
     json?: (url: URL, init?: RequestInit) => Response | Promise<Response>
+    identity?: (url: URL, init?: RequestInit) => Response | Promise<Response>
     nid?: (url: URL, init?: RequestInit) => Response | Promise<Response>
   } = {},
 ) {
@@ -103,11 +121,15 @@ function stubFetch(
       return (handlers.nid ?? (() => new Response('', { status: 404 })))(url, init)
     }
 
-    const isJson = url.pathname.endsWith('/aggregate/feed')
-    const handler = isJson
-      ? (handlers.json ?? (() => jsonResponse()))
-      : (handlers.feed ?? (() => rssResponse()))
-    return handler(url, init)
+    if (url.pathname.endsWith('/aggregate/feed')) {
+      return (handlers.json ?? (() => jsonResponse()))(url, init)
+    }
+
+    if (url.pathname.endsWith('/aggregate')) {
+      return (handlers.identity ?? (() => identityResponse()))(url, init)
+    }
+
+    return (handlers.feed ?? (() => rssResponse()))(url, init)
   }) as typeof fetch
   vi.stubGlobal('fetch', impl)
   return calls
@@ -118,11 +140,11 @@ async function getFeed(): Promise<Response> {
   return GET()
 }
 
-/** 只取 XML 那次上游调用，避免断言里混进 JSON / 补查那两次 */
+/** 只取 XML 那次上游调用，避免断言里混进 JSON / 身份 / 补查那几次 */
 function feedCalls(calls: FetchCall[]): FetchCall[] {
   return calls.filter(
     (call) =>
-      !call.url.pathname.endsWith('/aggregate/feed') && !call.url.pathname.includes('/notes/nid/'),
+      !call.url.pathname.includes('/aggregate') && !call.url.pathname.includes('/notes/nid/'),
   )
 }
 
@@ -192,11 +214,12 @@ describe('Feed 代理：转发行为', () => {
     expect(await response.text()).toBe(RSS)
   })
 
-  it('两次上游请求都不带查询串：请求侧无法影响上游地址', async () => {
+  it('所有上游请求都不带查询串：请求侧无法影响上游地址', async () => {
     const calls = stubFetch()
     await getFeed()
 
-    expect(calls).toHaveLength(2)
+    // 上游 feed、JSON 版 feed、站点身份：三条都不带 query
+    expect(calls).toHaveLength(3)
     for (const call of calls) expect(call.url.search).toBe('')
   })
 
@@ -336,12 +359,16 @@ describe('Feed 代理：URL 重写成本主题路由', () => {
     expect(lookups[0].url.pathname).toBe('/api/v2/notes/nid/49')
   })
 
-  it('未配置 NEXT_PUBLIC_SITE_URL 时原样透传，不做任何替换', async () => {
+  it('未配置 NEXT_PUBLIC_SITE_URL 时回退到 identity，仍然完成改写', async () => {
     delete process.env.NEXT_PUBLIC_SITE_URL
     stubFetch({ feed: () => rssResponse(CORE_RSS) })
     const xml = await (await getFeed()).text()
 
-    expect(xml).toBe(CORE_RSS)
+    // identity.siteUrl 与上游同源：路径该换，origin 保持不变
+    expect(xml).toContain('https://blog.example.com/articles/tech/hello')
+    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
+    expect(xml).not.toContain('blog.example.com/posts/')
+    expect(xml).not.toContain('blog.example.com/notes/49')
   })
 })
 
@@ -382,5 +409,248 @@ describe('Feed 代理：配置缺失', () => {
     const response = await getFeed()
     expect(response.status).toBe(503)
     expect(calls).toHaveLength(0)
+  })
+})
+
+/**
+ * 站点归属识别（本轮新增）
+ *
+ * 上一版要求 `NEXT_PUBLIC_SITE_URL` 与上游 host **逐字符相同**才改写，否则整段
+ * 静默跳过。这一组钉住的正是替换后的判据：站点基准取自 feed 自身，公开地址取自
+ * `siteBaseUrl(identity)`，两者任意一个缺失 / 不一致都不应让改写整体失效。
+ */
+describe('Feed 代理：本站链接识别与 origin 归一', () => {
+  /** 上游站点落在 localhost 的 feed：用来验证「不把开发地址发给订阅者」 */
+  const LOCALHOST_RSS = CORE_RSS.replaceAll('https://blog.example.com', 'http://127.0.0.1:3000')
+
+  /** 上游站点挂在子路径 `/blog` 上的 feed */
+  const SUBPATH_RSS = CORE_RSS.replaceAll(
+    'https://blog.example.com',
+    'https://blog.example.com/blog',
+  )
+
+  it('env 与上游 host 不一致：仍按路径识别本站并改写，origin 归一为 env', async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://new.example.com'
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
+    const xml = await (await getFeed()).text()
+
+    expect(xml).toContain('https://new.example.com/articles/tech/hello')
+    expect(xml).toContain('https://new.example.com/diaries/155695797663436800')
+    // 旧 origin 一个都不该留下（包括 channel 的 <link> 与 atom:link）
+    expect(xml).not.toContain('https://blog.example.com/')
+  })
+
+  it('上游用 localhost：输出里不出现开发地址', async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://blog.example.com'
+    stubFetch({ feed: () => rssResponse(LOCALHOST_RSS) })
+    const response = await getFeed()
+    const xml = await response.text()
+
+    expect(xml).toContain('https://blog.example.com/articles/tech/hello')
+    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
+    expect(xml).not.toContain('127.0.0.1:3000')
+    // 没有异常，就不该带告警头
+    expect(response.headers.get('x-folio-feed-warnings')).toBeNull()
+  })
+
+  it('上游带子路径：前缀被保留，不误匹配也不破坏路径', async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://blog.example.com/blog'
+    stubFetch({ feed: () => rssResponse(SUBPATH_RSS) })
+    const xml = await (await getFeed()).text()
+
+    expect(xml).toContain('https://blog.example.com/blog/articles/tech/hello')
+    expect(xml).toContain('https://blog.example.com/blog/diaries/155695797663436800')
+    // 没有把 /blog 重复两次，也没有丢掉它
+    expect(xml).not.toContain('/blog/blog/')
+  })
+
+  it('公开站挂在子路径、上游在根：前缀按公开地址补上', async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://blog.example.com/blog'
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
+    const xml = await (await getFeed()).text()
+
+    expect(xml).toContain('https://blog.example.com/blog/articles/tech/hello')
+    expect(xml).not.toContain('https://blog.example.com/articles/')
+  })
+
+  it('媒体链接不参与改写：路径与站点部署路径没有必然关系', async () => {
+    const mediaRss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+<link>https://blog.example.com</link>
+<item>
+  <title>带图</title>
+  <link>https://blog.example.com/notes/49</link>
+  <content:encoded><![CDATA[
+    <img src="https://blog.example.com/uploads/a.webp" />
+    <img src="https://blog.example.com/objects/b.png" />
+    <a href="https://blog.example.com/posts/tech/hello">正文链接</a>
+  ]]></content:encoded>
+</item>
+</channel></rss>`
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://new.example.com'
+    stubFetch({ feed: () => rssResponse(mediaRss) })
+    const xml = await (await getFeed()).text()
+
+    // 页面链接改写，媒体原样
+    expect(xml).toContain('https://new.example.com/articles/tech/hello')
+    expect(xml).toContain('https://blog.example.com/uploads/a.webp')
+    expect(xml).toContain('https://blog.example.com/objects/b.png')
+  })
+
+  it('读不出站点基准时一个字节都不动，并给出可观测告警', async () => {
+    // 没有 channel <link>、也没有 atom:link：无法区分本站与外链
+    const bare = '<?xml version="1.0"?><rss version="2.0"><channel><title>t</title></channel></rss>'
+    stubFetch({ feed: () => rssResponse(bare) })
+    const response = await getFeed()
+    const xml = await response.text()
+
+    expect(xml).toBe(bare)
+    expect(response.headers.get('x-folio-feed-warnings')).toContain('unidentified-site=1')
+  })
+
+  it('公开地址与上游都缺失时保留原值，不伪造域名', async () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL
+    stubFetch({
+      feed: () => rssResponse(LOCALHOST_RSS),
+      // identity 取不到站点地址：公开地址只能是缺失
+      identity: () => identityResponse({}),
+    })
+    const response = await getFeed()
+    const xml = await response.text()
+
+    // 站点基准仍是 localhost，但映射可用 → 路径改写、origin 保持上游
+    expect(xml).toContain('http://127.0.0.1:3000/diaries/155695797663436800')
+    // 前端域名没被编造出来
+    expect(xml).not.toContain('blog.example.com')
+    expect(response.headers.get('x-folio-feed-warnings')).toContain('dev-host=')
+  })
+})
+
+/**
+ * nid → 雪花 id 的两种来源
+ *
+ * JSON 版 feed 是主来源，feed 自身的 `<guid>` 是兜底。后者让「JSON 接口挂了」
+ * 不再等于「日记链接全 404」。
+ */
+describe('Feed 代理：日记 id 映射与降级', () => {
+  /** 日记条目自带 guid（core 的真实形状），且没有 JSON 映射可用 */
+  const GUID_RSS = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+<link>https://blog.example.com</link>
+<item>
+  <title>日记</title>
+  <link>https://blog.example.com/notes/49</link>
+  <guid>155695797663436800</guid>
+  <content:encoded><![CDATA[<a href="https://blog.example.com/notes/49#comments">说点什么</a>]]></content:encoded>
+</item>
+</channel></rss>`
+
+  it('JSON 映射挂了也能用 guid 兜底', async () => {
+    stubFetch({
+      feed: () => rssResponse(GUID_RSS),
+      json: () => new Response('', { status: 500 }),
+      nid: () => new Response('', { status: 404 }),
+    })
+    const xml = await (await getFeed()).text()
+
+    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
+    expect(xml).not.toContain('/notes/49')
+  })
+
+  it('guid 不是雪花 id 时不采信：不把 nid 当 id', async () => {
+    // guid 写成 nid（4 位）——这正是「把 nid 错当雪花 id」的场景
+    const bad = GUID_RSS.replace('<guid>155695797663436800</guid>', '<guid>49</guid>')
+    stubFetch({
+      feed: () => rssResponse(bad),
+      json: () => jsonResponse({ data: [] }),
+      nid: () => new Response('', { status: 404 }),
+    })
+    const response = await getFeed()
+    const xml = await response.text()
+
+    // 保持上游路由，绝不产出 /diaries/49 或 /diaries/undefined
+    expect(xml).toContain('https://blog.example.com/notes/49')
+    expect(xml).not.toContain('/diaries/49')
+    expect(xml).not.toContain('undefined')
+    expect(response.headers.get('x-folio-feed-warnings')).toContain('unmapped-nid=')
+  })
+
+  it('映射失败的链接不进入「已改写」统计，且不影响同一份 feed 的其它条目', async () => {
+    const mixed = CORE_RSS.replace('<title>日记</title>', '<title>日记</title>\n  <guid>49</guid>')
+    stubFetch({
+      feed: () => rssResponse(mixed),
+      json: () => jsonResponse({ data: [] }),
+      nid: () => new Response('', { status: 404 }),
+    })
+    const xml = await (await getFeed()).text()
+
+    // 文章照常改写，日记保持原样：一条失败不拖垮整份 feed
+    expect(xml).toContain('https://blog.example.com/articles/tech/hello')
+    expect(xml).toContain('https://blog.example.com/notes/49')
+  })
+})
+
+describe('Feed 代理：入口一致性与自检', () => {
+  it('/atom.xml 与 /feed 是同一个实现（rewrite 而非复制）', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const config = readFileSync(join(import.meta.dirname, '../next.config.ts'), 'utf8')
+
+    expect(config).toContain("source: '/atom.xml'")
+    expect(config).toContain("destination: '/feed'")
+  })
+
+  it('旧 /feed.xml 的域名来源与 canonical 同一套（不是第二份解析）', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const source = readFileSync(join(import.meta.dirname, '../src/app/feed.xml/route.ts'), 'utf8')
+
+    // 必须经 absoluteUrl / siteBaseUrl（env → identity 回退），不能自己读 env
+    expect(source).toContain('absoluteUrl')
+    expect(source).toContain('siteBaseUrl')
+    // 注释与报错文案里可以提到这个变量名，但不能自己读它——读它就是第二份解析
+    expect(source).not.toContain('process.env.NEXT_PUBLIC_SITE_URL')
+  })
+
+  it('空 feed 不报错，也不触发任何改写', async () => {
+    stubFetch({ feed: () => rssResponse(RSS) })
+    const response = await getFeed()
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe(RSS)
+  })
+
+  it('改写后自检残留：站内 /posts/ 会被计数（不再静默放过）', async () => {
+    // 站点基准取自 <channel><link>，但 item 里混入一条无法改写的 /posts/ 形态
+    // （路径没有第三段，仍按前缀改写，因此这里用一个故意不匹配的地址验证计数口径）
+    const odd = CORE_RSS.replace(
+      'https://blog.example.com/posts/tech/hello',
+      'https://blog.example.com/posts/tech/hello?x=/notes/77',
+    )
+    stubFetch({ feed: () => rssResponse(odd) })
+    const xml = await (await getFeed()).text()
+
+    // query 里的 /notes/77 不属于路径，不该被改写
+    expect(xml).toContain('/articles/tech/hello?x=/notes/77')
+  })
+})
+
+describe('Feed 代理：公开地址本身是开发地址时给出告警', () => {
+  it('env 配成 localhost：按配置执行，但必须可观测', async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'http://127.0.0.1:3000'
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
+    const response = await getFeed()
+
+    // 这是运维显式选择的公开地址，行为上照做（不改写用户配置）
+    expect(await response.text()).toContain('http://127.0.0.1:3000/articles/tech/hello')
+    // 但订阅者拿不到这个地址，必须留痕
+    expect(response.headers.get('x-folio-feed-warnings')).toContain('public-site-url-is-local=1')
+  })
+
+  it('正常公开地址不产生这条告警', async () => {
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
+    const response = await getFeed()
+
+    expect(response.headers.get('x-folio-feed-warnings')).toBeNull()
   })
 })
