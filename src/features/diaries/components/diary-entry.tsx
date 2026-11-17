@@ -1,8 +1,6 @@
 import Link from 'next/link'
 import type { Diary } from '@/lib/api'
 import { CoverImage } from '@/components/ui/cover-image'
-import { getThemeConfig } from '@/core/config/theme'
-import { DonateSlot } from '@/features/donate'
 import { firstImageSource } from '@/lib/content/inline-media'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
@@ -62,8 +60,6 @@ function pickCover(diary: Diary): Cover | null {
  */
 export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const locale = await getLocale()
-  // 与文章页同一个读取入口；getThemeConfig 在单次请求内已去重，列表里逐条调用不会重复取数
-  const theme = await getThemeConfig()
   const chips = [diary.mood, diary.weather, diary.location, diary.topic?.name].filter(
     (chip): chip is string => Boolean(chip),
   )
@@ -131,6 +127,8 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
           </div>
         ) : null}
 
+        {/* 元信息行只放「继续阅读 + 阅读次数」。赞赏属于详情页 ActionRail：
+            列表摘要时节点还没读内容，重复出现会让每条日记都变成一次募捐入口。 */}
         <div className="meta mt-3 flex flex-wrap items-center gap-x-1">
           <Link href={diaryPath(diary.id)} className="link-quiet">
             {t(locale, 'diary.continueReading')}
@@ -140,7 +138,6 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
               {tf(locale, 'meta.readCount', { count: diary.readCount.toLocaleString(locale) })}
             </span>
           ) : null}
-          <DonateSlot theme={theme} className="meta-sep" />
         </div>
       </div>
     </article>
