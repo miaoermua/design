@@ -98,18 +98,6 @@ const zhCN = {
   'home.moreLiked': '已喜欢',
   'home.moreLikeThanks': '谢谢喜欢',
   'home.moreLikeAlready': '今天已经赞过啦',
-  'home.moreSubscribeTitle': '订阅方式',
-  'home.moreSubscribeRss': 'RSS 订阅',
-  'home.moreSubscribeRssHint': '收进阅读器，不经过邮箱',
-  'home.moreSubscribeNotify': '浏览器通知',
-  'home.moreSubscribeNotifyHint': '有新内容时在系统通知里提醒，只在你点开这个开关后才会申请权限',
-  'home.moreNotifyOn': '已开启',
-  'home.moreNotifyOff': '未开启',
-  'home.moreNotifyBlocked': '浏览器已阻止',
-  'home.moreNotifyUnsupported': '浏览器不支持',
-  'home.moreNotifyEnabled': '已开启浏览器通知',
-  'home.moreNotifyDisabled': '已关闭浏览器通知',
-  'home.moreNotifyDenied': '浏览器拒绝了通知权限，需要到站点设置里手动允许',
 
   // ── 文章列表 ───────────────────────────────────────────────────
   'articles.title': '文章',
@@ -441,6 +429,9 @@ const zhCN = {
   'subscribe.notifyOff': '未开启',
   'subscribe.notifyBlocked': '浏览器已阻止',
   'subscribe.notifyUnsupported': '浏览器不支持',
+  'subscribe.notifyEnabled': '已开启浏览器通知',
+  'subscribe.notifyDisabled': '已关闭浏览器通知',
+  'subscribe.notifyDenied': '浏览器拒绝了通知权限，需要到站点设置里手动允许',
 
   // ── 实时更新 / AI / 打赏 ──────────────────────────────────────
   'live.updated': '文章已更新',
@@ -583,19 +574,6 @@ const en: Record<MessageKey, string> = {
   'home.moreLiked': 'Liked',
   'home.moreLikeThanks': 'Thanks for the love',
   'home.moreLikeAlready': 'Already liked today',
-  'home.moreSubscribeTitle': 'Subscribe',
-  'home.moreSubscribeRss': 'RSS feed',
-  'home.moreSubscribeRssHint': 'Read in your feed reader, no email needed',
-  'home.moreSubscribeNotify': 'Browser notifications',
-  'home.moreSubscribeNotifyHint':
-    'Get a system notification for new posts — permission is only requested after you flip this on',
-  'home.moreNotifyOn': 'On',
-  'home.moreNotifyOff': 'Off',
-  'home.moreNotifyBlocked': 'Blocked by browser',
-  'home.moreNotifyUnsupported': 'Not supported',
-  'home.moreNotifyEnabled': 'Browser notifications turned on',
-  'home.moreNotifyDisabled': 'Browser notifications turned off',
-  'home.moreNotifyDenied': 'Permission was denied — allow it in your browser site settings',
 
   'articles.title': 'Articles',
   'articles.kicker': 'Articles',
@@ -923,6 +901,9 @@ const en: Record<MessageKey, string> = {
   'subscribe.notifyOff': 'Off',
   'subscribe.notifyBlocked': 'Blocked by browser',
   'subscribe.notifyUnsupported': 'Not supported',
+  'subscribe.notifyEnabled': 'Browser notifications turned on',
+  'subscribe.notifyDisabled': 'Browser notifications turned off',
+  'subscribe.notifyDenied': 'Permission was denied — allow it in your browser site settings',
 
   'live.updated': 'Article updated',
   'live.updatedHint': 'Body and table of contents are now up to date',

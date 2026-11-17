@@ -99,6 +99,15 @@ describe('首页更多：入口渲染', () => {
 })
 
 describe('首页更多：订阅入口', () => {
+  it('点击之前不渲染 dialog', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
+
+    // 关闭态必须是「没有节点」，不是「有节点但藏起来」
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('订阅按钮存在，点击后打开弹窗', () => {
     render(
       <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
@@ -112,6 +121,47 @@ describe('首页更多：订阅入口', () => {
     // 弹窗打开后应该有模态 dialog
     const dialog = screen.getByRole('dialog')
     expect(dialog).toBeTruthy()
+    expect(dialog.getAttribute('aria-modal')).toBe('true')
+  })
+
+  it('Escape 关闭首页入口打开的弹窗', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('subscribeOptions 的邮件类型与频道被完整传进弹窗', () => {
+    render(
+      <HomeMore
+        items={[SUBSCRIBE]}
+        siteLikeCount={null}
+        subscribeOptions={{
+          enabled: true,
+          types: ['post_c'],
+          channels: [
+            {
+              id: 'channel:0',
+              title: 'Telegram 频道',
+              url: 'https://t.me/folio_demo',
+              icon: { type: 'builtin', name: 'telegram' },
+              color: null,
+            },
+          ],
+        }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+
+    // 只有 post_c → 只出现「新文章」一个勾选项，没有「新日记」
+    expect(screen.getByText('新文章')).toBeTruthy()
+    expect(screen.queryByText('新日记')).toBeNull()
+    expect(screen.getByRole('link', { name: /Telegram 频道/ })).toBeTruthy()
   })
 
   it('弹窗内有 RSS 链接', () => {

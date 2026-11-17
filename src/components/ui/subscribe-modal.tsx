@@ -229,7 +229,7 @@ function NotifySection({ locale }: { locale: Locale }) {
     if (state === 'on') {
       systemNotifications.disable()
       setState('off')
-      notify({ level: 'info', title: t(locale, 'home.moreNotifyDisabled') })
+      notify({ level: 'info', title: t(locale, 'subscribe.notifyDisabled') })
       return
     }
 
@@ -237,15 +237,15 @@ function NotifySection({ locale }: { locale: Locale }) {
     setState(next)
 
     if (next === 'on') {
-      notify({ level: 'success', title: t(locale, 'home.moreNotifyEnabled') })
+      notify({ level: 'success', title: t(locale, 'subscribe.notifyEnabled') })
     } else if (next === 'blocked') {
       notify({
         level: 'warning',
-        title: t(locale, 'home.moreNotifyDenied'),
+        title: t(locale, 'subscribe.notifyDenied'),
         durationMs: 0,
       })
     } else if (next === 'unsupported') {
-      notify({ level: 'info', title: t(locale, 'home.moreNotifyUnsupported') })
+      notify({ level: 'info', title: t(locale, 'subscribe.notifyUnsupported') })
     }
   }
 

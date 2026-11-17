@@ -62,21 +62,23 @@ describe('SubscribePanel 三种订阅方式', () => {
     expect(screen.getByText('RSS 订阅')).toBeTruthy()
   })
 
-  it('邮件订阅不可用、只剩频道时，弹窗仍然打开', async () => {
+  it('邮件订阅不可用、只剩频道时，弹窗仍然打开且焦点在面板上', async () => {
     const dialog = openModal({ types: [], channels: CHANNELS })
 
     expect(screen.queryByLabelText('邮箱地址')).toBeNull()
     expect(screen.getByRole('link', { name: /Telegram 频道/ })).toBeTruthy()
-    // 焦点在 Dialog 面板上（tabIndex=-1 的 panel 获得焦点）
-    await waitFor(() => expect(document.activeElement?.closest('[role="dialog"]')).toBe(dialog))
+    // 精确断言焦点落点，不用「只要在 dialog 里」的宽松写法
+    await waitFor(() => expect(document.activeElement).toBe(dialog))
   })
 })
 
 describe('SubscribePanel 邮件订阅', () => {
-  it('展开后焦点进入弹窗', async () => {
-    openModal()
-    // Dialog 组件会把焦点交给面板本身（tabIndex=-1）
-    await waitFor(() => expect(document.activeElement?.closest('[role="dialog"]')).toBeTruthy())
+  it('展开后焦点落在弹窗面板上', async () => {
+    const dialog = openModal()
+    // 焦点策略见 subscribe-modal.test.tsx：多入口弹窗聚焦面板，
+    // 读屏先播报标题与导语，而不是直接跳到第一个输入框。
+    await waitFor(() => expect(document.activeElement).toBe(dialog))
+    expect((document.activeElement as HTMLElement).tabIndex).toBe(-1)
   })
 
   it('邮箱输入保留原生 email 校验，同时关掉自动填充提示', () => {
