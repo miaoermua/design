@@ -36,6 +36,32 @@
   }
 }
 
+/* Hero 逐字上浮动画：每个字符从 10px 下方 + 透明 → 正常位置 */
+@keyframes char-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hero 整块上浮动画：比 rise-in 位移更大，用于 description / socials / avatar */
+@keyframes block-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .motion-fade-in {
   animation: fade-in var(--duration-slow) var(--ease-out-soft) both;
 }
@@ -56,6 +82,24 @@
   animation-delay: calc(var(--duration-fast) + var(--duration-fast));
 }
 
+/* ── Hero char-by-char animation ────────────────────────────── */
+
+.hero-char {
+  display: inline-block;
+  white-space: pre;
+  opacity: 0;
+  animation: char-rise 0.4s var(--ease-out-soft) both;
+  /* --char-index 由内联 style 注入，实现逐字错峰 */
+  animation-delay: calc(var(--char-index, 0) * 50ms);
+}
+
+.hero-block-rise {
+  opacity: 0;
+  animation: block-rise 0.6s var(--ease-out-soft) both;
+  /* --block-delay 由内联 style 注入 */
+  animation-delay: var(--block-delay, 0ms);
+}
+
 .page-enter {
   animation: rise-in var(--duration-base) var(--ease-out-soft) both;
 }
@@ -64,7 +108,10 @@
   .motion-fade-in,
   .motion-rise-in,
   .motion-panel-in,
-  .page-enter {
+  .page-enter,
+  .hero-char,
+  .hero-block-rise {
     animation: none;
+    opacity: 1;
   }
 }

@@ -38,7 +38,7 @@ export function BackToTop({ label, className }: BackToTopProps) {
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
-        className="size-[0.95rem]"
+        className="size-[0.875rem]"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"

@@ -84,6 +84,15 @@ export const HOME_MORE_ITEM_MAX = 12
 /** 首页更多入口标题长度上限 */
 export const HOME_MORE_TITLE_MAX = 32
 
+/** Hero 标题模板元素条数上限：24 个元素足够「多行标题 + 换行 + 副标题」的常见组合 */
+export const HERO_TEMPLATE_MAX = 24
+/** Hero 标题模板单个元素的文字长度上限 */
+export const HERO_TEMPLATE_TEXT_MAX = 128
+/** Hero 标题模板单个元素的 class 长度上限（Tailwind 类名串） */
+export const HERO_TEMPLATE_CLASS_MAX = 256
+/** Hero 描述文字长度上限 */
+export const HERO_DESCRIPTION_MAX = 256
+
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   footer: {
     since: null,
@@ -111,6 +120,9 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
         { title: '订阅', type: 'subscribe', url: null, icon: null, color: null },
       ],
     },
+    // Hero 默认 null：不配置时保持经典横排 Personal Brand 区块，
+    // 只有显式配置了 hero 才切换到整屏居中布局。
+    hero: null,
   },
   donate: {
     enabled: false,

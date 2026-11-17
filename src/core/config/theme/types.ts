@@ -126,12 +126,55 @@ export interface ThemeHomepageSection {
   limit: number
 }
 
+/**
+ * Hero 标题模板中的单个元素。
+ *
+ * 兼容 Shiro 的 `config.hero.title.template` 格式：
+ * 每个元素有 type（渲染成对应 HTML 标签）、text（文字内容）、class（样式类名）。
+ *
+ * type 只接受安全的内联/块级标签：h1 / h2 / span / code / br。
+ * 不接受 script / style / iframe 等危险标签——这是配置注入面。
+ */
+export interface ThemeHeroTitleElement {
+  /** 渲染成对应的 HTML 标签 */
+  type: 'h1' | 'h2' | 'span' | 'code' | 'br'
+  /** 文字内容；br 类型时为 null */
+  text: string | null
+  /** CSS 类名（Tailwind 或自定义）；null 表示不附加额外样式 */
+  class: string | null
+}
+
+export interface ThemeHeroTitle {
+  template: ThemeHeroTitleElement[]
+}
+
+/**
+ * Hero 配置。
+ *
+ * 兼容 Shiro 的 `config.hero` 格式。配置存在时首页使用整屏居中 Hero 布局，
+ * 不配置时保持 Folio 经典的横排 Personal Brand 区块——两种布局对读者的感受
+ * 完全不同，不能在不知情的情况下切换，所以默认值是 null 而不是空对象。
+ */
+export interface ThemeHero {
+  title: ThemeHeroTitle
+  /** 简介文字，显示在标题下方 */
+  description: string | null
+}
+
 export interface ThemeHomepage {
   profile: ThemeHomepageSection
   articles: ThemeHomepageSection
   notes: ThemeHomepageSection
   /** 首页日记区块下方的「更多」入口行；不配置时默认展示点赞和订阅 */
   more: ThemeHomepageMore
+  /**
+   * Hero 区块配置。
+   *
+   * 兼容 Shiro 的 `config.hero` 格式：配置了就渲染整屏居中 Hero，
+   * 不配置（null）就保持 Folio 经典的横排 Personal Brand 区块。
+   * 两种布局共存在同一个首页组件里，由这个字段决定走哪条路。
+   */
+  hero: ThemeHero | null
 }
 
 /**

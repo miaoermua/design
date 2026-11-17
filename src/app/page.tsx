@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
-import { CoverImage } from '@/components/ui/cover-image'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
-import { SocialIcon } from '@/components/ui/social-icon'
+import { HeroSection } from '@/components/home/hero'
 import { HomeMore } from '@/components/home/home-more'
 import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
@@ -42,7 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
  *   Personal Brand → Latest Blogs → Latest Notes → Footer
  *
  * 每一段都只回答一个问题：「这是谁」「最近写了什么」「最近在想什么」。
- * 刻意不做的事情：没有整屏 Hero、没有首篇「头条」大卡片、没有封面图强制位、
+ *
+ * Personal Brand 区块有两种布局，由 theme config 的 `homepage.hero` 决定：
+ *   - 不配置（默认）：经典横排「头像 + 文字」，刻意不做整屏 Hero
+ *   - 配置了 hero：兼容 Shiro 的 `config.hero` 格式，整屏居中模板化标题
+ *
+ * 刻意不做的事情：没有首篇「头条」大卡片、没有封面图强制位、
  * 没有把所有内容都堆在首页——归档、标签、页面各有自己的入口。
  */
 export default async function HomePage() {
@@ -114,71 +118,30 @@ export default async function HomePage() {
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
       {showProfile ? (
-        <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.5)] pb-[var(--spacing-stack)]">
-          <div className="flex items-start gap-5 sm:gap-7">
-            {owner?.avatar ? (
-              <CoverImage
-                src={owner.avatar}
-                alt={name}
-                width={88}
-                height={88}
-                priority
-                // 圆形头像，尺寸克制：它是身份的一部分，不是首屏主视觉
-                className="size-16 shrink-0 rounded-full border border-[var(--edge)] sm:size-[5.5rem]"
-              />
-            ) : null}
-
-            <div className="min-w-0 flex-1">
-              {/* 作者名是首页最大的字：它是这个空间的身份标识，
-                用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
-              <h1 className="text-display max-w-[22ch] font-serif text-balance text-[var(--text-heading)]">
-                {name}
-              </h1>
-              {(owner?.introduce ?? identity?.description) ? (
-                <p className="text-lead mt-2 max-w-[34rem] leading-[1.7] text-pretty text-[var(--text-secondary)]">
-                  {owner?.introduce ?? identity?.description}
-                </p>
-              ) : null}
-
-              {socials.length > 0 ? (
-                <ul className="mt-4 flex flex-wrap items-center gap-1.5">
-                  {socials.map((item) => (
-                    <li key={item.id}>
-                      <a
-                        href={item.url}
-                        rel="me noopener noreferrer"
-                        target={item.url.startsWith('mailto:') ? undefined : '_blank'}
-                        title={item.title}
-                        aria-label={item.title}
-                        // 品牌色作为前景色：图标行本身是安静的，
-                        // 用大块背景色会把这行变成按钮墙
-                        style={item.color ? { color: item.color } : undefined}
-                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
-                      >
-                        <SocialIcon icon={item.icon} className="size-[1.05rem]" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
-            {articles ? (
-              <Link href="/articles" className="link-quiet">
-                {tf(locale, 'home.countArticles', { count: articles.pagination.total })}
-              </Link>
-            ) : null}
-            {diaries ? (
-              <Link href="/diaries" className="link-quiet">
-                <span className={articles ? 'meta-sep' : undefined}>
-                  {tf(locale, 'home.countDiaries', { count: diaries.pagination.total })}
-                </span>
-              </Link>
-            ) : null}
-          </div>
-        </section>
+        <HeroSection
+          name={name}
+          avatar={owner?.avatar ?? null}
+          introduce={owner?.introduce ?? identity?.description ?? null}
+          socials={socials}
+          stats={{
+            articles: articles
+              ? {
+                  total: articles.pagination.total,
+                  href: '/articles',
+                  label: tf(locale, 'home.countArticles', { count: articles.pagination.total }),
+                }
+              : null,
+            diaries: diaries
+              ? {
+                  total: diaries.pagination.total,
+                  href: '/diaries',
+                  label: tf(locale, 'home.countDiaries', { count: diaries.pagination.total }),
+                }
+              : null,
+            showArticlesSep: !!articles,
+          }}
+          hero={theme.homepage.hero}
+        />
       ) : null}
 
       {/* ── Latest Blogs ───────────────────────────────────────── */}

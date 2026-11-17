@@ -8,6 +8,10 @@ import {
   FOOTER_LINK_MAX,
   FOOTER_LINK_TITLE_MAX,
   FOOTER_LINK_URL_MAX_LENGTH,
+  HERO_DESCRIPTION_MAX,
+  HERO_TEMPLATE_CLASS_MAX,
+  HERO_TEMPLATE_MAX,
+  HERO_TEMPLATE_TEXT_MAX,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
   HOME_MORE_ITEM_MAX,
@@ -22,6 +26,8 @@ import type {
   ThemeDonateQrcode,
   ThemeFooter,
   ThemeFooterLink,
+  ThemeHero,
+  ThemeHeroTitleElement,
   ThemeHomepage,
   ThemeHomepageMore,
   ThemeHomepageMoreItem,
@@ -202,6 +208,69 @@ function parseSocial(value: unknown): ThemeSocial {
   }
 }
 
+/* ── hero ───────────────────────────────────────────────────── */
+
+/**
+ * Hero 标题模板允许的 HTML 标签白名单。
+ *
+ * 只接受安全的内联/块级标签：script、style、iframe 等一概拒绝。
+ * br 是特殊的：没有 text，只起换行作用。
+ */
+const VALID_HERO_ELEMENT_TYPES = new Set(['h1', 'h2', 'span', 'code', 'br'])
+
+function parseHeroTitleElement(value: unknown): ThemeHeroTitleElement | null {
+  if (!isRecord(value)) return null
+
+  const rawType = typeof value.type === 'string' ? value.type.toLowerCase() : ''
+  if (!VALID_HERO_ELEMENT_TYPES.has(rawType)) return null
+
+  const type = rawType as ThemeHeroTitleElement['type']
+
+  // br 类型不需要 text 和 class
+  if (type === 'br') return { type, text: null, class: null }
+
+  const text = readString(value.text, HERO_TEMPLATE_TEXT_MAX)
+  // 非 br 元素必须有文字内容，空元素没有存在意义
+  if (!text) return null
+
+  const cls = readString(value.class, HERO_TEMPLATE_CLASS_MAX)
+
+  return { type, text, class: cls }
+}
+
+/**
+ * 解析 Hero 配置。
+ *
+ * 返回 null 表示不配置 Hero（使用经典布局）。
+ * 只有 `title.template` 至少有一个有效元素时才认为配置有效——
+ * 光有 description 没有标题的 Hero 没有意义。
+ */
+export function parseHero(value: unknown): ThemeHero | null {
+  if (!isRecord(value)) return null
+
+  const titleSource = record(value.title)
+  const rawTemplate = titleSource.template
+
+  if (!Array.isArray(rawTemplate)) return null
+
+  const template: ThemeHeroTitleElement[] = []
+  for (const raw of rawTemplate) {
+    if (template.length >= HERO_TEMPLATE_MAX) break
+    const element = parseHeroTitleElement(raw)
+    if (element) template.push(element)
+  }
+
+  // 没有有效的标题元素，退化为经典布局
+  if (template.length === 0) return null
+
+  const description = readString(value.description, HERO_DESCRIPTION_MAX)
+
+  return {
+    title: { template },
+    description,
+  }
+}
+
 /* ── homepage ───────────────────────────────────────────────── */
 
 function parseHomepageSection(
@@ -226,6 +295,7 @@ export function parseHomepage(value: unknown, fallback: ThemeHomepage): ThemeHom
     articles: parseHomepageSection(source.articles, fallback.articles),
     notes: parseHomepageSection(source.notes, fallback.notes),
     more: parseHomepageMore(source.more, fallback.more),
+    hero: parseHero(source.hero),
   }
 }
 

@@ -17,6 +17,7 @@ export { getThemeConfig, loadThemeConfig, type LoadedTheme } from './loader'
 export { fetchThemeSnippet, type ThemeFetchResult, type ThemeFetchStatus } from './repository'
 export {
   footerSinceYear,
+  parseHero,
   parseThemeConfig,
   parseFooter,
   parseHomepage,
@@ -45,6 +46,10 @@ export {
   FOOTER_LINK_MAX,
   FOOTER_LINK_TITLE_MAX,
   FOOTER_LINK_URL_MAX_LENGTH,
+  HERO_DESCRIPTION_MAX,
+  HERO_TEMPLATE_CLASS_MAX,
+  HERO_TEMPLATE_MAX,
+  HERO_TEMPLATE_TEXT_MAX,
   HOME_LIMIT_MAX,
   HOME_LIMIT_MIN,
   HOME_MORE_ITEM_MAX,
@@ -65,6 +70,9 @@ export type {
   ThemeDonateQrcode,
   ThemeFooter,
   ThemeFooterLink,
+  ThemeHero,
+  ThemeHeroTitleElement,
+  ThemeHeroTitle,
   ThemeHomepage,
   ThemeHomepageMore,
   ThemeHomepageMoreItem,
