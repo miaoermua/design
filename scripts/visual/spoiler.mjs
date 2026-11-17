@@ -21,11 +21,15 @@ import {
   settle,
   sleep,
 } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3021'
 const OUT_DIR = 'docs/audits/assets/phase-4d'
 const SHOT_DIR = join(OUT_DIR, 'screenshots')
 const ROUTE = '/visual-tests/markdown'
+
+// 样张里的五张 SVG 在运行时释放到临时目录，由 CDP 拦截提供（保证图片不破、版面不变）
+const fixtures = materializeFixtures()
 
 const RESULTS = []
 const SHOTS = []
@@ -235,6 +239,7 @@ async function main() {
   mkdirSync(SHOT_DIR, { recursive: true })
   const chrome = await launchChrome({ port: 9334 })
   const client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
   const viewport = { width: 1280, height: 800 }
 
   // ── A. 禁用 JavaScript ─────────────────────────────────────────
@@ -405,11 +410,13 @@ async function main() {
   const failed = RESULTS.filter((item) => item.status !== 'PASS')
   console.log(`\n${RESULTS.length} 项检查，非 PASS ${failed.length} 项`)
   client.close()
+  fixtures.dispose()
   await chrome.close()
   if (failed.length) process.exitCode = 0 // 结果写进 JSON，不在此处中断
 }
 
 main().catch((error) => {
+  fixtures.dispose()
   console.error(error)
   process.exitCode = 1
 })

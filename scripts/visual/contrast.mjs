@@ -13,9 +13,15 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { applyTheme, launchChrome, navigate, openPage, preparePage, sleep } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3021'
 const OUT_DIR = 'docs/audits/assets/phase-4d'
+
+// 样张页的图片靠拦截提供。实测这份脚本只量首屏元素，懒加载图根本不发请求
+// （拦截 0 命中）；仍然挂上，是为了以后测量点前移时不至于出现破图影响背景色。
+// 素材用完即删。
+const fixtures = materializeFixtures()
 
 /** 所有要抽查的元素，selector 会自动取第 n 个匹配 */
 const TARGETS = [
@@ -187,6 +193,7 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true })
   const chrome = await launchChrome({ port: 9337 })
   const client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
 
   const results = {}
   // 移动端导航只在 <640px 渲染，1280 视口那一轮看不到它，单独补一次 390 的测量。
@@ -281,10 +288,12 @@ async function main() {
   )
 
   client.close()
+  fixtures.dispose()
   await chrome.close()
 }
 
 main().catch((error) => {
+  fixtures.dispose()
   console.error(error)
   process.exitCode = 1
 })

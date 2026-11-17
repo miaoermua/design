@@ -30,10 +30,15 @@ import {
   settle,
   sleep,
 } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3021'
 const OUT_DIR = 'docs/audits/assets/phase-4d'
 const SHOT_DIR = join(OUT_DIR, 'screenshots')
+
+// 样张里的五张 SVG 在运行时释放到临时目录，由 CDP 拦截提供。
+// 放在模块顶层是为了让「脚本异常退出」也能靠 process 的 exit 钩子清理干净。
+const fixtures = materializeFixtures()
 
 const PAGES = [
   { key: 'home', route: '/', label: '首页' },
@@ -151,6 +156,7 @@ async function main() {
 
   const chrome = await launchChrome({ port: 9333 })
   const client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
   client.browserVersion = chrome.version
 
   const shots = []
@@ -307,10 +313,12 @@ async function main() {
   console.log(`\n共 ${shots.length} 张，manifest 已写入 ${OUT_DIR}/manifest.json`)
 
   client.close()
+  fixtures.dispose()
   await chrome.close()
 }
 
 main().catch(async (error) => {
+  fixtures.dispose()
   console.error(error)
   process.exitCode = 1
 })

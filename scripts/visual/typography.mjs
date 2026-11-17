@@ -17,10 +17,15 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { launchChrome, navigate, openPage, preparePage, screenshot, settle } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const OUT = join(process.env.TEMP ?? '.', 'folio-typography')
 mkdirSync(OUT, { recursive: true })
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3000'
+
+// 样张页的图片在运行时释放并由 CDP 拦截提供。实测不滚动视口，懒加载图不发请求
+// （拦截 0 命中）；保留是为了以后加「滚到底再量」的检查时不出现破图。
+const fixtures = materializeFixtures()
 
 const VIEWPORTS = [
   { name: 'desktop-1440', width: 1440, height: 900 },
@@ -35,6 +40,7 @@ const notes = {}
 
 const chrome = await launchChrome({ port: 9481 })
 const client = await openPage(chrome.port)
+await attachFixtureInterception(client, fixtures)
 
 /** 量一个元素的实际排版参数 */
 const measure = (selector) => `(() => {
@@ -204,6 +210,7 @@ try {
   writeFileSync(join(OUT, 'phone-390-mixed.png'), await screenshot(client))
 } finally {
   await chrome.close()
+  fixtures.dispose()
 }
 
 writeFileSync(join(OUT, 'report.json'), JSON.stringify({ notes, problems }, null, 2))
