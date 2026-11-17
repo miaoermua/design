@@ -18,12 +18,17 @@
     color var(--duration-fast) var(--ease-out-soft);
 }
 
-/* 平台前缀：等宽小字，作为「这是哪个平台的账号」的视觉标记 */
+/* 平台前缀：等宽小字，作为「这是哪个平台的账号」的视觉标记。
+ *
+ * 字号是 0.71em 而不是 0.7em：正文 17px 下 0.7em = 11.9px，跌破了项目
+ * 自己定的 12px 下限（§14.7）。0.71em = 12.07px，视觉差 0.17px 不可辨，
+ * 但让「全站信息文字不少于 12px」这条规则成立。
+ * 不用 aria-hidden 兜底：`::before` 是生成内容，挂不上 ARIA 属性。 */
 .prose .md-mention::before {
   content: 'GH';
   margin-right: 0.34em;
   font-family: var(--font-sans);
-  font-size: 0.7em;
+  font-size: 0.71em;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-secondary);

@@ -1694,16 +1694,9 @@ details[open] > .toc-summary .toc-chevron {
   color: var(--text-secondary);
 }
 
-/* 权限状态是这一行的副标题，不抢标题的注意力 */
-.home-more__notify-state {
-  margin-left: auto;
-  font-size: 0.95em;
-  color: var(--text-secondary);
-}
-
-.home-more__panel-row[aria-pressed='true'] .home-more__notify-state {
-  color: var(--accent-strong);
-}
+/* `.home-more__notify-state` 的两条规则已删除（2026-11-17）：
+   订阅面板迁成 SubscribeModal 后，TSX 里再无该类的生产者，
+   而它是 0.95em 的小字号，留在样式表里会被当成「真实豁免」登记。 */
 
 /* 屏幕阅读器专用 */
 .sr-only {

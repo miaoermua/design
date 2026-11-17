@@ -33,15 +33,15 @@
 >
 > **2026-11-16 文档与源码对齐（v0.2 合并前审计 T3）**：本轮只改文档与测试，**不动任何 Token 值、颜色、字号**。修掉六处会让"以本文为准"失效的错误：① §2 的「三层结构」改为**四层**（`@theme` / 语义别名 / 组件专属 `--nav-*`·`--note-*` / 材质 `--material-*`），并写清每层的消费权限——旧文把 `--material-*` 归进别名层、又规定"组件只消费第 2 层"，与 `--nav-*` 的实际消费自相矛盾；② §6 删掉三个**源码里已不存在**的 Token（`--container-prose` / `--container-diary` / `--spacing-gutter-lg`，它们被 `--measure-post` / `--measure-note` 与 `clamp()` 版 gutter 取代），补记 9 个从未进文档的布局 Token（`--measure-post|note|page|copy`、`--rail-toc|side`、`--shell-post|note|page`）与 `--gap-rail|side`、`--pad-paper-*`，并诚实标注 `--shell-page` **当前无消费者**；③ `--nav-blur` 的 §4.1 值 22/20 改为源码的 **14/12**（§7 本来就写 14/12，两处打架）；④ `--shadow-color` 的 34 40 38 改为 **43 40 48**；⑤ §5 仍把 `.nav-label` / `.nav-panel-link` 当现行类，实际早已由 `.nav-link` / `.nav-row` 取代，且 `.meta` 的行号引用已漂移 → 改为符号引用、不写行号；⑥ 断点表删掉不存在的 `--spacing-gutter-lg`、补上真实存在的 `md`（48rem，友链两列 + 导航双态起点）与 `69rem`（1104px 侧栏阈值），并把"没有 `md:` 使用"改成事实。另修：`--text-tertiary` 白名单 10 → **11 处**；「i18n 三语」→ **中英双语**（`LOCALES` 只有两种）；§9 的 `DiaryEntry` 描述从"多图 3 列缩略"改为**摘要 + 单张代表图**，`ArticleRow` 标题从"16→20px"改为实际的 `text-[1.625rem]`（26px，待 Token 化）；两条 2026-11-15 记录的先后按提交历史（`5856d6c` blur 14/alpha 85 → `291bfdd` alpha 82）**对调并注明这是一次往返**。§14.9 补 `nav-dual-state.test.tsx` 一行。配套修复：`tests/helpers/design-tokens.ts` 的路径分隔符与行尾归一（见 `.gitattributes`），此前 `design-color-system` 与 `markdown-css-contract` 的守卫在 Windows 上**恒不命中**。
 > **2026-11-16 第二/三组：体验与兼容性收敛**：① **正文图补宽高**（T4）：`renderMarkdown` 新增 `RenderOptions.imageSizes`，`imageSizeIndex()` 从 core 的附件元数据建 `src → 宽高` 索引，命中才输出 `width`/`height`（未命中一个属性都不加，不猜比例）；相册静态轨道与**客户端增强后的 `<img>`** 共用同一份索引（`media-enhancer` 从 DOM 属性回读，否则重建节点会丢掉尺寸）。实测最长日记 CLS 从 **0.9244 → 0**，尺寸覆盖 471/475。② **打印样式**（T5，新增 `print.css`）与 **系统高对比度**（T13，新增 `forced-colors.css`），见 §7.2。③ **`--text-rowtitle` 新档位**（T7）：文章列表行标题过去写成 `text-[1.625rem]`，实为缺一档；固定 26px（不能用 clamp 的 `--text-title`，桌面会爬到 32–34px）。④ `--shell-page` 从「零消费者」改为真实使用（`/about` 的 `max-w`），并写明 **1104px = 65rem + 双侧 gutter**。⑤ `--text-tertiary` 白名单唯一承载可读文字的那条（分页禁用项）补上了真正的判定依据。
->
+
 ---
 
 ## 1. 设计语言
 
-| 层次                       | 占比 | 承担什么                         | 材质                        |
-| -------------------------- | ---- | -------------------------------- | --------------------------- |
-| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光    |
-| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）                |
+| 层次                       | 占比 | 承担什么                         | 材质                          |
+| -------------------------- | ---- | -------------------------------- | ----------------------------- |
+| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光      |
+| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）                  |
 | 冰面 Frosted Glass         | 10%  | 导航条、工具浮标、浮层           | 半透明纸色玻璃 + 14–24px 模糊 |
 
 三条不可越界：
@@ -101,36 +101,36 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ### 3.1 亮色（默认，`:root`）
 
-| 角色       | Token                     | 值        | 用途                                                                                                                                                                                          |
-| ---------- | ------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 页面底     | `--color-paper`           | `#fbfaf7` | `body`、`--surface`。`L* 98.3` / `b* +1.5`（v1 是 94.8 / +4.7 的牛皮米黄）                                                                                                                     |
-| 抬升面     | `--color-paper-raised`    | `#fdfcf9` | 卡片、浮层、`--reading-surface` 基色                                                                                                                                                          |
-| 最高面     | `--color-paper-lift`      | `#ffffff` | 内缘高光、玻璃 rim                                                                                                                                                                            |
-| 下沉面     | `--color-paper-sunk`      | `#f3f1ea` | 代码块底、空状态、`--code-surface`                                                                                                                                                            |
-| 更深       | `--color-paper-deep`      | `#e7e4da` | 亮色下**没有组件消费者**；暗色值仍被暗色 `--material-ambient` 消费，是真实使用中的环境光基色。**不得因为亮色零消费者而删除**（`design-color-system.test.ts` 有反向守护，见 §14.8）                 |
-| 冰         | `--color-frost`           | `#e2e8f1` | 经 `--edge-frost` 服务阅读纸面外框与 `.glass-panel` 边框                                                                                                                                      |
-| 正文       | `--color-ink`             | `#4a4a45` | 段落。纸面 8.54                                                                                                                                                                               |
-| 强正文     | `--color-ink-soft`        | `#35352f` | 强调段、`strong`。纸面 11.82                                                                                                                                                                  |
-| 次级       | `--color-ink-muted`       | `#6b6b64` | 一切**需要读**的文字（含 12px meta）；在 paper/raised/lift/sunk/reading/wash 上均 ≥4.5:1（最差 wash 4.73）                                                                                    |
-| 装饰       | `--color-ink-faint`       | `#85857d` | **装饰专用**：图标、分隔点、图表线、未激活控件（非文本 ≥3:1，最差 wash 3.28）。**禁止用作正文或 meta**（§11）                                                                                 |
-| 标题       | `--color-heading`         | `#2c2a26` | h1–h6、卡片标题。**中性深灰**（v1 是青绿 `#344f58`）                                                                                                                                          |
-| 边界       | `--color-line`            | `#e0dcd1` | 1px 分隔                                                                                                                                                                                      |
-| 强边界     | `--color-line-strong`     | `#cec9bc` | 虚线分隔、引用左边线                                                                                                                                                                          |
-| 主题色     | `--color-accent`          | `#586fa8` | 装饰与交互**边界**：焦点环、进度条、细线、指示点、下划线、按钮填充（非文本 ≥3:1，最差 wash 4.35）。**禁止用作文字色**（§3.3）                                                                  |
-| 主题浅     | `--color-accent-soft`     | `#8296c8` | 下划线装饰、图表描边、导航光斑                                                                                                                                                                |
-| 主题深     | `--color-accent-strong`   | `#465b91` | **唯一可用于文字的强调色**；全表面 ≥4.5:1（最差 wash 5.85）                                                                                                                                   |
-| 主题洗     | `--color-accent-wash`     | `#eef0fc` | 选中底、标签底、`::selection`                                                                                                                                                                 |
-| 主题线     | `--color-accent-line`     | `#bbc8e9` | kicker 前短横线、引线                                                                                                                                                                         |
-| 主题按     | `--color-accent-active`   | `#394b7c` | 按下态预留：比 `accent` 再深一档（`L* 33`）。**当前无别名、无消费者** —— 现有代码没有任何 `:active` 颜色规则，调色板层不受死 Token 检查约束，先留值以免将来加 pressed 态时再调色            |
-| 危险       | `--color-danger`          | `#a4503f` | 状态色，**组件必须经 `--state-danger` 消费**；Callout / Banner / ErrorState                                                                                                                   |
-| 警告       | `--color-warning`         | `#7d5f28` | 经 `--state-warning` 消费；比 4D 基线深一档，保证 8% 底纹上标题 ≥4.5:1                                                                                                                        |
-| 成功       | `--color-success`         | `#4a6b52` | 经 `--state-success` 消费；Callout / Banner / Ins / diff / 状态胶囊                                                                                                                           |
-| 信息       | `--color-info`            | `#4a6a7c` | 经 `--state-info` 消费；Callout / Banner / Toaster                                                                                                                                            |
-| 便签鼠尾草 | `--color-note-sage`       | `#d8ddca` | Tags 索引签纸色（§14.12）                                                                                                                                                                     |
-| 便签灰蓝   | `--color-note-blue`       | `#d2dde2` | 同上                                                                                                                                                                                          |
-| 便签陶土   | `--color-note-clay`       | `#e6d2c6` | 同上                                                                                                                                                                                          |
-| 便签麦芽   | `--color-note-ochre`      | `#e7dbbc` | 同上                                                                                                                                                                                          |
-| 便签米色   | `--color-note-cream`      | `#efe6d3` | 同上                                                                                                                                                                                          |
+| 角色       | Token                   | 值        | 用途                                                                                                                                                                               |
+| ---------- | ----------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 页面底     | `--color-paper`         | `#fbfaf7` | `body`、`--surface`。`L* 98.3` / `b* +1.5`（v1 是 94.8 / +4.7 的牛皮米黄）                                                                                                         |
+| 抬升面     | `--color-paper-raised`  | `#fdfcf9` | 卡片、浮层、`--reading-surface` 基色                                                                                                                                               |
+| 最高面     | `--color-paper-lift`    | `#ffffff` | 内缘高光、玻璃 rim                                                                                                                                                                 |
+| 下沉面     | `--color-paper-sunk`    | `#f3f1ea` | 代码块底、空状态、`--code-surface`                                                                                                                                                 |
+| 更深       | `--color-paper-deep`    | `#e7e4da` | 亮色下**没有组件消费者**；暗色值仍被暗色 `--material-ambient` 消费，是真实使用中的环境光基色。**不得因为亮色零消费者而删除**（`design-color-system.test.ts` 有反向守护，见 §14.8） |
+| 冰         | `--color-frost`         | `#e2e8f1` | 经 `--edge-frost` 服务阅读纸面外框与 `.glass-panel` 边框                                                                                                                           |
+| 正文       | `--color-ink`           | `#4a4a45` | 段落。纸面 8.54                                                                                                                                                                    |
+| 强正文     | `--color-ink-soft`      | `#35352f` | 强调段、`strong`。纸面 11.82                                                                                                                                                       |
+| 次级       | `--color-ink-muted`     | `#6b6b64` | 一切**需要读**的文字（含 12px meta）；在 paper/raised/lift/sunk/reading/wash 上均 ≥4.5:1（最差 wash 4.73）                                                                         |
+| 装饰       | `--color-ink-faint`     | `#85857d` | **装饰专用**：图标、分隔点、图表线、未激活控件（非文本 ≥3:1，最差 wash 3.28）。**禁止用作正文或 meta**（§11）                                                                      |
+| 标题       | `--color-heading`       | `#2c2a26` | h1–h6、卡片标题。**中性深灰**（v1 是青绿 `#344f58`）                                                                                                                               |
+| 边界       | `--color-line`          | `#e0dcd1` | 1px 分隔                                                                                                                                                                           |
+| 强边界     | `--color-line-strong`   | `#cec9bc` | 虚线分隔、引用左边线                                                                                                                                                               |
+| 主题色     | `--color-accent`        | `#586fa8` | 装饰与交互**边界**：焦点环、进度条、细线、指示点、下划线、按钮填充（非文本 ≥3:1，最差 wash 4.35）。**禁止用作文字色**（§3.3）                                                      |
+| 主题浅     | `--color-accent-soft`   | `#8296c8` | 下划线装饰、图表描边、导航光斑                                                                                                                                                     |
+| 主题深     | `--color-accent-strong` | `#465b91` | **唯一可用于文字的强调色**；全表面 ≥4.5:1（最差 wash 5.85）                                                                                                                        |
+| 主题洗     | `--color-accent-wash`   | `#eef0fc` | 选中底、标签底、`::selection`                                                                                                                                                      |
+| 主题线     | `--color-accent-line`   | `#bbc8e9` | kicker 前短横线、引线                                                                                                                                                              |
+| 主题按     | `--color-accent-active` | `#394b7c` | 按下态预留：比 `accent` 再深一档（`L* 33`）。**当前无别名、无消费者** —— 现有代码没有任何 `:active` 颜色规则，调色板层不受死 Token 检查约束，先留值以免将来加 pressed 态时再调色   |
+| 危险       | `--color-danger`        | `#a4503f` | 状态色，**组件必须经 `--state-danger` 消费**；Callout / Banner / ErrorState                                                                                                        |
+| 警告       | `--color-warning`       | `#7d5f28` | 经 `--state-warning` 消费；比 4D 基线深一档，保证 8% 底纹上标题 ≥4.5:1                                                                                                             |
+| 成功       | `--color-success`       | `#4a6b52` | 经 `--state-success` 消费；Callout / Banner / Ins / diff / 状态胶囊                                                                                                                |
+| 信息       | `--color-info`          | `#4a6a7c` | 经 `--state-info` 消费；Callout / Banner / Toaster                                                                                                                                 |
+| 便签鼠尾草 | `--color-note-sage`     | `#d8ddca` | Tags 索引签纸色（§14.12）                                                                                                                                                          |
+| 便签灰蓝   | `--color-note-blue`     | `#d2dde2` | 同上                                                                                                                                                                               |
+| 便签陶土   | `--color-note-clay`     | `#e6d2c6` | 同上                                                                                                                                                                               |
+| 便签麦芽   | `--color-note-ochre`    | `#e7dbbc` | 同上                                                                                                                                                                               |
+| 便签米色   | `--color-note-cream`    | `#efe6d3` | 同上                                                                                                                                                                               |
 
 ### 3.2 暗色（`[data-theme='dark']`，夜间纸墨，不是反色）
 
@@ -147,7 +147,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | 标题     | `#e4e1e8`                | 中性微紫白，不再带纸墨青调                                 |
 | 次级     | `#a4a0aa`                | AA，最差 wash 5.50                                         |
 | 装饰     | `#85818a`                | 装饰专用；最差 wash 3.70（≥3:1），语义规则两套主题一致     |
-| 主题色   | `#a8b8e4` / 深 `#8fa2d5` | 提亮以保证暗底 ≥4.5:1；`accent-strong` 是最差面 6.14        |
+| 主题色   | `#a8b8e4` / 深 `#8fa2d5` | 提亮以保证暗底 ≥4.5:1；`accent-strong` 是最差面 6.14       |
 | 阴影基色 | `0 0 0`                  | 暗色下阴影必须纯黑                                         |
 
 > **下沉面 / 更深 是本轮唯一没有照移植表取值的一对，不要"修正"回去。** 移植表给的是 `#2e2b32` / `#39353e`（比 `paper` 更亮，一套"越高越亮"的 Material 阶梯），但这两个 Token 在本仓库各有硬消费者，按表取值会产生两处可见回归：① `--code-surface` 等于 `paper-sunk`，代码块会比页面还亮、且亮过浮层；② 暗色 `--material-ambient` 用 `paper-deep` 画右下角环境光，角上会**发光**而不是压暗。因此保留移植表的色相与彩度，只把明度方向按角色收回。
@@ -158,22 +158,22 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ### 3.3 颜色职责总览（先看这张表，再看具体值）
 
-| 分类          | Token                                                                           | 设计职责                                                              | 允许的使用场景                                                          | 禁止的使用场景                                                        | 亮/暗主题要求                                                                |
-| ------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 核心 · 纸     | `--surface` / `--surface-raised` / `--surface-lift` / `--surface-sunk`          | 五级纸张层级：页面底 → 卡片 → 最高光 → 下沉 → 深层                    | body、卡片、浮层、代码块、骨架                                          | 不用于文字；`--color-paper-deep` 亮色不铺面                           | 亮色保持暖纸明暗层次；暗色保持低亮度，层级识别交给 `--edge*` 与阴影（§14.3） |
-| 核心 · 纸     | `--reading-surface` / `--code-surface`                                          | 派生表面：阅读纸面（亮色=纯白，暗色=oklab 94/6 混合）/ 代码底          | 文章详情、代码块、搜索输入                                              | 不另造第四套底色                                                      | 两套主题配方不同：亮色页纸已到 L\* 98.3，raised 撑不出层次；暗色取 lift 会过亮 |
-| 核心 · 墨     | `--text-primary` / `--text-strong` / `--text-heading`                           | 正文、强调段、标题                                                    | 一切正文与标题                                                          | 不用于装饰线                                                          | 亮暗都 ≥4.5:1（暗色正文 ≥7:1）                                               |
-| 核心 · 墨     | `--text-secondary`                                                              | **唯一可用于 12px meta 的次级文字色**                                 | 日期、说明、空态、页脚、kbd、placeholder、代码块行号/diff 头            | 五档便利贴纸、`paper-deep`、`frost` 上禁用（未达 4.5:1）              | 在 paper/raised/lift/sunk/reading/wash 上 ≥4.5:1，亮色最差 wash 4.73         |
-| 核心 · 墨     | `--text-tertiary`                                                               | **装饰色，不是更淡的灰**                                              | 图标、分隔点、图表连线、未激活控件                                      | 一切需要读的文字（尤其 12px）；`sunk` / `deep` / `frost` / 便利贴表面 | 非文本 ≥3:1；静态使用点由 `design-color-system.test.ts` 的装饰白名单逐项登记 |
-| 核心 · 强调   | `--accent`                                                                      | 装饰与交互边界、按钮填充                                              | 焦点环、1–2px 细线、进度条描边、指示点、下划线颜色、实心按钮底          | **文字色**（`color:` 与 `text-[...]`），有静态禁令                    | 非文本 ≥3:1；亮色最差 wash 4.35                                              |
-| 核心 · 强调   | `--accent-strong`                                                               | 需要读的强调文字                                                      | 链接、脚注角标、hover、mention、画廊箭头、导航焦点环                    | 大面积填充                                                            | 所有承载文字的表面 ≥4.5:1；亮色最差 wash 5.85                                |
-| 核心 · 强调   | `--accent-soft` / `--accent-line` / `--accent-wash` / `--accent-active`         | 柔和装饰 / 强调细线 / 选中与 hover 浅底 / 按下态                      | 下划线装饰、kicker 短横线、选中底、pressed 态                           | 正文与链接文字                                                        | 装饰色不套用文字门限；`accent-active` 是调色板预留（无别名、无消费者）       |
-| 语义 · 状态   | `--state-danger` / `--state-warning` / `--state-success` / `--state-info`       | 功能色唯一入口                                                        | Callout / Banner 的 tone 与 ink、Ins、diff、状态胶囊、Toaster、表单错误 | 品牌装饰；组件直接取 `--color-danger` 等                              | 亮暗各一套值，标题在 8% 底纹上 ≥4.5:1（亮色最差 4.83）                       |
-| 语义 · 边框   | `--edge` / `--edge-strong` / `--edge-frost`                                     | 1px 边界（普通 / 强 / 冰面）                                          | 分隔线、虚线、阅读纸面外框                                              | 文字                                                                  | 装饰性发丝边不套 3:1；需要识别边界的控件另按非文本门限                       |
-| 组件 · 便利贴 | `--note-sage` / `--note-blue` / `--note-clay` / `--note-ochre` / `--note-cream` | Tags 索引签的五种纸色                                                 | 只服务 `.tag-note__body` 与其 hover 混色                                | 普通正文、链接、按钮                                                  | 纸面上的文字只用 `--text-heading` / `--text-primary`（§11）                  |
-| 组件 · 导航   | `--nav-*`                                                                       | 悬浮导航的角色色（背景、边框、hover、active、文字、图标、焦点、光斑） | `.nav-card` / 菜单 / 工具按钮                                           | 全站其它组件                                                          | 亮暗各一套；`--nav-ink` 在玻璃上 ≥4.5:1                                      |
-| 材质          | `--material-*`                                                                  | 颗粒、环境光、浮层顶缘高光（rim）                                     | `material.css`                                                          | 组件直接拿来当文字色                                                  | 玻璃 tint / alpha / blur / saturate 已随 `.glass-control` 删除，不得复活     |
-| 焦点 / 阴影   | `--focus-ring*` / `--shadow-*`                                                  | 全站唯一焦点样式与投影基色                                            | 焦点环、投影                                                            | 文字与底色                                                            | 焦点环按非文本 ≥3:1；亮色基色 `43 40 48`（中性偏紫）                         |
+| 分类          | Token                                                                           | 设计职责                                                              | 允许的使用场景                                                          | 禁止的使用场景                                                        | 亮/暗主题要求                                                                  |
+| ------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 核心 · 纸     | `--surface` / `--surface-raised` / `--surface-lift` / `--surface-sunk`          | 五级纸张层级：页面底 → 卡片 → 最高光 → 下沉 → 深层                    | body、卡片、浮层、代码块、骨架                                          | 不用于文字；`--color-paper-deep` 亮色不铺面                           | 亮色保持暖纸明暗层次；暗色保持低亮度，层级识别交给 `--edge*` 与阴影（§14.3）   |
+| 核心 · 纸     | `--reading-surface` / `--code-surface`                                          | 派生表面：阅读纸面（亮色=纯白，暗色=oklab 94/6 混合）/ 代码底         | 文章详情、代码块、搜索输入                                              | 不另造第四套底色                                                      | 两套主题配方不同：亮色页纸已到 L\* 98.3，raised 撑不出层次；暗色取 lift 会过亮 |
+| 核心 · 墨     | `--text-primary` / `--text-strong` / `--text-heading`                           | 正文、强调段、标题                                                    | 一切正文与标题                                                          | 不用于装饰线                                                          | 亮暗都 ≥4.5:1（暗色正文 ≥7:1）                                                 |
+| 核心 · 墨     | `--text-secondary`                                                              | **唯一可用于 12px meta 的次级文字色**                                 | 日期、说明、空态、页脚、kbd、placeholder、代码块行号/diff 头            | 五档便利贴纸、`paper-deep`、`frost` 上禁用（未达 4.5:1）              | 在 paper/raised/lift/sunk/reading/wash 上 ≥4.5:1，亮色最差 wash 4.73           |
+| 核心 · 墨     | `--text-tertiary`                                                               | **装饰色，不是更淡的灰**                                              | 图标、分隔点、图表连线、未激活控件                                      | 一切需要读的文字（尤其 12px）；`sunk` / `deep` / `frost` / 便利贴表面 | 非文本 ≥3:1；静态使用点由 `design-color-system.test.ts` 的装饰白名单逐项登记   |
+| 核心 · 强调   | `--accent`                                                                      | 装饰与交互边界、按钮填充                                              | 焦点环、1–2px 细线、进度条描边、指示点、下划线颜色、实心按钮底          | **文字色**（`color:` 与 `text-[...]`），有静态禁令                    | 非文本 ≥3:1；亮色最差 wash 4.35                                                |
+| 核心 · 强调   | `--accent-strong`                                                               | 需要读的强调文字                                                      | 链接、脚注角标、hover、mention、画廊箭头、导航焦点环                    | 大面积填充                                                            | 所有承载文字的表面 ≥4.5:1；亮色最差 wash 5.85                                  |
+| 核心 · 强调   | `--accent-soft` / `--accent-line` / `--accent-wash` / `--accent-active`         | 柔和装饰 / 强调细线 / 选中与 hover 浅底 / 按下态                      | 下划线装饰、kicker 短横线、选中底、pressed 态                           | 正文与链接文字                                                        | 装饰色不套用文字门限；`accent-active` 是调色板预留（无别名、无消费者）         |
+| 语义 · 状态   | `--state-danger` / `--state-warning` / `--state-success` / `--state-info`       | 功能色唯一入口                                                        | Callout / Banner 的 tone 与 ink、Ins、diff、状态胶囊、Toaster、表单错误 | 品牌装饰；组件直接取 `--color-danger` 等                              | 亮暗各一套值，标题在 8% 底纹上 ≥4.5:1（亮色最差 4.83）                         |
+| 语义 · 边框   | `--edge` / `--edge-strong` / `--edge-frost`                                     | 1px 边界（普通 / 强 / 冰面）                                          | 分隔线、虚线、阅读纸面外框                                              | 文字                                                                  | 装饰性发丝边不套 3:1；需要识别边界的控件另按非文本门限                         |
+| 组件 · 便利贴 | `--note-sage` / `--note-blue` / `--note-clay` / `--note-ochre` / `--note-cream` | Tags 索引签的五种纸色                                                 | 只服务 `.tag-note__body` 与其 hover 混色                                | 普通正文、链接、按钮                                                  | 纸面上的文字只用 `--text-heading` / `--text-primary`（§11）                    |
+| 组件 · 导航   | `--nav-*`                                                                       | 悬浮导航的角色色（背景、边框、hover、active、文字、图标、焦点、光斑） | `.nav-card` / 菜单 / 工具按钮                                           | 全站其它组件                                                          | 亮暗各一套；`--nav-ink` 在玻璃上 ≥4.5:1                                        |
+| 材质          | `--material-*`                                                                  | 颗粒、环境光、浮层顶缘高光（rim）                                     | `material.css`                                                          | 组件直接拿来当文字色                                                  | 玻璃 tint / alpha / blur / saturate 已随 `.glass-control` 删除，不得复活       |
+| 焦点 / 阴影   | `--focus-ring*` / `--shadow-*`                                                  | 全站唯一焦点样式与投影基色                                            | 焦点环、投影                                                            | 文字与底色                                                            | 焦点环按非文本 ≥3:1；亮色基色 `43 40 48`（中性偏紫）                           |
 
 **读表两条铁律**：① 组件只消费第 2 层（语义）与第 3 层（组件专属），不直接取 `--color-*`（受控例外见 §14.3）；② 12px 文字只能用表里标了「≥4.5:1」的墨色，层级靠字号/字重/字距/布局表达，不靠压低对比度。
 
@@ -193,8 +193,8 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 提亮页纸会**连带吃掉**阅读纸面的层次，这一点在只比色值时看不出来，必须实测渲染像素：
 
-| 场景                             | v1 分离度（纸面内 − 页面底，8bit） | v2 改前 | v2 现在 |
-| -------------------------------- | ---------------------------------- | ------- | ------- |
+| 场景                              | v1 分离度（纸面内 − 页面底，8bit） | v2 改前 | v2 现在 |
+| --------------------------------- | ---------------------------------- | ------- | ------- |
 | 亮色 `.reading-sheet`（日记详情） | `6,7,9`                            | `3,3,3` | `5,6,9` |
 | 暗色 `.reading-sheet`             | `4,5,5`                            | `6,6,6` | `6,6,6` |
 
@@ -208,31 +208,31 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 4. 语义变量（组件唯一可用层）
 
-| 变量                                                                                 | 代理到                                                  | 场景                                                                  | 消费者状态                                         |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
-| `--surface`                                                                          | `--color-paper`                                         | 页面底                                                                | 有                                                 |
-| `--surface-raised`                                                                   | `--color-paper-raised`                                  | 卡片/浮层、`.glass-panel`                                             | 有                                                 |
-| `--surface-lift`                                                                     | `--color-paper-lift`                                    | 阅读层最高层：AI 摘要卡、AI 精读窗口                                  | 有                                                 |
-| `--surface-sunk`                                                                     | `--color-paper-sunk`                                    | 代码块、空状态                                                        | 有                                                 |
-| `--text-primary` / `--text-strong`                                                   | ink / ink-soft                                          | 正文 / 强调                                                           | 有                                                 |
-| `--text-secondary`                                                                   | ink-muted                                               | **一切要读的次级文字**，含 12px meta（全表面 ≥4.5:1）                 | 有                                                 |
-| `--text-tertiary`                                                                    | ink-faint                                               | **装饰专用**：图标 / 分隔点 / 图表线 / 未激活控件；禁止任何要读的文字 | 有（11 处白名单，逐条见 `design-color-system.test.ts` 的 `DECORATIVE`） |
-| `--text-heading`                                                                     | heading                                                 | 所有标题与卡片标题                                                    | 有                                                 |
-| `--edge` / `--edge-strong`                                                           | line / line-strong                                      | 实线 / 虚线                                                           | 有                                                 |
-| `--edge-frost`                                                                       | `color-mix(in srgb, frost 72% + ink 8%)`                | 纸面外框、导航条下边                                                  | 有                                                 |
-| `--accent` / `--accent-soft` / `--accent-strong` / `--accent-wash` / `--accent-line` | 见 §3.1                                                 | 交互与强调                                                            | 前四者有；`--accent-line` 仅经 Tailwind 工具类消费 |
-| `--state-danger`                                                                     | `--color-danger`                                        | 功能色：危险状态（Callout / Banner / 表单错误）                       | 有                                                 |
-| `--state-warning`                                                                    | `--color-warning`                                       | 功能色：警告状态                                                      | 有                                                 |
-| `--state-success`                                                                    | `--color-success`                                       | 功能色：成功状态（含 Ins / diff）                                     | 有                                                 |
-| `--state-info`                                                                       | `--color-info`                                          | 功能色：信息状态                                                      | 有                                                 |
-| `--reading-surface`                                                                  | 亮色 `paper-lift` / 暗色 `oklab 94/6(paper-raised, paper)` | 阅读纸面（亮色取纯白、暗色取混合，理由见 §3.4）                       | 有                                                 |
-| `--code-surface`                                                                     | `paper-sunk`                                            | 行内代码、代码块                                                      | 有                                                 |
-| `--focus-ring-width`                                                                 | `2px`                                                   | 焦点环粗细的唯一来源                                                  | 有（`globals.css:62`、`media.css:299`）            |
-| `--focus-ring-offset`                                                                | `2px`                                                   | 焦点环外偏移                                                          | 有（`globals.css:63`）                             |
-| `--focus-ring-color`                                                                 | `--accent`                                              | 焦点环颜色                                                            | 仅 tokens 内部（被 `--focus-ring` 消费）           |
-| `--focus-ring`                                                                       | `var(--focus-ring-width) solid var(--focus-ring-color)` | 全站唯一焦点样式                                                      | 有（globals + 4 个 styles 文件）                   |
-| `--shadow-color`                                                                     | 亮 `43 40 48` / 暗 `0 0 0`                              | 阴影基色（RGB 三元组，供 `rgb()` 组合）                               | 仅 tokens 内部（被 `--shadow-raise/pop` 消费）     |
-| `--shadow-raise` / `--shadow-pop`                                                    | 基于 `--shadow-color`                                   | 纸面抬起 / 浮层                                                       | 有                                                 |
+| 变量                                                                                 | 代理到                                                     | 场景                                                                  | 消费者状态                                                              |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `--surface`                                                                          | `--color-paper`                                            | 页面底                                                                | 有                                                                      |
+| `--surface-raised`                                                                   | `--color-paper-raised`                                     | 卡片/浮层、`.glass-panel`                                             | 有                                                                      |
+| `--surface-lift`                                                                     | `--color-paper-lift`                                       | 阅读层最高层：AI 摘要卡、AI 精读窗口                                  | 有                                                                      |
+| `--surface-sunk`                                                                     | `--color-paper-sunk`                                       | 代码块、空状态                                                        | 有                                                                      |
+| `--text-primary` / `--text-strong`                                                   | ink / ink-soft                                             | 正文 / 强调                                                           | 有                                                                      |
+| `--text-secondary`                                                                   | ink-muted                                                  | **一切要读的次级文字**，含 12px meta（全表面 ≥4.5:1）                 | 有                                                                      |
+| `--text-tertiary`                                                                    | ink-faint                                                  | **装饰专用**：图标 / 分隔点 / 图表线 / 未激活控件；禁止任何要读的文字 | 有（11 处白名单，逐条见 `design-color-system.test.ts` 的 `DECORATIVE`） |
+| `--text-heading`                                                                     | heading                                                    | 所有标题与卡片标题                                                    | 有                                                                      |
+| `--edge` / `--edge-strong`                                                           | line / line-strong                                         | 实线 / 虚线                                                           | 有                                                                      |
+| `--edge-frost`                                                                       | `color-mix(in srgb, frost 72% + ink 8%)`                   | 纸面外框、导航条下边                                                  | 有                                                                      |
+| `--accent` / `--accent-soft` / `--accent-strong` / `--accent-wash` / `--accent-line` | 见 §3.1                                                    | 交互与强调                                                            | 前四者有；`--accent-line` 仅经 Tailwind 工具类消费                      |
+| `--state-danger`                                                                     | `--color-danger`                                           | 功能色：危险状态（Callout / Banner / 表单错误）                       | 有                                                                      |
+| `--state-warning`                                                                    | `--color-warning`                                          | 功能色：警告状态                                                      | 有                                                                      |
+| `--state-success`                                                                    | `--color-success`                                          | 功能色：成功状态（含 Ins / diff）                                     | 有                                                                      |
+| `--state-info`                                                                       | `--color-info`                                             | 功能色：信息状态                                                      | 有                                                                      |
+| `--reading-surface`                                                                  | 亮色 `paper-lift` / 暗色 `oklab 94/6(paper-raised, paper)` | 阅读纸面（亮色取纯白、暗色取混合，理由见 §3.4）                       | 有                                                                      |
+| `--code-surface`                                                                     | `paper-sunk`                                               | 行内代码、代码块                                                      | 有                                                                      |
+| `--focus-ring-width`                                                                 | `2px`                                                      | 焦点环粗细的唯一来源                                                  | 有（`globals.css:62`、`media.css:299`）                                 |
+| `--focus-ring-offset`                                                                | `2px`                                                      | 焦点环外偏移                                                          | 有（`globals.css:63`）                                                  |
+| `--focus-ring-color`                                                                 | `--accent`                                                 | 焦点环颜色                                                            | 仅 tokens 内部（被 `--focus-ring` 消费）                                |
+| `--focus-ring`                                                                       | `var(--focus-ring-width) solid var(--focus-ring-color)`    | 全站唯一焦点样式                                                      | 有（globals + 4 个 styles 文件）                                        |
+| `--shadow-color`                                                                     | 亮 `43 40 48` / 暗 `0 0 0`                                 | 阴影基色（RGB 三元组，供 `rgb()` 组合）                               | 仅 tokens 内部（被 `--shadow-raise/pop` 消费）                          |
+| `--shadow-raise` / `--shadow-pop`                                                    | 基于 `--shadow-color`                                      | 纸面抬起 / 浮层                                                       | 有                                                                      |
 
 「仅 tokens 内部」= 该变量不被组件直接引用，而是被 `tokens.css` 里另一条 Token 消费。这类 Token **不是死 Token**，删除会破坏定义链。
 
@@ -240,35 +240,35 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 悬浮导航（`.nav-card` 与共用的 `.nav-panel`）专用的一组语义变量，亮暗各一套。**全部由 `--color-*` / `--accent-*` 混色派生，没有往调色板里加新颜色**；非选中项一律走墨色，Accent 只出现在选中底、hover 提示与 Spotlight 光斑三处。
 
-| 变量                     | 亮色               | 暗色               | 场景                                                                   |
-| ------------------------ | ------------------ | ------------------ | ---------------------------------------------------------------------- |
-| `--nav-backdrop`         | `paper-raised` 82% | `paper-raised` 88% | 卡片与菜单底（配 `--nav-blur`）                                        |
-| `--nav-edge`             | `line-strong` 42%  | `line-strong` 72%  | 发丝边                                                                 |
-| `--nav-shadow`           | 0.04 / 0.26 双层   | 0.5 / 0.72 双层    | 悬浮投影（暗色需更实）                                                 |
-| `--nav-blur`             | 14px               | 12px               | 毛玻璃半径（原 22/20，2026-11-15 模糊减量时下调）                      |
-| `--nav-saturate`         | 1.12               | 1.06               | 毛玻璃饱和度                                                           |
-| `--nav-ink`              | `ink-muted`        | `ink-muted`        | 非选中项文字、图标、分组标题、空态、说明（合并前两条后的唯一默认墨色） |
-| `--nav-ink-strong`       | `color-heading`    | `color-ink-soft`   | 悬停 / 选中文字                                                        |
-| `--nav-item-hover`       | `accent-soft` 15%  | `accent` 16%       | hover 底，仅轻微提示                                                   |
-| `--nav-item-active`      | `accent-wash`      | `accent-wash`      | 选中项底                                                               |
-| `--nav-item-active-ink`  | `color-heading`    | `color-ink-soft`   | 选中项文字                                                             |
-| `--nav-spotlight`        | `accent-soft` 26%  | `accent` 30%       | 指针光斑                                                               |
-| `--nav-divider`          | `line` 68%         | `line` 82%         | 快捷栏与菜单内的分隔线                                                 |
-| `--nav-focus`            | `accent-strong`    | 继承亮色           | 菜单项与分段控件的焦点环                                               |
+| 变量                    | 亮色               | 暗色               | 场景                                                                   |
+| ----------------------- | ------------------ | ------------------ | ---------------------------------------------------------------------- |
+| `--nav-backdrop`        | `paper-raised` 82% | `paper-raised` 88% | 卡片与菜单底（配 `--nav-blur`）                                        |
+| `--nav-edge`            | `line-strong` 42%  | `line-strong` 72%  | 发丝边                                                                 |
+| `--nav-shadow`          | 0.04 / 0.26 双层   | 0.5 / 0.72 双层    | 悬浮投影（暗色需更实）                                                 |
+| `--nav-blur`            | 14px               | 12px               | 毛玻璃半径（原 22/20，2026-11-15 模糊减量时下调）                      |
+| `--nav-saturate`        | 1.12               | 1.06               | 毛玻璃饱和度                                                           |
+| `--nav-ink`             | `ink-muted`        | `ink-muted`        | 非选中项文字、图标、分组标题、空态、说明（合并前两条后的唯一默认墨色） |
+| `--nav-ink-strong`      | `color-heading`    | `color-ink-soft`   | 悬停 / 选中文字                                                        |
+| `--nav-item-hover`      | `accent-soft` 15%  | `accent` 16%       | hover 底，仅轻微提示                                                   |
+| `--nav-item-active`     | `accent-wash`      | `accent-wash`      | 选中项底                                                               |
+| `--nav-item-active-ink` | `color-heading`    | `color-ink-soft`   | 选中项文字                                                             |
+| `--nav-spotlight`       | `accent-soft` 26%  | `accent` 30%       | 指针光斑                                                               |
+| `--nav-divider`         | `line` 68%         | `line` 82%         | 快捷栏与菜单内的分隔线                                                 |
+| `--nav-focus`           | `accent-strong`    | 继承亮色           | 菜单项与分段控件的焦点环                                               |
 
 **布局尺寸（第三层，随导航双态新增）**。下面是几何值，不是颜色：三种状态的所有尺寸都由这几个值派生，`globals.css` 只消费、不另写平行数值。
 
-| 变量                  | 值     | 场景                                                       |
-| --------------------- | ------ | ---------------------------------------------------------- |
-| `--nav-bar-height`    | 3.5rem | 移动端底部胶囊高度（双态不参与手机端）                     |
-| `--nav-topbar-height` | 4.25rem | Editorial Bar 高度，也是 `.site-nav-spacer` 的占位高度     |
-| `--nav-dock-height`   | 3.125rem | Floating Dock 高度                                        |
-| `--nav-dock-width`    | 35rem  | Floating Dock 宽度上限（560px，收缩动画的终点）            |
-| `--nav-dock-radius`   | 1rem   | Dock 圆角（16px 微圆角卡片，**不是** `--radius-pill` 药丸） |
-| `--nav-dock-offset`   | 0.875rem | Dock 与视口顶边的距离                                     |
-| `--nav-gap`           | 0.5rem | 卡片与菜单 / 下拉面板之间的缝                              |
-| `--nav-inset`         | 0.75rem | 移动端与物理边缘的距离（不含安全区）                       |
-| `--nav-panel-max`     | `min(34rem, 72dvh)` | 菜单面板最大高度                              |
+| 变量                  | 值                  | 场景                                                        |
+| --------------------- | ------------------- | ----------------------------------------------------------- |
+| `--nav-bar-height`    | 3.5rem              | 移动端底部胶囊高度（双态不参与手机端）                      |
+| `--nav-topbar-height` | 4.25rem             | Editorial Bar 高度，也是 `.site-nav-spacer` 的占位高度      |
+| `--nav-dock-height`   | 3.125rem            | Floating Dock 高度                                          |
+| `--nav-dock-width`    | 35rem               | Floating Dock 宽度上限（560px，收缩动画的终点）             |
+| `--nav-dock-radius`   | 1rem                | Dock 圆角（16px 微圆角卡片，**不是** `--radius-pill` 药丸） |
+| `--nav-dock-offset`   | 0.875rem            | Dock 与视口顶边的距离                                       |
+| `--nav-gap`           | 0.5rem              | 卡片与菜单 / 下拉面板之间的缝                               |
+| `--nav-inset`         | 0.75rem             | 移动端与物理边缘的距离（不含安全区）                        |
+| `--nav-panel-max`     | `min(34rem, 72dvh)` | 菜单面板最大高度                                            |
 
 滚动阈值（离开顶部 72px / 回到顶部 40px / 下滚 96px 隐藏 / 上滚 40px 显示）**刻意不是 CSS 变量**：JS 读不到 CSS 变量，写进 Token 就成了第二份事实，阈值只存在于 `use-header-scroll.ts`。
 
@@ -280,21 +280,21 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 5. 排版
 
-| 角色 | Token | 值 | 用途 |
-| --- | --- | --- | --- |
-| Display | `--text-display` | `clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem)`，lh **1.2**，ls **−0.024em** | 首页身份名 |
-| PageHeading | `--text-pageheading` | `clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem)`，lh 1.26，ls **−0.02em** | `PageHeader` 内页页头 |
-| Headline | `--text-headline` | `clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem)`，lh 1.22，ls **−0.022em** | 文章详情 h1、Markdown 样张 h1 |
-| Title | `--text-title` | `clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem)`，lh 1.26，ls **−0.014em** | 日记详情 h1、卡片标题、错误页 |
-| RowTitle | `--text-rowtitle` | 1.625rem（固定值，不随视口变化）/ lh 1.3 / ls **−0.01em** | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，桌面会爬到 32–34px，一屏行数会被压掉 |
-| H2 | `--text-h2` | 1.375rem / lh 1.4（无字距覆盖） | 正文二级标题、区块标题 |
-| H3 | `--text-h3` | 1.125rem / lh 1.5（无字距覆盖） | 卡片标题、正文三级标题 |
-| Body | `--text-body` | 1.0625rem（= 17px @16px 根字号）/ lh **1.82** | `.prose` 阅读正文 |
-| Lead | `--text-lead` | 1.125rem / lh 1.8 | 导语、摘要 |
-| Small | `--text-small` | 0.9375rem / lh 1.7 | 说明文 |
-| Caption | `--text-caption` | 0.8125rem / lh 1.6 | 图注、注释、表头 |
-| Meta | `--text-meta` | 0.75rem / lh 1.5 | 日期、阅读数、kicker |
-| Code | `--text-code` | 0.875rem / lh 1.7 | 行内与代码块 |
+| 角色        | Token                | 值                                                                         | 用途                                                                                           |
+| ----------- | -------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Display     | `--text-display`     | `clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem)`，lh **1.2**，ls **−0.024em**   | 首页身份名                                                                                     |
+| PageHeading | `--text-pageheading` | `clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem)`，lh 1.26，ls **−0.02em**   | `PageHeader` 内页页头                                                                          |
+| Headline    | `--text-headline`    | `clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem)`，lh 1.22，ls **−0.022em** | 文章详情 h1、Markdown 样张 h1                                                                  |
+| Title       | `--text-title`       | `clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem)`，lh 1.26，ls **−0.014em**    | 日记详情 h1、卡片标题、错误页                                                                  |
+| RowTitle    | `--text-rowtitle`    | 1.625rem（固定值，不随视口变化）/ lh 1.3 / ls **−0.01em**                  | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，桌面会爬到 32–34px，一屏行数会被压掉 |
+| H2          | `--text-h2`          | 1.375rem / lh 1.4（无字距覆盖）                                            | 正文二级标题、区块标题                                                                         |
+| H3          | `--text-h3`          | 1.125rem / lh 1.5（无字距覆盖）                                            | 卡片标题、正文三级标题                                                                         |
+| Body        | `--text-body`        | 1.0625rem（= 17px @16px 根字号）/ lh **1.82**                              | `.prose` 阅读正文                                                                              |
+| Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                          | 导语、摘要                                                                                     |
+| Small       | `--text-small`       | 0.9375rem / lh 1.7                                                         | 说明文                                                                                         |
+| Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                         | 图注、注释、表头                                                                               |
+| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                           | 日期、阅读数、kicker                                                                           |
+| Code        | `--text-code`        | 0.875rem / lh 1.7                                                          | 行内与代码块                                                                                   |
 
 `lh` = 同族 `--text-*--line-height`；`ls` = `--text-*--letter-spacing`。display / pageheading / headline / title 四个标题档位都定义了字距，h2/h3 及更小层级没有字距变量 —— 组件若自行写 `tracking-*` 属于局部调整，不是 Token 缺失。
 
@@ -308,18 +308,18 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 只记录现有 Token 的语义映射，不新增平行字号。
 
-| Token | 消费位置（节选） |
-| --- | --- |
-| `--text-display` | 首页身份名 h1（`app/page.tsx`） |
-| `--text-pageheading` | `PageHeader` 统一页头 h1（`ui/page-header.tsx`） |
-| `--text-headline` | 文章详情 h1（`articles/[category]/[slug]/page.tsx`）、Markdown 视觉样张 h1 |
-| `--text-title` | 日记详情 h1（`diaries/[id]/page.tsx`）、`ArticleCard` lead 变体、`error.tsx` / `not-found.tsx` / 分类页 |
-| `--text-rowtitle` | 文章列表每一条的 h3（`ArticleRow` 非 compact 变体） |
-| `--text-h2` / `--text-h3` | `.prose` 标题、卡片标题、`friends` 等页 |
-| `--text-body` | `body`、`.prose`（含移动端）、归档条目 |
-| `--text-lead` | 首页导语（无衬线）、文章导语（衬线） |
-| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta` |
-| `--text-code`                                     | `.prose :code`（`prose.css:206`）                                                       |
+| Token                                             | 消费位置（节选）                                                                                        |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--text-display`                                  | 首页身份名 h1（`app/page.tsx`）                                                                         |
+| `--text-pageheading`                              | `PageHeader` 统一页头 h1（`ui/page-header.tsx`）                                                        |
+| `--text-headline`                                 | 文章详情 h1（`articles/[category]/[slug]/page.tsx`）、Markdown 视觉样张 h1                              |
+| `--text-title`                                    | 日记详情 h1（`diaries/[id]/page.tsx`）、`ArticleCard` lead 变体、`error.tsx` / `not-found.tsx` / 分类页 |
+| `--text-rowtitle`                                 | 文章列表每一条的 h3（`ArticleRow` 非 compact 变体）                                                     |
+| `--text-h2` / `--text-h3`                         | `.prose` 标题、卡片标题、`friends` 等页                                                                 |
+| `--text-body`                                     | `body`、`.prose`（含移动端）、归档条目                                                                  |
+| `--text-lead`                                     | 首页导语（无衬线）、文章导语（衬线）                                                                    |
+| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta`                                                                                   |
+| `--text-code`                                     | `.prose :code`（`prose.css:206`）                                                                       |
 
 同一 px 数值不代表同一语义。以下是**特殊排版用法**，尚未 Token 化，改动前请先确认是否值得升为 Token：
 
@@ -365,43 +365,43 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 6. 版心 / 间距 / 圆角 / 阴影 / 动效
 
-| 项       | Token                                 | 值                                  | 说明                                            |
-| -------- | ------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| 文章正文宽 | `--measure-post`                       | 44rem | 704px，文章详情正文；≈41 汉字/行 @17px |
-| 日记正文宽 | `--measure-note`                       | 40rem | 640px，日记详情正文；≈37 汉字/行，比文章窄 4rem |
-| 普通页正文宽 | `--measure-page`                     | 44rem | 704px，普通页（`/about`、`/pages/:slug`）正文 |
-| 文案宽     | `--measure-copy`                       | 48rem | 768px，导语、摘要、搜索与错误页文案 |
-| 目录轨     | `--rail-toc`                           | 13rem | 208px，文章 / 日记右侧目录，**独立占位、不挤正文** |
-| 侧栏轨     | `--rail-side`                          | 17rem | 272px，普通页左侧身份卡 |
-| 正文—目录间距 | `--gap-rail`                        | 2.25rem                             | 正文与目录轨之间                                 |
-| 侧栏—正文间距 | `--gap-side`                        | 4rem                                | 侧栏与正文之间                                   |
-| 纸张内边距 | `--pad-paper-inline`                   | `clamp(0px, 8vw - 3rem, 3.5rem)`    | `.reading-sheet` 左右留白，连续响应式            |
-| 纸张上下留白 | `--pad-paper-block-start` / `--pad-paper-block-end` | `clamp(0.5rem, 3vw, 3.5rem)` / `clamp(1rem, 3.5vw, 4rem)` | 纸面首尾留白            |
-| 文章 shell | `--shell-post`                         | `calc(measure-post + gap-rail + rail-toc)` | 文章详情桌面外壳宽度                      |
-| 日记 shell | `--shell-note`                         | `calc(measure-note + 2×pad-paper + gap-rail + rail-toc)` | 日记详情桌面外壳宽度          |
-| 普通页 shell | `--shell-page`                       | `calc(rail-side + gap-side + measure-page)` = 65rem（1040px） | `/about` 的两栏网格上限。**侧栏显示阈值 1104px = 这个值 + 双侧 gutter**（1040 + 64） |
-| 页面版心 | `--container-wide`                    | 72rem                               | 首页、列表页                                    |
-| 窄栏     | `--container-narrow`                  | 30rem                               | 搜索空态等                                      |
-| 页边距   | `--spacing-gutter`                    | `clamp(1.25rem, 0.189rem + 4.528vw, 2rem)` | 连续变化：375px→20px、640px 起封顶 32px（**没有 `-lg` 变体**） |
-| 区块间距 | `--spacing-section`                   | 5rem                                | 首页各 section 上下                             |
-| 区块内部 | `--spacing-stack`                     | 2rem                                | 标题与内容之间                                  |
-| 圆角     | `--radius-xs/sm/md/pill`              | 2 / 4 / 6 / 999px                   | 纸面用 xs，浮层用 md，移动端导航与工具胶囊用 pill；桌面 Dock 用 `--nav-dock-radius`（16px） |
-| 描边     | `--border-hairline` / `--border-rule` | 1px                                 | 实线 / 虚线                                     |
-| 阴影     | `--shadow-raise` / `--shadow-pop`     | 双层极浅                            | 全部走 `--shadow-color`                         |
-| 动效     | `--duration-fast`                     | 140ms                               | 导航、链接下划线、代码底、预览层与错峰间隔      |
-| 动效     | `--duration-base` / `--duration-slow` | 240 / 420ms                         | 页面 / 面板过渡与首页内容淡入                   |
-| 缓动     | `--ease-out-soft`                     | `cubic-bezier(0.22, 0.61, 0.36, 1)` | 默认，全部 `transition`/`animation` 用它        |
-| 缓动     | `--ease-in-out-soft`                  | `cubic-bezier(0.4, 0, 0.2, 1)`      | **当前无消费者**，见 §14.8                      |
+| 项            | Token                                               | 值                                                            | 说明                                                                                        |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 文章正文宽    | `--measure-post`                                    | 44rem                                                         | 704px，文章详情正文；≈41 汉字/行 @17px                                                      |
+| 日记正文宽    | `--measure-note`                                    | 40rem                                                         | 640px，日记详情正文；≈37 汉字/行，比文章窄 4rem                                             |
+| 普通页正文宽  | `--measure-page`                                    | 44rem                                                         | 704px，普通页（`/about`、`/pages/:slug`）正文                                               |
+| 文案宽        | `--measure-copy`                                    | 48rem                                                         | 768px，导语、摘要、搜索与错误页文案                                                         |
+| 目录轨        | `--rail-toc`                                        | 13rem                                                         | 208px，文章 / 日记右侧目录，**独立占位、不挤正文**                                          |
+| 侧栏轨        | `--rail-side`                                       | 17rem                                                         | 272px，普通页左侧身份卡                                                                     |
+| 正文—目录间距 | `--gap-rail`                                        | 2.25rem                                                       | 正文与目录轨之间                                                                            |
+| 侧栏—正文间距 | `--gap-side`                                        | 4rem                                                          | 侧栏与正文之间                                                                              |
+| 纸张内边距    | `--pad-paper-inline`                                | `clamp(0px, 8vw - 3rem, 3.5rem)`                              | `.reading-sheet` 左右留白，连续响应式                                                       |
+| 纸张上下留白  | `--pad-paper-block-start` / `--pad-paper-block-end` | `clamp(0.5rem, 3vw, 3.5rem)` / `clamp(1rem, 3.5vw, 4rem)`     | 纸面首尾留白                                                                                |
+| 文章 shell    | `--shell-post`                                      | `calc(measure-post + gap-rail + rail-toc)`                    | 文章详情桌面外壳宽度                                                                        |
+| 日记 shell    | `--shell-note`                                      | `calc(measure-note + 2×pad-paper + gap-rail + rail-toc)`      | 日记详情桌面外壳宽度                                                                        |
+| 普通页 shell  | `--shell-page`                                      | `calc(rail-side + gap-side + measure-page)` = 65rem（1040px） | `/about` 的两栏网格上限。**侧栏显示阈值 1104px = 这个值 + 双侧 gutter**（1040 + 64）        |
+| 页面版心      | `--container-wide`                                  | 72rem                                                         | 首页、列表页                                                                                |
+| 窄栏          | `--container-narrow`                                | 30rem                                                         | 搜索空态等                                                                                  |
+| 页边距        | `--spacing-gutter`                                  | `clamp(1.25rem, 0.189rem + 4.528vw, 2rem)`                    | 连续变化：375px→20px、640px 起封顶 32px（**没有 `-lg` 变体**）                              |
+| 区块间距      | `--spacing-section`                                 | 5rem                                                          | 首页各 section 上下                                                                         |
+| 区块内部      | `--spacing-stack`                                   | 2rem                                                          | 标题与内容之间                                                                              |
+| 圆角          | `--radius-xs/sm/md/pill`                            | 2 / 4 / 6 / 999px                                             | 纸面用 xs，浮层用 md，移动端导航与工具胶囊用 pill；桌面 Dock 用 `--nav-dock-radius`（16px） |
+| 描边          | `--border-hairline` / `--border-rule`               | 1px                                                           | 实线 / 虚线                                                                                 |
+| 阴影          | `--shadow-raise` / `--shadow-pop`                   | 双层极浅                                                      | 全部走 `--shadow-color`                                                                     |
+| 动效          | `--duration-fast`                                   | 140ms                                                         | 导航、链接下划线、代码底、预览层与错峰间隔                                                  |
+| 动效          | `--duration-base` / `--duration-slow`               | 240 / 420ms                                                   | 页面 / 面板过渡与首页内容淡入                                                               |
+| 缓动          | `--ease-out-soft`                                   | `cubic-bezier(0.22, 0.61, 0.36, 1)`                           | 默认，全部 `transition`/`animation` 用它                                                    |
+| 缓动          | `--ease-in-out-soft`                                | `cubic-bezier(0.4, 0, 0.2, 1)`                                | **当前无消费者**，见 §14.8                                                                  |
 
 断点（实测口径）：
 
-| 断点 | 等宽            | 承担                                                     | 实现方式                                                               |
-| ---- | --------------- | -------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `sm` | 40rem（640px）  | 纸面起铺、阅读纸面上色 | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)` |
-| `md` | 48rem（768px）  | 友链卡片转两列；**桌面导航双态的起点** | Tailwind `md:`（仅 `friends/page.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
-| `lg` | 64rem（1024px） | 阅读区加宽（纸张内边距 3.5rem） | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)` |
-| `xl` | 80rem（1280px） | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起 | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处） |
-| `69rem` | 1104px | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列 | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处） |
+| 断点    | 等宽            | 承担                                               | 实现方式                                                                                      |
+| ------- | --------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `sm`    | 40rem（640px）  | 纸面起铺、阅读纸面上色                             | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)`                                |
+| `md`    | 48rem（768px）  | 友链卡片转两列；**桌面导航双态的起点**             | Tailwind `md:`（仅 `friends/page.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
+| `lg`    | 64rem（1024px） | 阅读区加宽（纸张内边距 3.5rem）                    | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)`                                |
+| `xl`    | 80rem（1280px） | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起   | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处）                                     |
+| `69rem` | 1104px          | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列 | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处）                                        |
 
 - Tailwind v4 走 CSS-first 配置：仓库里没有 `tailwind.config.*`，`tokens.css` 也没有覆盖 `--breakpoint-*`，所以 `sm/md/lg/xl` 就是 Tailwind 默认值。**没有 `2xl:` 使用**；`md:` 只有 `friends/page.tsx` 一处（768px 两列），与导航双态的 48rem 断点是同一个值，改其中一个要同时看另一个。`69rem` 是唯一一个任意值断点（1104px），它不在 Tailwind 档位里，**修改前先想清楚为什么不复用 `xl`**。
 - 断点处数会随功能增减，本文不再写死"共 N 处"——写死的那一刻就开始过期。要看当前分布，直接在 `src` 下搜 `sm:` / `md:` / `lg:` / `xl:` / `min-[69rem]:` 这几个前缀。
@@ -412,13 +412,13 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 7. 材质层（可整体关闭）
 
-| 类               | 实现                                                                                                                                                                                    | 用量                                                           |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                | 全站 1 层，不随内容滚动                                        |
-| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                         | 全站 1 层                                                      |
-| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                            | 文章/日记详情各 1 个                                           |
+| 类               | 实现                                                                                                                                                                                    | 用量                                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `.paper-grain`   | 单层 `feTurbulence` SVG 噪点，`position: fixed`，`opacity var(--material-grain-opacity)`                                                                                                | 全站 1 层，不随内容滚动                                                                                                |
+| `.paper-ambient` | 两组径向渐变（顶部受光 + 右下阴影），对比度极低                                                                                                                                         | 全站 1 层                                                                                                              |
+| `.reading-sheet` | `<640` 无底色；`≥640` 铺 `--reading-surface` + `--edge-frost` 细边 + `--shadow-raise`；`≥1024` 内边距 3.5rem                                                                            | 文章/日记详情各 1 个                                                                                                   |
 | `.glass-nav`     | 纸面底 `--nav-backdrop` + `backdrop-filter: saturate(var(--nav-saturate)) blur(var(--nav-blur))`（亮 14px / 暗 12px）+ `--nav-edge` 发丝边 + `--nav-shadow`。**底色调是暖纸，不是冰色** | Floating Dock、右下工具胶囊、移动端底部胶囊（三处都挂在宿主的 `.nav-glass` 层）；Editorial Bar 状态下该层 `opacity: 0` |
-| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                       | 搜索面板                                                       |
+| `.glass-panel`   | 实色 `--surface-raised` + 边框 + `--shadow-pop`（**刻意不做玻璃**，避免菜单下正文与菜单文字叠加）                                                                                       | 搜索面板                                                                                                               |
 
 `.glass-nav` 用 `--nav-backdrop`（暖纸），是全站唯一的玻璃材质。`.glass-bar` 曾是一块「大面积冰色薄片」的预留类，全站从没有 DOM 生产者，`scripts/visual/contrast.mjs` 里 `.glass-bar a` 的采样目标也一直匹配不到元素；已删除该类及其专用 alpha 参数。它**没有**被并入导航。将来若真需要整行玻璃，必须连同真实生产者一起新增。
 
@@ -431,19 +431,27 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 1. **玻璃不能挂在 `.nav-card` 上**。带 `backdrop-filter` 的元素会成为 `position: fixed` 后代的包含块，移动端菜单面板会被缩进卡片内部（实测宽度从 350px 缩到 161px）。因此 `.glass-nav` 落在卡片内独立的 `.nav-glass` 绝对定位层，卡片本身不带滤镜；`tests/nav-menu.test.tsx` 有回归护栏。
 2. **菜单面板刻意做实色，不跟着卡片做玻璃**。卡片只有 50–68px 高，透一点无妨；面板下压着整段正文，实测即使把不透明度提到 97% 仍能看到文章标题的淡影。这与 `.glass-panel` 的判断一致：浮层优先可读性。面板沿用 `--surface-raised` + `--nav-edge` + `--nav-shadow`，与卡片同色系但实心。
 
+**日文字形：全站统一走 SC，不引入 JP 字体**（**A**，实测确认，属设计决定）
+
+- 实测（CDP `CSS.getPlatformFontsForNode`，看的是**实际渲染**而非声明栈）：平假名、片假名、日文汉字、日文标点、半角片假名全部命中 `Noto Sans SC`，`isCustom: true`，**零回退**。
+- `unicode-range` 覆盖已逐码位验证：`U+3042`(あ) `U+30A2`(ア) `U+65E5`(日) `U+300C`(「) `U+3002`(。) `U+3001`(、) `U+FF01`(！) `U+FF71`(ｱ) 在 Sans / Serif 两侧均为 `covered: true`（202 条 `@font-face` 规则逐条比对）。
+- 前进宽度：所有 CJK 字符（含假名与全角标点）在 17px 下均为 **1em = 17.00px**，等宽成立。标点位置实测无坏行首（行首未出现 `。」』？！）`）。
+- 可变字重轴确实生效：40px 下同一字符串 `Noto Sans SC` 100→900 宽度 551.4→601.92 单调递增，**证明 600 是真字重、不是合成粗体**。
+- **已知差异（设计选择，不是缺陷）**：日文汉字用的是 **SC 字形的日文覆盖**，不是 Noto Sans JP。`直` / `骨` / `次` / `関` 等字在 SC 与 JP 标准下笔形不同。全站统一 SC 是有意决定（一套字体服务中/日，避免再引入 ~5MB 的 JP 字体）；若将来要 JP 笔形，须作为独立设计决策，不能顺手替换。
+
 ### 7.1 导航双态（Editorial Bar / Floating Dock）
 
 一次导航改造，**一套 DOM、三种状态**，由 `<header class="site-nav" data-mode>` 切换。三态的视觉差异全部落在同一个 `.nav-card` 上，靠 `max-width` / `height` / `border-radius` / `transform` / `opacity` 过渡；没有第二棵导航树，因此导航数据、菜单开关、`aria-controls` 指向的 ID 与 Tab 顺序都只有一份。
 
-| 维度     | `top`（Editorial Bar）        | `floating`（Floating Dock） | `hidden`                    |
-| -------- | ----------------------------- | --------------------------- | --------------------------- |
-| 宽度     | `min(视口, --container-wide)` | `--nav-dock-width`（560px） | 同 `top`（只是滑出）        |
-| 高度     | `--nav-topbar-height`（68px） | `--nav-dock-height`（50px） | —                           |
-| 圆角     | 无（通栏）                    | `--nav-dock-radius`（16px） | —                           |
-| 背景     | 透明                          | `.nav-glass`（`opacity: 1`）| —                           |
-| 边框     | 无                            | `--nav-edge` 发丝边         | —                           |
-| 光斑     | `display: none`               | 保留                        | —                           |
-| 位置     | 贴顶，与版心 / gutter 对齐    | 贴顶居中，下沉 `--nav-dock-offset` | `translateY(-100% - --nav-gap)` + `opacity: 0` + `visibility: hidden` |
+| 维度 | `top`（Editorial Bar）        | `floating`（Floating Dock）        | `hidden`                                                              |
+| ---- | ----------------------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| 宽度 | `min(视口, --container-wide)` | `--nav-dock-width`（560px）        | 同 `top`（只是滑出）                                                  |
+| 高度 | `--nav-topbar-height`（68px） | `--nav-dock-height`（50px）        | —                                                                     |
+| 圆角 | 无（通栏）                    | `--nav-dock-radius`（16px）        | —                                                                     |
+| 背景 | 透明                          | `.nav-glass`（`opacity: 1`）       | —                                                                     |
+| 边框 | 无                            | `--nav-edge` 发丝边                | —                                                                     |
+| 光斑 | `display: none`               | 保留                               | —                                                                     |
+| 位置 | 贴顶，与版心 / gutter 对齐    | 贴顶居中，下沉 `--nav-dock-offset` | `translateY(-100% - --nav-gap)` + `opacity: 0` + `visibility: hidden` |
 
 要点：
 
@@ -471,14 +479,14 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 
 **打印（`print.css`）**
 
-| 处理 | 对象 | 理由 |
-| --- | --- | --- |
-| `display: none` | `.site-nav`、`.site-nav-spacer`、`.toolbar-dock`、`.reading-aside`、`.reading-inline`、`.search-panel`、`.nav-panel`、`.nav-flyout`、`.comments`、`footer`、`.paper-grain`、`.paper-ambient` | 固定定位的导航会盖住每页顶部；占位块必须跟着隐藏，否则每页空一条导航的高度 |
-| 去底去边去影 | `.reading-sheet` | 屏幕上的白纸 + 发丝边在纸上是灰框 |
-| `max-width: none` | `.prose`、`main` | 704px 的固定行宽在 A4 上是浪费 |
-| `break-inside: avoid` | `figure` / `blockquote` / `.md-callout` / `.md-banner` | 图与图注不该被拆到两页 |
-| `break-inside: auto` | `pre` / `table` | 长代码与宽表**允许**跨页，强行不拆会切掉内容 |
-| 不展开 URL | `a` | 中文排版里「正文 + 括号里的长 URL」比省略更难读 |
+| 处理                  | 对象                                                                                                                                                                                         | 理由                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `display: none`       | `.site-nav`、`.site-nav-spacer`、`.toolbar-dock`、`.reading-aside`、`.reading-inline`、`.search-panel`、`.nav-panel`、`.nav-flyout`、`.comments`、`footer`、`.paper-grain`、`.paper-ambient` | 固定定位的导航会盖住每页顶部；占位块必须跟着隐藏，否则每页空一条导航的高度 |
+| 去底去边去影          | `.reading-sheet`                                                                                                                                                                             | 屏幕上的白纸 + 发丝边在纸上是灰框                                          |
+| `max-width: none`     | `.prose`、`main`                                                                                                                                                                             | 704px 的固定行宽在 A4 上是浪费                                             |
+| `break-inside: avoid` | `figure` / `blockquote` / `.md-callout` / `.md-banner`                                                                                                                                       | 图与图注不该被拆到两页                                                     |
+| `break-inside: auto`  | `pre` / `table`                                                                                                                                                                              | 长代码与宽表**允许**跨页，强行不拆会切掉内容                               |
+| 不展开 URL            | `a`                                                                                                                                                                                          | 中文排版里「正文 + 括号里的长 URL」比省略更难读                            |
 
 隐藏必须用 `display: none`：`visibility: hidden` / `opacity: 0` / `height: 0` 都仍然占位，
 打印出来是一片空白页。
@@ -515,27 +523,27 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 
 ## 9. 组件与状态
 
-| 组件                             | 文件                                        | 状态                                                                                                                                                                                                         |
-| -------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SiteHeader`                     | `layout/site-header.tsx`                    | 服务端壳：从 `core/navigation` 取快捷栏 / 菜单主导航 / 更多，按 Feature 开关收敛后下发；自身不渲染交互                                                                                                       |
-| `SiteHeaderClient`               | `layout/site-header-client.tsx`             | 一棵 DOM 三种状态（`data-mode`：`top` Editorial Bar / `floating` Dock / `hidden`）：桌面双态、移动底部悬浮；只含头像 / 博客 / 日记 / 菜单四个入口；右下工具组挂载点；下拉悬停与菜单打开时冻结滚动形态 |
-| `SiteNavMenu`                    | `layout/site-nav-menu.tsx`                  | 桌面与移动共用同一份内容的菜单面板：站点身份 → 主导航 → 更多（原生 `<details>` 分组）；**不再挂设置**，`tocSlot` 为目录预留位                                                                                  |
-| `FooterSettings`                 | `layout/footer-settings.tsx`                | 全站唯一的设置区：左语言选择器（图标 + 名称 + 向上弹出的菜单）/ 右三态主题（Sun → Monitor → Moon）。语言走 `useLocaleSwitcher`，主题走 `useThemePreference`，不另存状态。挂在页脚**右侧**那一栏（`.site-footer__settings`），桌面端整体靠右、手机端落到信息区下方 |
-| `ToolbarGroup` / `ToolbarButton` | `layout/toolbar-button.tsx`                 | 40px 方格（`--radius-pill`），**自身无材质**：玻璃与光斑由 `.toolbar-dock` 的 `.glass-nav` + `.nav-spotlight` 提供；悬停/激活复用 `--nav-item-hover` / `--nav-item-active`，tooltip 仅 hover / focus-visible |
-| `SiteFooter`                     | `layout/site-footer.tsx`                    | 左右两区（`.site-footer__info` / `.site-footer__settings`）：左侧两行——年份 + 衬线名字 + 签名 / Powered by + ICP + `footer.links`（可换行的流）；右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                        |
-| `Container`                      | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                                                                                                                 |
-| `PageHeader`                     | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                                                                                                          |
-| `ArticleRow`                     | `features/articles/...`                     | 标题 `text-[1.625rem]`（26px，固定值，**尚未 Token 化**，见 §5.1），hover 变 `--accent-strong`；日期/分类/阅读数 pill；标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）                                                                                                                                              |
-| `ArticleCard`                    | 同上                                        | 首页主推：图 + 标签 + 32px 衬线标题 + 摘要                                                                                                                                                                   |
-| `ReadingProgressRing` / `ReadingProgressBar` | `ui/reading-progress.tsx`             | 环形（26px，移动端折叠目录行右侧）与竖向线性（2rem×1px，桌面端侧栏）两种阅读进度指示，共用 scroll 监听。环形百分比在环外右侧，竖向条百分比在条右侧。填充色 `--accent`，底色 `--edge`                            |
-| `AISummaryCard`                  | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性                                                                                          |
-| `Dialog` / `InsightsDialog`      | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                                                                                                              |
-| `Comments`                       | `features/comments/...`                     | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件                                                                                                       |
-| `Toc` / `TocList`                | `ui/toc.tsx` / `ui/toc-list.tsx`            | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动；活跃项 `w-[2px] rounded-full bg-accent` 竖线指示                                                                              |
-| `DiaryDayGroup`                  | `features/diaries/...`                      | 40px 衬线日号 + `2026.11` + 星期                                                                                                                                                                             |
-| `DiaryEntry`                     | 同上                                        | **列表条目 = 摘要，不是正文**：左 60px 时间列 + 纯文本摘要（`excerpt()`，140 字，`line-clamp-3/4`）+ **最多一张**代表图（`firstImageSource()`，正文优先、再退附件；命中附件时带原始宽高占位）+ 「继续阅读」。不跑 Markdown 渲染、不输出全部附件；完整正文与 Shiki/KaTeX 只在 `/diaries/:id`                                                                                                                                                       |
-| `Pagination`                     | `ui/pagination.tsx`                         | 方形页码，当前页实底 `--text-heading`                                                                                                                                                                        |
-| `EmptyState` / `ErrorState`      | `ui/*`                                      | 虚线框 + 衬线标题 + 一句说明 + 一个出口                                                                                                                                                                      |
+| 组件                                         | 文件                                        | 状态                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SiteHeader`                                 | `layout/site-header.tsx`                    | 服务端壳：从 `core/navigation` 取快捷栏 / 菜单主导航 / 更多，按 Feature 开关收敛后下发；自身不渲染交互                                                                                                                                                                                      |
+| `SiteHeaderClient`                           | `layout/site-header-client.tsx`             | 一棵 DOM 三种状态（`data-mode`：`top` Editorial Bar / `floating` Dock / `hidden`）：桌面双态、移动底部悬浮；只含头像 / 博客 / 日记 / 菜单四个入口；右下工具组挂载点；下拉悬停与菜单打开时冻结滚动形态                                                                                       |
+| `SiteNavMenu`                                | `layout/site-nav-menu.tsx`                  | 桌面与移动共用同一份内容的菜单面板：站点身份 → 主导航 → 更多（原生 `<details>` 分组）；**不再挂设置**，`tocSlot` 为目录预留位                                                                                                                                                               |
+| `FooterSettings`                             | `layout/footer-settings.tsx`                | 全站唯一的设置区：左语言选择器（图标 + 名称 + 向上弹出的菜单）/ 右三态主题（Sun → Monitor → Moon）。语言走 `useLocaleSwitcher`，主题走 `useThemePreference`，不另存状态。挂在页脚**右侧**那一栏（`.site-footer__settings`），桌面端整体靠右、手机端落到信息区下方                           |
+| `ToolbarGroup` / `ToolbarButton`             | `layout/toolbar-button.tsx`                 | 40px 方格（`--radius-pill`），**自身无材质**：玻璃与光斑由 `.toolbar-dock` 的 `.glass-nav` + `.nav-spotlight` 提供；悬停/激活复用 `--nav-item-hover` / `--nav-item-active`，tooltip 仅 hover / focus-visible                                                                                |
+| `SiteFooter`                                 | `layout/site-footer.tsx`                    | 左右两区（`.site-footer__info` / `.site-footer__settings`）：左侧两行——年份 + 衬线名字 + 签名 / Powered by + ICP + `footer.links`（可换行的流）；右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                                  |
+| `Container`                                  | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                                                                                                                                                                                                |
+| `PageHeader`                                 | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                                                                                                                                                                                         |
+| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-[1.625rem]`（26px，固定值，**尚未 Token 化**，见 §5.1），hover 变 `--accent-strong`；日期/分类/阅读数 pill；标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）                                                                                                                  |
+| `ArticleCard`                                | 同上                                        | 首页主推：图 + 标签 + 32px 衬线标题 + 摘要                                                                                                                                                                                                                                                  |
+| `ReadingProgressRing` / `ReadingProgressBar` | `ui/reading-progress.tsx`                   | 环形（26px，移动端折叠目录行右侧）与竖向线性（2rem×1px，桌面端侧栏）两种阅读进度指示，共用 scroll 监听。环形百分比在环外右侧，竖向条百分比在条右侧。填充色 `--accent`，底色 `--edge`                                                                                                        |
+| `AISummaryCard`                              | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性                                                                                                                                                                         |
+| `Dialog` / `InsightsDialog`                  | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                                                                                                                                                                                             |
+| `Comments`                                   | `features/comments/...`                     | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件                                                                                                                                                                                      |
+| `Toc` / `TocList`                            | `ui/toc.tsx` / `ui/toc-list.tsx`            | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动；活跃项 `w-[2px] rounded-full bg-accent` 竖线指示                                                                                                                                                             |
+| `DiaryDayGroup`                              | `features/diaries/...`                      | 40px 衬线日号 + `2026.11` + 星期                                                                                                                                                                                                                                                            |
+| `DiaryEntry`                                 | 同上                                        | **列表条目 = 摘要，不是正文**：左 60px 时间列 + 纯文本摘要（`excerpt()`，140 字，`line-clamp-3/4`）+ **最多一张**代表图（`firstImageSource()`，正文优先、再退附件；命中附件时带原始宽高占位）+ 「继续阅读」。不跑 Markdown 渲染、不输出全部附件；完整正文与 Shiki/KaTeX 只在 `/diaries/:id` |
+| `Pagination`                                 | `ui/pagination.tsx`                         | 方形页码，当前页实底 `--text-heading`                                                                                                                                                                                                                                                       |
+| `EmptyState` / `ErrorState`                  | `ui/*`                                      | 虚线框 + 衬线标题 + 一句说明 + 一个出口                                                                                                                                                                                                                                                     |
 
 九态检查（任何交互元素都要过一遍）：default / hover / active / focus-visible / selected / disabled / loading / empty / error。焦点统一 `outline: var(--focus-ring); outline-offset: 2px`。
 
@@ -679,27 +687,27 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 按风险分类（下表即这 15 处 CSS 600 + 4 处 CSS 500）：
 
-| 位置                                                            | 字重 | 字体族                        | 场景                 | 合成粗体风险                                                                                                                                                          |
-| --------------------------------------------------------------- | ---- | ----------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `globals.css`（`body` 内的 `h1–h6`）                            | 600  | `--font-sans`（继承自 body）  | 全站标题基线         | 低：`Noto Sans SC` 是 100–900 可变字体，600 是真字重；仅当 Web Font 未加载、回退到 `Microsoft YaHei`（只有 Regular/Bold）时才可能被合成                                   |
-| `prose.css`（`.prose :is(h1,h2,h3,h4)`）                        | 600  | `--font-serif`                | **中文正文标题**     | 低：`Noto Serif SC` 是 200–900 可变字体，600 是真字重（自托管，见 §5）；只有当字体文件加载失败、回退到 `Songti SC` / `SimSun` 时才回到"只有 Regular/Bold"的两档情形      |
-| `prose.css`（`strong`）                                         | 600  | `--font-sans`                 | 强调段               | 中低：sans 家族普遍有半粗                                                                                                                                             |
-| `prose.css`（`th`）                                             | 600  | `--font-sans`（caption + 大写） | 表头               | 低：拉丁为主、字号小                                                                                                                                                  |
-| `containers.css`（`.md-callout__title`）                        | 600  | `--font-sans`                 | 提示块标题           | 中：内容是中文                                                                                                                                                        |
-| `containers.css`（`.md-details__summary`）                      | 600  | `--font-sans`                 | 折叠块摘要           | 中：内容是中文                                                                                                                                                        |
-| `mentions.css`（`::before` 徽标 `GH`/`TW`/`TG`）                | 600  | `--font-sans`                 | 平台徽标文字         | 低：拉丁字形                                                                                                                                                          |
-| `footnotes.css`（`.prose .footnotes__title`）                   | 600  | `--font-sans`                 | 小字 + 0.12em 字距   | 低                                                                                                                                                                    |
-| `reading.css`（`.ai-summary__label`）                           | 600  | `--font-sans`                 | AI 摘要标签          | 中：内容是中文，但字号 12px                                                                                                                                           |
-| `reading.css`（`.comment__author`）                             | 600  | `--font-serif`（继承自父块）  | 评论作者名           | 中低：中文姓名，字号 12px                                                                                                                                             |
-| `reading.css`（`.comment-composer__whisper-label`）             | 600  | `--font-sans`                 | 悄悄话表单标签       | 中：内容是中文                                                                                                                                                        |
-| `reading.css`（`.ai-gen__mark`）                                | 600  | `--font-sans`                 | `AI` 徽章            | 低：拉丁字母，本轮已从 10px 提到 `--text-meta`                                                                                                                        |
-| `globals.css`（`.nav-avatar__fallback`）                        | 600  | `--font-sans`                 | 头像首字母兜底       | 低：单个字母                                                                                                                                                          |
-| `globals.css`（`.nav-identity__avatar`）                        | 600  | `--font-sans`                 | 导航身份块头像首字母 | 低：单个字母                                                                                                                                                          |
-| `globals.css`（`.nav-identity__name`）                          | 600  | `--font-sans`                 | 导航身份块名称       | 中：中文，但字号 15px 且有 `text-overflow: ellipsis`                                                                                                                  |
-| `globals.css`（`.nav-link`）                                    | 500  | `--font-sans`                 | 顶栏一级导航         | 低                                                                                                                                                                    |
-| `friend-postcard.css`（`.friend-postcard__title`）              | 500  | `--font-serif`                | 友链卡片名称         | 中低：可能含中文                                                                                                                                                      |
-| `friend-postcard.css`（`.friend-postmark text`）                | 500  | `--font-sans`（10px，SVG）    | 邮戳弧形字（装饰）   | 低：纯装饰图案                                                                                                                                                        |
-| `reading.css`（`.article-info__heading`）                       | 500  | `--font-sans`                 | 文末信息区标题       | 低                                                                                                                                                                    |
+| 位置                                                | 字重 | 字体族                          | 场景                 | 合成粗体风险                                                                                                                                                        |
+| --------------------------------------------------- | ---- | ------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `globals.css`（`body` 内的 `h1–h6`）                | 600  | `--font-sans`（继承自 body）    | 全站标题基线         | 低：`Noto Sans SC` 是 100–900 可变字体，600 是真字重；仅当 Web Font 未加载、回退到 `Microsoft YaHei`（只有 Regular/Bold）时才可能被合成                             |
+| `prose.css`（`.prose :is(h1,h2,h3,h4)`）            | 600  | `--font-serif`                  | **中文正文标题**     | 低：`Noto Serif SC` 是 200–900 可变字体，600 是真字重（自托管，见 §5）；只有当字体文件加载失败、回退到 `Songti SC` / `SimSun` 时才回到"只有 Regular/Bold"的两档情形 |
+| `prose.css`（`strong`）                             | 600  | `--font-sans`                   | 强调段               | 中低：sans 家族普遍有半粗                                                                                                                                           |
+| `prose.css`（`th`）                                 | 600  | `--font-sans`（caption + 大写） | 表头                 | 低：拉丁为主、字号小                                                                                                                                                |
+| `containers.css`（`.md-callout__title`）            | 600  | `--font-sans`                   | 提示块标题           | 中：内容是中文                                                                                                                                                      |
+| `containers.css`（`.md-details__summary`）          | 600  | `--font-sans`                   | 折叠块摘要           | 中：内容是中文                                                                                                                                                      |
+| `mentions.css`（`::before` 徽标 `GH`/`TW`/`TG`）    | 600  | `--font-sans`                   | 平台徽标文字         | 低：拉丁字形                                                                                                                                                        |
+| `footnotes.css`（`.prose .footnotes__title`）       | 600  | `--font-sans`                   | 小字 + 0.12em 字距   | 低                                                                                                                                                                  |
+| `reading.css`（`.ai-summary__label`）               | 600  | `--font-sans`                   | AI 摘要标签          | 中：内容是中文，但字号 12px                                                                                                                                         |
+| `reading.css`（`.comment__author`）                 | 600  | `--font-serif`（继承自父块）    | 评论作者名           | 中低：中文姓名，字号 12px                                                                                                                                           |
+| `reading.css`（`.comment-composer__whisper-label`） | 600  | `--font-sans`                   | 悄悄话表单标签       | 中：内容是中文                                                                                                                                                      |
+| `reading.css`（`.ai-gen__mark`）                    | 600  | `--font-sans`                   | `AI` 徽章            | 低：拉丁字母，本轮已从 10px 提到 `--text-meta`                                                                                                                      |
+| `globals.css`（`.nav-avatar__fallback`）            | 600  | `--font-sans`                   | 头像首字母兜底       | 低：单个字母                                                                                                                                                        |
+| `globals.css`（`.nav-identity__avatar`）            | 600  | `--font-sans`                   | 导航身份块头像首字母 | 低：单个字母                                                                                                                                                        |
+| `globals.css`（`.nav-identity__name`）              | 600  | `--font-sans`                   | 导航身份块名称       | 中：中文，但字号 15px 且有 `text-overflow: ellipsis`                                                                                                                |
+| `globals.css`（`.nav-link`）                        | 500  | `--font-sans`                   | 顶栏一级导航         | 低                                                                                                                                                                  |
+| `friend-postcard.css`（`.friend-postcard__title`）  | 500  | `--font-serif`                  | 友链卡片名称         | 中低：可能含中文                                                                                                                                                    |
+| `friend-postcard.css`（`.friend-postmark text`）    | 500  | `--font-sans`（10px，SVG）      | 邮戳弧形字（装饰）   | 低：纯装饰图案                                                                                                                                                      |
+| `reading.css`（`.article-info__heading`）           | 500  | `--font-sans`                   | 文末信息区标题       | 低                                                                                                                                                                  |
 
 结论与建议（**不改任何 CSS 字重**）：
 
@@ -723,6 +731,29 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 墨（3 级文字 + 1 级装饰）：`ink` → `ink-soft` → `ink-muted` 是文字层级，`ink-faint` **不是第四级灰**，而是装饰专用色（图标 / 分隔 / 图表线 / 未激活控件），禁止承载任何要读的文字。视觉层级靠字号、字重、字距，不靠压低对比度。
 线（2 级）：`line` 实线 / `line-strong` 虚线与引用左线。
 **A**：`--surface*` / `--text*` / `--edge*` 与调色板的一一对应关系由 `tests/design-doc-sync.test.ts` 校验（文档 §4 的"代理到"必须与源码同批改动）。
+
+**正文链接的下划线必须用 `--accent`，不能用 `--accent-soft`**（**A**，2026-11-17 修正）
+
+正文链接是 `color: inherit` —— 与周围文字**完全同色**（实测 `linkVsBody = 1`），下划线是唯一的识别线索。它因此不属于「装饰」，必须满足 WCAG 1.4.11 的 3:1 非文本对比：
+
+| 下划线色                   | 亮/阅读面 | 亮/页面底 | 暗/阅读面 | 暗/页面底 | 判定              |
+| -------------------------- | --------- | --------- | --------- | --------- | ----------------- |
+| `--accent-soft`（旧）      | 2.94      | 2.82      | 1.95      | 2.11      | ❌ 四处全部 < 3:1 |
+| **`--accent`（现）**       | **4.94**  | **4.73**  | **8.69**  | **9.38**  | ✅                |
+| `--accent-strong`（hover） | 6.63      | 6.36      | 6.77      | 7.31      | ✅                |
+
+> **口径与取数方式**（2026-11-17 实测校正）：四个面都是**浏览器里真实渲染出来的颜色**，不是拿 `tokens.css` 的 hex 手算——`--reading-surface` 在暗色下是 `color-mix(in oklab, …)`，computed 值形如 `oklab(0.222803 0.00355288 -0.00683348)`，必须先经 canvas 采样成 sRGB 才能算对比度。
+>
+> | 面                      | 亮色实测           | 暗色实测        |
+> | ----------------------- | ------------------ | --------------- |
+> | 阅读面 `.reading-sheet` | `rgb(255,255,255)` | `rgb(28,27,30)` |
+> | 页面底 `body`           | `rgb(251,250,247)` | `rgb(20,19,22)` |
+>
+> **本节曾有两个错误数字必须作废**：`--accent` 暗色曾写 10.64、hover 曾写 8.29。它们是把 `oklab()` 的前三个数字当成 RGB 0–255 直接代入亮度公式得出的（`0.22` 被当成接近零的通道值），量级完全失真。正确值是 8.69（阅读面）与 6.77。教训：**涉及 `color-mix` / `oklab` 的表面，必须先在浏览器里解析成 sRGB 再算**。
+
+hover 从 `--accent` 抬到 `--accent-strong` 并加粗到 2px，保持可感知的层次；`focus-visible` 走全局 `--focus-ring`（`--accent`，浏览器实测 outline 为 `solid 2px rgb(88,111,168)` 亮 / `rgb(168,184,228)` 暗）。全站未定义 `:visited` 样式，访问过的链接外观不变 —— 这是既定取舍（文章链接多为一次性跳转，标记已读收益低），不是缺陷。
+
+`tests/design-color-system.test.ts` 有 4 条断言锁住这一点：静置与 hover 都必须声明下划线色、静置色在所有承载表面 ≥3:1、hover 与静置必须不同色、`color: inherit` 与 `text-decoration: underline` 必须同时存在（否则链接完全不可辨）。
 
 分层例外（**A**，本轮收敛）：§2 说组件只消费第 2 层，现在只剩**一处受控例外** —— 图片预览的**反色浮层**（`media.css` 的遮罩/前景、`reading.css` 的一处遮罩）必须直接取 `--color-ink` / `--color-paper`，因为它的语义就是「遮罩用墨、前景用纸」，套正向语义别名反而会在暗色下失效。例外以文件+Token 为单位登记在 `tests/design-color-system.test.ts`，新增一处就会失败，登记项失效也会失败。
 
@@ -764,11 +795,59 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 ### 14.7 最小字号护栏
 
-- 事实：**B**，且本轮已把三处真实信息文字抬到 12px 以上。最小字号角色是 `--text-meta` = 0.75rem（12px）。当前全站**唯一**低于 12px 的 `font-size` 是 `friend-postcard.css` 的 `.friend-postmark text` 10px —— 它是 SVG 印章图案内部的弧形字，字号是 SVG 用户单位、随邮戳尺寸等比缩放，属于装饰而非信息，保留不改。
-- 本轮修正的三处（原都是要读的信息，不是装饰）：`reading-progress.tsx` 竖向进度百分比 11px → `--text-meta`；`friend-postcard.css` 移动端卡片描述 11px → `--text-meta`；`reading.css` 的 `.ai-gen__mark`（`AI` 徽章）10px → `--text-meta`。三项的容器空间均已实测放得下（见 `docs/audits/PHASE-3A.md`）。
-- **仍低于 12px 的相对字号**（不计入上面的绝对统计，因为它们随父级计算）：`mentions.css` 的 `0.7em`、`footnotes.css` 的 `0.72em`、`prose.css` 的 `.insight-ref` `0.72em`。这些是平台徽标与上标符号，命中 12px 基准时约 8.4–8.6px，属于**符号级排版**（上标必须小于正文才能成立），本轮不动。
-- 颜色护栏（**A**，上一轮落地）：不再靠"某个 class 的字号 × 颜色"这种脆弱的自动识别。改为两层更可靠的检查：① **Token 级禁令** —— `--text-tertiary` 的全部静态使用点登记在 `tests/design-color-system.test.ts` 的装饰白名单（含理由），新增一处即失败；`--accent` 禁止出现在 `color:` 与 `text-[...]`。② **规则级兜底** —— CSS 里 `font-size` ≤13px 的规则块若同时出现弱对比文字色，直接失败。
-- **盲区如实记录**：TSX 里由条件表达式拼出的类名、跨行拼接的 class 字符串，静态扫描无法可靠还原最终 DOM。这部分由完整对比度矩阵（`--text-secondary` 在允许表面 ≥4.5:1）+ 上述 Token 级禁令双保险，不伪造"全站字号×颜色已覆盖"的结论。另外，`<12px` 也**没有自动化守护**（**C**，未实施）：只有本节的静态扫描口径，新增一处低于 12px 的信息文字不会被测试拦住。要做这条守护需要先定义「哪些选择器族允许出现在 12px 以下」（目前只有 `friend-postmark` 的 SVG 弧形字），否则会把装饰性符号误报成缺陷。
+- 事实：**A**（本轮由 B 升为 A，补齐了自动化守护）。最小字号角色是 `--text-meta` = 0.75rem（12px）。
+- **旧表述已作废**：本节曾写「全站唯一低于 12px 的 `font-size` 是 `.friend-postmark text` 10px」。那是**只扫绝对数值**得出的结论，漏掉了 em 链与伪元素。2026-11-17 的实测把真实清单扩到 **7 条**（5 条现存 + 2 条已处理，见下两表），其中 `.prose .md-mention::before` 与 `.home-more__count` 是旧口径完全看不到的。
+
+**判定口径（三层，缺一层就会漏）**：
+
+| 来源              | 例子                        | 能否只靠文本匹配               |
+| ----------------- | --------------------------- | ------------------------------ |
+| 字面量 px / rem   | `font-size: 10px`、`0.7rem` | 能                             |
+| 语义 Token        | `var(--text-caption)`       | 能（需查 Token 值）            |
+| **相对父级 em**   | `0.9em`                     | **不能** —— 取决于祖先最终字号 |
+| **继承 / 伪元素** | `::before` 生成内容         | **不能** —— 不在 DOM 里        |
+
+`.prose code { 0.875em }` 是这条口径最好的例子：正文段落里算 14.875px（合格），落进 13px 的脚注区就是 11.375px（不合格）。**同一段 CSS 文本，两个结论**，所以 em 必须结合祖先求值。
+
+**当前全部低于 12px 的规则（`tests/small-fonts.test.ts` 断言此表与源码一致）**：
+
+| 选择器                           | 求值                                | 分类           | 依据                                                                  |
+| -------------------------------- | ----------------------------------- | -------------- | --------------------------------------------------------------------- |
+| `.friend-postmark text`          | 10px 字面量                         | decorative     | SVG 用户单位，随邮戳等比缩放，属图案（且 `svg` 本身带 `aria-hidden`） |
+| `.prose .heading-anchor`         | 0.7em × 17px(h4) = **11.9px**       | decorative     | `opacity: 0`，仅 hover/聚焦出现                                       |
+| `.home-more__count`              | 0.95em × 12px = **11.4px**          | decorative     | JSX 标了 `aria-hidden="true"`，读屏不读它                             |
+| `.prose .footnote-backref__hint` | 0.9em × 13px(脚注) = **11.7px**     | footnote-inner | 脚注区已是 13px 次级说明，内部再小一档                                |
+| `.prose code`                    | 0.875em × 13px(脚注) = **11.375px** | footnote-inner | 仅当行内代码落进脚注区                                                |
+
+已解决的问题两条（保留记录，不再是豁免）：
+
+| 选择器                       | 原值                   | 处理                             | 原因                                                                       |
+| ---------------------------- | ---------------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `.prose .md-mention::before` | 0.7em × 17px = 11.9px  | **改为 0.71em = 12.07px**        | 见下条说明                                                                 |
+| `.home-more__notify-state`   | 0.95em × 12px = 11.4px | **删除规则与豁免**（2026-11-17） | TSX 里零消费者（订阅面板迁成模态弹窗后遗留的死 CSS），给它发豁免是虚假覆盖 |
+
+- **平台徽标为什么不是豁免而是改字号**：`.prose .md-mention::before`（GH/TW/TG）曾经是 11.9px。它挂在 `::before` 上，而**生成内容加不了 ARIA 属性**——「装饰类可证」的三个条件（`svg` / `opacity:0` / `aria-hidden`）一个都不成立。既然它承载「这是哪个平台」的信息，正确处理是把字号提到 12px 以上（0.71em = 12.07px，视觉差 0.17px 不可辨），而不是塞进白名单。
+- **`.home-more__count` 为什么归 decorative 而不是 footnote-inner**：它的真实父级是 `.home-more__entry`（12px），不是 `.footnotes`。原来的 `footnote-inner` 归类套错了理由——真正成立的是 JSX 上的 `aria-hidden="true"`。`aria-hidden` 是 DOM 属性，CSS 里看不到，因此证明必须跨文件到 TSX 取（`tsxAriaHiddenClasses()`）。
+- **KaTeX 的 `.vlist-s` 不在名单里**：它来自 `node_modules` 的第三方样式表（零宽占位，1px），不归本项目维护，列进来等于把别人的问题伪装成本项目已审核的例外。
+
+**守卫实现**（**A**）：
+
+- 判定内核：`tests/helpers/small-fonts.ts`（482 → 约 600 行）；断言：`tests/small-fonts.test.ts`（**34 用例**）。
+- 白名单 `SUB_12PX_ALLOWANCES` 分三类：`structural` / `decorative` / `footnote-inner`，每条必须带理由。
+- 六条纪律，任一不满足即失败：
+  1. 白名单选择器必须真实存在（失效即报错）；
+  2. 装饰类必须给出**可机检**的证明（`svg` / `opacity:0` / `aria-hidden`），且该条件在规则里成立；
+  3. 装饰证明返回**成立集合**而非单值——`.friend-postmark` 的 `<svg>` 同时满足 `svg`（结构）与 `aria-hidden`（语义），声明哪条都应认可，顺序不该决定对错；
+  4. 脚注类必须登记 em 求值祖先、解析值**确实** < 12px，且祖先选择器必须含 `.footnotes`（"脚注内再小一档"这个理由对它才成立）；
+  5. 白名单条目的类名必须在 `.ts` / `.tsx` 里有真实生产者——**死豁免**（CSS 还在、DOM 没了）同样失败；
+  6. **TSX 侧零容忍** —— `text-[11px]` / `text-[0.7rem]` 一律失败，因为任意值没有"场景"可辩。
+- **`aria-hidden` 必须跨文件证明**：它是 DOM 属性，CSS 里永远看不到。`tsxAriaHiddenClasses()` 扫 TSX 的 JSX 开标签，把带 `aria-hidden` 的类名收集起来供装饰证明使用。只看 CSS 会把 `.home-more__count` 误判成「承载信息的小字」。
+- **`svg` 证明要求结构证据**：`text` / `textPath` 必须作为**元素名**出现，**且该 CSS 文件里确实存在 `svg` 元素选择器**。否则 `.prose text` 这种写法会被误判成「SVG 文字」而白送豁免（实测 `prose.css` 里没有任何 `svg` 选择器，`friend-postcard.css` 有 `.friend-postcard__mark svg`）。
+- **em 祖先必须显式登记**（`EM_ANCESTORS`）而不是猜：`.footnotes` 是 `.prose .footnote-backref__hint` 的 DOM 祖先，但它既不出现在后者的选择器里，也不在同一条规则链上。未登记祖先的 em 规则判为**不可验证**（不是放行）。
+- **渲染器产出的类名也算有生产者**：`heading-anchor` 与 `footnote-backref__hint` 不是 JSX，而是 `src/lib/content/markdown.ts` / `footnotes.ts` 用模板字符串拼的 HTML。死豁免检测因此扫 `.ts` 与 `.tsx`，只扫 `.tsx` 会把它们误报成孤儿。
+- **反向验证记录**：注入一条指向死 CSS（`.home-more__panel-hint`）的豁免后，三个守卫同时失败（无生产者 / 祖先缺失 / 祖先非脚注容器）；注入一条不存在的选择器后，失效检查失败。确认守卫不是空转，验证后已还原。
+
+**已知盲区（如实记录，不假装全覆盖）**：TSX 里由条件表达式拼出的类名、跨行拼接的 class 字符串，静态扫描无法可靠还原最终 DOM；这部分由对比度矩阵与 Token 级禁令兜底。另外 `inherit` 不视为独立小字号来源（它的实际大小由父级决定，父级自己会被检查）。
 
 ### 14.8 死 Token 的识别与处理原则
 
@@ -815,7 +894,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 | Markdown 渲染器输出 ↔ CSS 选择器（`.md-*`）                          | `markdown-css-contract.test.ts`（Phase 4B 新增）                | A                                                                                       |
 | 失效选择器回归（`.prose .spoiler` / `.prose .callout`）              | `markdown-css-contract.test.ts`                                 | A                                                                                       |
 | Callout 类型配色只有 `containers.css` 一处实现                       | `markdown-css-contract.test.ts`                                 | A                                                                                       |
-| 导航双态：单 DOM / 三态转换 / 迟滞阈值 / 48rem 断点归属 / 交互冻结     | `nav-dual-state.test.tsx`                                       | A（真实浏览器观感另见 `docs/audits/PHASE-nav-dual-state.md`）                            |
+| 导航双态：单 DOM / 三态转换 / 迟滞阈值 / 48rem 断点归属 / 交互冻结   | `nav-dual-state.test.tsx`                                       | A（真实浏览器观感另见 `docs/audits/PHASE-nav-dual-state.md`）                           |
 | 自托管字体：202 分片 / manifest / OFL / 无外部地址                   | `self-hosted-fonts.test.ts`（Phase 4A 新增）                    | A                                                                                       |
 | 字体栈单一来源（`tokens.css` 定义、`fonts.css` 只声明 `@font-face`） | `self-hosted-fonts.test.ts`                                     | A                                                                                       |
 | `@theme` 调色板层是否被工具类消费                                    | —                                                               | **盲区**：需要 Tailwind 的类名提取，用正则冒充会误报，故不做                            |
@@ -830,6 +909,28 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 - 断点事实与口径见 §6：**A**（只有 `sm/lg/xl` 三档，无 `md:`/`2xl:`，无 `--breakpoint-*` 覆盖）。
 - 组件内部局部尺寸条件（`prose.css:353`、`prose.css:394` 的 `max-width: 640px`）不算断点，**不要为了统一而改写它们**。
 
+**已实测完成（2026-11-17，Chromium / Windows，Dev Server + CDP）**：
+
+| 项目                | 结论 | 证据                                                                                                                           |
+| ------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 暗色主题全套排版    | 通过 | 正文 13.32:1、h2 16.23:1、引用块 8.18:1、代码块 13.37:1、元信息 7.22:1，全部 ≥ AA 4.5                                          |
+| 暗色衬线/无衬线层级 | 通过 | 标题与引用为 Serif、正文为 Sans，截图确认可分                                                                                  |
+| 暗色日记卡片        | 通过 | 日号 40px/600 Serif + `tabular-nums`，条目 14.31:1、正文 7.22:1                                                                |
+| 320px 极窄屏        | 通过 | 页面横向溢出 0、真正越界元素 0；正文 16.5 字/行；引用/表格/列表/代码块子元素泄漏均为 0                                         |
+| 320px 滚到底遮挡    | 通过 | 三档视口 `coveredByNavPx = 0`（浮动底栏不遮蔽末行）                                                                            |
+| 日文混排            | 通过 | 见 §5.2「日文字形」；平台字体命中率 100%                                                                                       |
+| 正文链接可辨识度    | 通过 | 静置下划线 4.94:1(亮)/8.69:1(暗) 实测；hover 6.63/6.77 为规则级验证；focus-visible 实测 outline 2px `--accent`（口径见 §14.3） |
+
+**仍未实测（不得写成 PASS）**：
+
+| 项目                    | 状态           | 原因                                                                        |
+| ----------------------- | -------------- | --------------------------------------------------------------------------- |
+| Safari / macOS 字体观感 | **NOT TESTED** | 无可用环境                                                                  |
+| iOS Safari 字体与安全区 | **NOT TESTED** | 无可用环境                                                                  |
+| Android Chrome 字体     | **NOT TESTED** | 无可用环境                                                                  |
+| Linux Chromium          | 部分等价       | 同 Blink + HarfBuzz 整形，但未在真机跑                                      |
+| `:visited` 链接样式     | **无规则**     | 全站（除打印样式）未定义 `:visited`，访问过的链接不变化；属已知取舍，非缺陷 |
+
 以下各项**必须人工视觉验收，本任务未声称通过**：
 
 1. 亮/暗两套在 390 / 768 / 1024 / 1280 下的标题字重观感（§14.1 的合成粗体风险；自托管后主要看 100–400 区间的观感，而不是合成粗体）。
@@ -838,11 +939,11 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 4. Accent 的实际视觉面积占比（§14.4）。
 5. Gallery 与预览层的组件专属 blur 在深色图片上是否过强（§14.5）。
 6. **跨平台字体观感**（自托管后新增的验收项）：Safari / iOS / Windows / Android 上正文与标题的实际字形、行高与字重是否一致；罕见字回退到系统字体时的观感是否可接受（§5.2）。
-7. **320–375px 窄屏**：中文标点挤压、`text-wrap: balance` 标题换行、媒体组件与字体的配合（§6）。
+7. 320–375px 窄屏的**中文标点挤压观感**与 `text-wrap: balance` 换行是否美观 —— 几何已实测合格（见上表），但"好不好看"仍需人眼确认。
 
 ### 14.11 文章封面与标题渐变（临时方案）
 
-> **状态：临时设计稿，尚未定稿。** 本节记录一次针对文章详情页的试验性调整，不是已确立的全局规范；定稿前不要把它当作其他地方可复用的模式。
+> **状态（**C**）：临时设计稿，尚未定稿。** 本节记录一次针对文章详情页的试验性调整，不构成当前事实，不是已确立的全局规范；定稿前不要把它当作其他地方可复用的模式。
 
 **设计目的**：让封面与文章标题形成连续的视觉关系——封面底部不再以一条硬边结束，而是溶进标题所在的纸面，使标题成为封面与正文信息之间的衔接段落。
 
@@ -857,7 +958,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 
 ### 14.12 Tags 彩色便利贴索引签（临时方案）
 
-> **状态：临时设计稿，尚未定稿。** 只用于 /tags 与「探索 → 标签」的索引签，不是新的全局组件语言。
+> **状态（**C**）：临时设计稿，尚未定稿。** 只用于 /tags 与「探索 → 标签」的索引签，不构成当前事实，不是新的全局组件语言。
 
 **形状**：一张从书页边缘伸出的纸签 —— 左边朝左的尖角，右边圆角矩形，两者是**同一块纸**：`clip-path` 在元素上裁出左尖角（`polygon(0 50%, 0.95rem 0, 100% 0, 100% 100%, 0.95rem 100%)`），右侧圆角由 `border-radius` 提供，二者取交集，圆角不会被裁掉。不是「箭头按钮 + 右侧卡片」拼出来的两件东西。
 
