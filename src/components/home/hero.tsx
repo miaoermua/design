@@ -86,7 +86,7 @@ function ClassicHero({ name, avatar, introduce, socials, stats }: Omit<HeroSecti
             {name}
           </h1>
           {introduce ? (
-            <p className="text-lead mt-2 max-w-[34rem] leading-[1.7] text-pretty text-[var(--text-secondary)]">
+            <p className="text-lead mt-2 max-w-[34rem] font-serif text-pretty text-[var(--text-secondary)]">
               {introduce}
             </p>
           ) : null}
@@ -267,7 +267,7 @@ function TemplatedHero({
 
           {hero.description ? (
             <p
-              className="hero-block-rise text-lead mt-6 max-w-[38rem] leading-[1.7] text-pretty text-[var(--text-secondary)] max-lg:mx-auto"
+              className="hero-block-rise text-lead mt-6 max-w-[38rem] font-serif text-pretty text-[var(--text-secondary)] max-lg:mx-auto"
               style={{ '--block-delay': descDelay } as React.CSSProperties}
             >
               {hero.description}

@@ -18,12 +18,7 @@ import { CommentsSection } from '@/features/comments'
 import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
-import {
-  getArticle,
-  getSiteTimezone,
-  isNotFound,
-  type ArticleDetail,
-} from '@/lib/api'
+import { getArticle, getSiteTimezone, isNotFound, type ArticleDetail } from '@/lib/api'
 import { imageSizeIndex } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
 import { isRealtimeEnabled } from '@/lib/realtime/config'
@@ -216,7 +211,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               )}
 
               {article.summary ? (
-                <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
+                <p className="text-lead mt-4 font-serif text-[var(--text-secondary)] sm:mt-5">
                   {article.summary}
                 </p>
               ) : null}
