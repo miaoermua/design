@@ -10,6 +10,7 @@ import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
 import { DiaryCard } from '@/features/diaries'
+import { readSubscribeOptions } from '@/features/interactions'
 import {
   ConfigurationError,
   getSiteLikeCount,
@@ -113,6 +114,13 @@ export default async function HomePage() {
     isFeatureEnabled('interactions') &&
     theme.homepage.more.items.some((item) => item.type === 'like')
   const siteLikeCount = needsLikeCount ? await getSiteLikeCount() : null
+
+  // 订阅弹窗需要完整的订阅选项（邮件类型 + 频道），与 More 区块的 subscribe 入口共享
+  const needsSubscribe =
+    showMore &&
+    isFeatureEnabled('interactions') &&
+    theme.homepage.more.items.some((item) => item.type === 'subscribe')
+  const subscribeOptions = needsSubscribe ? await readSubscribeOptions(theme.social) : null
 
   return (
     <Container>
@@ -238,7 +246,11 @@ export default async function HomePage() {
         >
           <SectionHeading title={t(locale, 'home.more')} />
           <div className="mt-6">
-            <HomeMore items={theme.homepage.more.items} siteLikeCount={siteLikeCount} />
+            <HomeMore
+              items={theme.homepage.more.items}
+              siteLikeCount={siteLikeCount}
+              subscribeOptions={subscribeOptions}
+            />
           </div>
         </section>
       ) : null}

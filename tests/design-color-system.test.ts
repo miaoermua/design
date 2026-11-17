@@ -439,11 +439,6 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       reason: '目录折叠箭头，aria-hidden',
     },
     {
-      file: 'src/components/reading/subscribe-panel.tsx',
-      match: 'aria-hidden="true"',
-      reason: '箭头图标，aria-hidden',
-    },
-    {
       file: 'src/components/ui/pagination.tsx',
       match: 'disabledClass',
       // 这是白名单里**唯一承载可读文字**的一处（其余都是分隔符与图标）。
@@ -457,6 +452,11 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       file: 'src/components/ui/mermaid-hydrator.tsx',
       match: "'lineColor'",
       reason: 'Mermaid 图表连线，非文本图形',
+    },
+    {
+      file: 'src/components/ui/subscribe-modal.tsx',
+      match: 'text-[var(--text-tertiary)]',
+      reason: '箭头图标「↗」，aria-hidden',
     },
   ]
 

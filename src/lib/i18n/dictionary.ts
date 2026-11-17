@@ -433,6 +433,14 @@ const zhCN = {
   'subscribe.rssHint': '用阅读器主动拉取，不需要留下邮箱。',
   'subscribe.channelsLabel': '频道订阅',
   'subscribe.channelNote': '跳转到外部频道，站内不记录订阅状态。',
+  'subscribe.close': '关闭订阅窗口',
+  'subscribe.rssTitle': 'RSS 订阅',
+  'subscribe.notifyTitle': '浏览器通知',
+  'subscribe.notifyHint': '有新内容时在系统通知里提醒，只在你点开这个开关后才会申请权限',
+  'subscribe.notifyOn': '已开启',
+  'subscribe.notifyOff': '未开启',
+  'subscribe.notifyBlocked': '浏览器已阻止',
+  'subscribe.notifyUnsupported': '浏览器不支持',
 
   // ── 实时更新 / AI / 打赏 ──────────────────────────────────────
   'live.updated': '文章已更新',
@@ -906,6 +914,15 @@ const en: Record<MessageKey, string> = {
   'subscribe.rssHint': 'Pull updates with your reader — no email needed.',
   'subscribe.channelsLabel': 'Channel subscriptions',
   'subscribe.channelNote': 'Opens an external channel; this site does not track your subscription.',
+  'subscribe.close': 'Close subscribe dialog',
+  'subscribe.rssTitle': 'RSS feed',
+  'subscribe.notifyTitle': 'Browser notifications',
+  'subscribe.notifyHint':
+    'Get notified when new content is published — permission is requested only when you flip this switch',
+  'subscribe.notifyOn': 'On',
+  'subscribe.notifyOff': 'Off',
+  'subscribe.notifyBlocked': 'Blocked by browser',
+  'subscribe.notifyUnsupported': 'Not supported',
 
   'live.updated': 'Article updated',
   'live.updatedHint': 'Body and table of contents are now up to date',
