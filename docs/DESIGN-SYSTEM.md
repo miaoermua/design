@@ -352,7 +352,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 规则：
 
 - **标题衬线、正文无衬线**。`.prose` 正文用 `--font-sans`（`prose.css:9`），`.prose` 标题用 `--font-serif`（`prose.css:24`）。
-- 「正文用衬线」目前**已实现两处**：`.prose blockquote` 显式 `font-family: var(--font-serif)` + `font-style: normal`（`prose.css:158-167`），文章页导语带 `font-serif`（`articles/[category]/[slug]/page.tsx:159`）。首页导语用 `text-lead` 但**不带** `font-serif`（`page.tsx:66`），所以同一个 `--text-lead` 字号在两处的字体族不同 —— 这是**已实现但未统一**的状态，见 §14.2。
+- 「正文用衬线」目前**已实现三处**：`.prose blockquote` 显式 `font-family: var(--font-serif)` + `font-style: normal`，文章页导语、首页 Hero 导语都带 `font-serif`。**同一个 `--text-lead` 在三处现在字体族一致**（此前首页是无衬线，属未统一状态，已收敛）。导语也不再各自写 `leading-[1.7]` / `leading-[1.75]`，统一吃 `--text-lead--line-height`（1.8）。
 - 中文标题不额外加字距；英文大标题靠 `--text-display--letter-spacing` / `--text-pageheading--letter-spacing` / `--text-headline--letter-spacing` / `--text-title--letter-spacing` 提供负字距。**四个标题档位的字距现在全部来自 Token**，组件不再用 `tracking-[-0.022em]` 之类的任意值覆盖（原文章 h1 与 PageHeader 的覆盖已并入 Token）。
 - **标题字号与行高必须成对消费**：正确写法是 `text-pageheading` / `text-headline`（一个类同时给出 font-size、line-height、letter-spacing），**禁止**再写 `text-[calc(var(--text-display)*0.78)] leading-[1.25]` 这种「自己算字号 + 手写行高」的组合 —— 前者的行高无处可查，后者在断点换系数时会跳变（原实现 640px 处跳 11.7px）。
 - `.meta` = `--text-meta` + `--text-secondary` + `letter-spacing: 0.04em` + `tabular-nums`（`globals.css` 的 `.meta`）；分隔点用 `.meta-sep`（`·` 前后 0.5em，颜色 `--text-tertiary`）。**不要在这里写行号**：这两个类在 `globals.css` 里的位置随导航段落一起漂移过。
@@ -707,15 +707,15 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 - 自托管之后，"中文衬线只有 Regular/Bold 两档"这个前提**在 Web Font 命中时不成立**：`Noto Serif SC` 提供 200–900 连续字重，600 不再依赖系统字体解析。因此这一条从"高风险待验收"降级为"**降级路径上的残余风险**"——只有字体文件加载失败时才复现。
 - 不能把 600 一律降成 500：即便在降级路径上，500 与 600 也都会落到同一个真字重或同一个合成品上，**降低数值不等于降低合成风险**，反而可能让拉丁与中文看起来不一致。
 - 仍需人工验收的点（不是自动化能回答的）：100–400 字重区间在真实正文尺寸下的观感，以及 Web Font 加载失败时 `Songti SC` / `SimSun` 的合成粗体是否可接受（见 §14.10）。**这是设计决策，不是文档修正**。
-- 建议的自动化守护（**C**，仍未实现）：断言"衬线 + 600"的组合只出现在标题族选择器里，避免正文段落被加到同一组合。
+- 自动化守护（**A**，已实现）：`tests/typography-contract.test.ts` 断言「同一条规则里同时出现 `--font-serif` 与 `font-weight: 600`」只能落在标题族选择器（含 `h1–h6` 或 title/heading 语义）。靠**继承**拿到衬线的选择器（如 `.comment__author`）不在覆盖范围内——静态扫描无法还原继承链，这是已知盲区，不假装全覆盖。同批守的还有：禁止显式 `font-weight: 400`（那是继承默认值，写出来只会在换字体时多一个同步点）。
 
 ### 14.2 字号角色与衬线一致性
 
 - 字号角色映射见 §5.1：**13 个 Token**各自有明确语义，**同一 px 不代表同一语义**（`--text-h3` 与 `--text-lead` 都是 1.125rem，前者是层级、后者是语气）。**A**（`tests/design-doc-sync.test.ts` 校验映射表里的 Token 真实存在）。
 - **标题字号与行高的配对（Phase 3A，A）**：四个标题档位（display / pageheading / headline / title）现在都用「一个工具类同时给出 font-size + line-height + letter-spacing」的方式消费，组件层不再出现标题上的 `leading-[...]` 任意值覆盖，也不再出现 `text-[calc(var(--text-display)*0.78)]` 这类自算字号。原实现的四处覆盖（首页 h1 `leading-[1.2]`、文章 h1 `0.78/0.82 + 1.25/1.2`、PageHeader `1.24`、日记 h1 `1.28`）已分别并入 Token。
 - 新增 `--text-pageheading` 与 `--text-headline` 的判断依据见 §5：原实现用 `display × 0.78/0.82/0.92` 三个系数表达「内页页头」与「文章标题」两个语义，但系数不是语义、`calc` 出来的行高也无处可查，且 640px 断点换系数时产生 11.7px 台阶。新增后的值与原终值逐一实测对齐（见 `docs/audits/PHASE-3A.md`），因此首屏观感不变。
-- 特殊排版用法（40px 日号、32px 归档年月、标签页动态字号、文章行标题）目前仍是 **B**：源码里是硬编码 `text-[...]`，无 Token、无守护。**本轮未纳入**——它们属于「同一角色的局部尺寸变体」，与标题档位不是同一层问题，是否升格为 Token 需要独立设计决策。
-- 导语衬线不一致（文章页 serif / 首页 sans）是 **B**，属于已知的未统一状态，不是缺陷描述错误。
+- 特殊排版用法现状（**A**，已重新盘点）：文章行标题已改用 `--text-rowtitle`；归档 32px 年月与标签页动态字号在后续重构中已不存在。**仍保留的 6 处字面量字号**全部登记在 `tests/typography-contract.test.ts` 的 `ALLOWED_LITERAL_SIZES`（带理由）：40px 日记日号、28px 归档年份、17px 页头描述、17px 空态说明、18px 搜索输入、15px 搜索占位。新增第 7 处会让测试失败，删除实现则对应白名单条目失效——两个方向都拦。
+- 导语衬线**已统一**（**A**）：文章页与首页 Hero 都用 `--font-serif`，行高统一取 `--text-lead--line-height`。`tests/typography-contract.test.ts` 双向守护——导语段落缺 `font-serif`、或自己写 `leading-[...]` 覆盖，都会失败（两个大号标签用法在例外清单里，带理由）。
 
 ### 14.3 中性色阶与分层例外
 
