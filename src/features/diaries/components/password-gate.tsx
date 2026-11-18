@@ -4,40 +4,28 @@ import { t } from '@/lib/i18n/dictionary'
 import type { Locale } from '@/lib/i18n/config'
 import { NOTE_LIST_PATH } from '@/lib/routes'
 
-/** 表单提交的目标：正式路由给 `nid`，旧雪花 id 路由给 `id` */
-export type PasswordTarget = { field: 'nid' | 'id'; value: string }
-
 /**
  * 密码门槛：不通过时不渲染任何正文，也不把 403 当成「内容不存在」。
  *
- * ## 密码用 POST 交，不进 URL
+ * ## 密码走查询参数，跟上游一致
  *
- * 表单提交到 `/api/notes/unlock`，`method="post"`：密码在**请求体**里。
- * 这是硬要求，不是风格选择——若用 `method="get"`，密码会被拼进 `?password=`，
- * 于是同时出现在地址栏、浏览器历史、`Referer` 与服务器访问日志里，每一条都是
- * 不该有的副本。
+ * 这是**有意**跟随 Shiro / Kami，不是没做完：
  *
- * 提交后由那条路由向上游校验（上游只认 `GET /notes/:id?password=`，查询参数
- * 只存在于服务端到服务端那一次请求），成功则种下 httpOnly cookie 并 303 回到
- * **不含密码**的页面地址；失败则 303 回 `?wrong=1`。
+ *   - Shiro `NotePasswordForm.tsx`：`searchParams.set('password', …)` 后跳转；
+ *   - Kami `notes/[id].tsx`：`ctx.query.password` 直接喂给
+ *     `apiClient.note.getNoteByNid(id, { password })`。
  *
- * `wrong` 不是秘密，可以出现在 URL；密码不可以。
+ * 两家都是 `?password=` 查询参数、明文进地址栏；上游 core 的接口契约也只有
+ * 这一种形态（`NotePasswordQuerySchema`，`GET /notes/:id?password=`）。
  *
- * ## 无需 JS
+ * 我们同样是「服务端读 `?password=` → 转发上游」，只是把请求放在服务端做
+ * （本主题不让浏览器直连后端）。**没有**引入 POST 中转、cookie 凭据、签名令牌
+ * 这些上游不存在的东西——多两条代码路径、两份状态，收益只是让密码不出现在
+ * 自己的地址栏，与整个 MX 生态的行为反而不一致。
  *
- * 用原生表单 POST，不是 `fetch`，禁用 JS 也能解锁。没有用 Server Action：
- * 这条路由要在测试里直接用 POST 验证状态码与 `Set-Cookie`，普通 POST 更好验证，
- * 也不必把这块变成客户端边界。
+ * 用 GET 表单而不是 JS 跳转：无 JS 也能解锁，效果与 Shiro 的跳转等价。
  */
-export function PasswordGate({
-  target,
-  wrong,
-  locale,
-}: {
-  target: PasswordTarget
-  wrong: boolean
-  locale: Locale
-}) {
+export function PasswordGate({ locale, wrong }: { locale: Locale; wrong: boolean }) {
   return (
     <Container width="narrow">
       <div className="py-24">
@@ -49,9 +37,11 @@ export function PasswordGate({
           {wrong ? t(locale, 'diary.wrongPassword') : t(locale, 'diary.passwordHint')}
         </p>
 
-        <form action="/api/notes/unlock" method="post" className="mt-8 flex gap-3">
-          {/* 目标由服务端渲染；解锁路由会再校验一次必须是纯数字 */}
-          <input type="hidden" name={target.field} value={target.value} />
+        {/*
+         * 提交到当前页面自身（`method="get"`）：`password` 被拼成 `?password=`，
+         * 服务端读 searchParams 后转发上游，与上游同一套参数。
+         */}
+        <form method="get" className="mt-8 flex gap-3">
           <label htmlFor="password" className="sr-only">
             {t(locale, 'diary.password')}
           </label>

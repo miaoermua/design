@@ -2,7 +2,6 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { requireFeature } from '@/core/registry/guard'
 import { PasswordGate } from '@/features/diaries/components/password-gate'
 import { getDiary, isNotFound, isPasswordRequired } from '@/lib/api'
-import { readLegacyNotePassword } from '@/features/diaries/note-password'
 import { getLocale } from '@/lib/i18n/server'
 import { notePath } from '@/lib/routes'
 
@@ -29,49 +28,47 @@ import { notePath } from '@/lib/routes'
  */
 interface LegacyDiaryPageProps {
   params: Promise<{ id: string }>
-  /** 只有 `wrong`（密码错过的标记）；密码本身绝不从 URL 读 */
-  searchParams: Promise<{ wrong?: string }>
+  /** 与上游同一套参数：`password` 走查询串，`wrong` 仅用于区分「刚被拒」 */
+  searchParams: Promise<{ password?: string; wrong?: string }>
 }
 
 export default async function LegacyDiaryPage({ params, searchParams }: LegacyDiaryPageProps) {
   requireFeature('diaries')
 
   const { id } = await params
-  const { wrong } = await searchParams
+  const { password, wrong } = await searchParams
 
   // 雪花 id 是纯数字；其余形态直接 404，别把后端 422 变成 500
   if (!/^\d+$/.test(id)) notFound()
 
   /*
-   * 密码来自 httpOnly cookie，**不从 URL 读**。
-   * 未解锁时 cookie 不存在，上游 403，照常渲染密码门；解锁由
-   * POST /api/notes/unlock 完成（那里会同时种下 nid 与雪花 id 两个键），
-   * 成功后 303 到 `/notes/:nid`，这条路由不必再转发密码。
+   * 密码与上游同形：读 `?password=` 后透传给 core。
+   *
+   * 为什么这里也要处理密码：旧地址是用户可能仍在用的链接，受保护的日记
+   * 若直接 308 到 `/notes/:nid`，读者会在新地址再被问一次；在本路由先校验，
+   * 一次解锁就能走到目标。
    */
-  const password = await readLegacyNotePassword(id)
-
   let diary
   try {
-    diary = await getDiary(id, password ?? undefined)
+    diary = await getDiary(id, password)
   } catch (error) {
     if (isNotFound(error)) notFound()
     if (isPasswordRequired(error)) {
       const locale = await getLocale()
       return (
-        <PasswordGate
-          target={{ field: 'id', value: id }}
-          wrong={Boolean(wrong) || password !== null}
-          locale={locale}
-        />
+        <PasswordGate wrong={Boolean(wrong) || Boolean(password)} locale={locale} />
       )
     }
     throw error
   }
 
   /*
-   * 308 的目标**只有干净地址**：密码不再拼进查询串。
-   * 读者已经解锁时 cookie 会跟着 308 之后的 GET 一起过去（同为本站、path=/），
-   * `/notes/:nid` 直接读得到，不需要在 URL 里再带一次。
+   * 308 到不含密码的干净地址。
+   *
+   * 代价：受保护的旧链接解锁后，`/notes/:nid` 上没有 `?password=`，会再问一次。
+   * 之所以不把密码拼进 Location：那会让明文密码跟着 308 进浏览器历史，
+   * 而且多一条「密码出现在重定向头里」的路径。旧地址本就属于被 308 淘汰的
+   * 兼容层，多问一次可以接受。
    */
   permanentRedirect(notePath(diary.nid))
 }

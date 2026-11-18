@@ -24,15 +24,17 @@ import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { NOTE_LIST_PATH, notePath } from '@/lib/routes'
 import { PasswordGate } from '@/features/diaries/components/password-gate'
-import { readNotePassword } from '@/features/diaries/note-password'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, formatTime, formatWeekday } from '@/lib/utils/date'
 import { excerpt } from '@/lib/utils/text'
 
 interface DiaryPageProps {
   params: Promise<{ nid: string }>
-  /** 只有 `wrong`（密码错过的标记）；密码本身绝不从 URL 读 */
-  searchParams: Promise<{ wrong?: string }>
+  /**
+   * `password` 是上游 core 的既有参数形态（`NotePasswordQuerySchema`），
+   * Shiro / Kami 也都用它；`wrong` 只用于区分「首次」与「刚被拒」。
+   */
+  searchParams: Promise<{ password?: string; wrong?: string }>
 }
 
 /**
@@ -43,11 +45,12 @@ function isNoteNid(value: string): boolean {
   return /^[1-9]\d*$/.test(value)
 }
 
-export async function generateMetadata({ params }: DiaryPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: DiaryPageProps): Promise<Metadata> {
   const { nid } = await params
+  const { password } = await searchParams
   if (!isNoteNid(nid)) notFound()
   try {
-    const diary = await getDiaryByNid(Number(nid), (await readNotePassword(nid)) ?? undefined)
+    const diary = await getDiaryByNid(Number(nid), password)
     /*
      * canonical 与文章详情页走同一套：`absoluteUrl(identity, path)`。
      * 公开地址的解析优先级（env → 后端 `aggregate.url.webUrl`）也完全一致，
@@ -89,37 +92,19 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   requireFeature('diaries')
 
   const { nid } = await params
-  const { wrong } = await searchParams
+  const { password, wrong } = await searchParams
   if (!isNoteNid(nid)) notFound()
 
   const locale = await getLocale()
 
-  /*
-   * 密码来自 httpOnly cookie（由 POST /api/notes/unlock 种下），**不从 URL 读**。
-   * 这样地址栏、历史记录、Referer 与访问日志里都不会出现密码。
-   *
-   * 没有 cookie 就是「还没解锁」，`password` 为 undefined，上游直接 403，
-   * 下面渲染密码门——与改造前的行为一致。
-   */
-  const password = await readNotePassword(nid)
-
+  // 密码照上游的形态走查询参数，直接透传给 core
   let diary: Diary
   try {
-    diary = await getDiaryByNid(Number(nid), password ?? undefined)
+    diary = await getDiaryByNid(Number(nid), password)
   } catch (error) {
     if (isNotFound(error)) notFound()
     if (isPasswordRequired(error)) {
-      /*
-       * `wrong` 用来区分「第一次看到密码门」和「刚被拒过」。
-       * cookie 存在却仍 403 也算被拒（例如密码被作者改过）。
-       */
-      return (
-        <PasswordGate
-          target={{ field: 'nid', value: nid }}
-          wrong={Boolean(wrong) || password !== null}
-          locale={locale}
-        />
-      )
+      return <PasswordGate wrong={Boolean(wrong) || Boolean(password)} locale={locale} />
     }
     throw error
   }
