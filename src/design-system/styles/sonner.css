@@ -1,0 +1,112 @@
+/*
+ * Sonner 适配层样式
+ *
+ * Sonner 的样式**不是** CSS 文件，而是运行时 `__insertCSS()` 往 <head> 末尾追加
+ * 一个 <style>。也就是说它总在 Folio 的样式表之后 —— 同特异性下它永远胜出。
+ * 因此本文件所有覆盖规则都靠**堆叠两个属性选择器**把特异性提到 0,3,0，
+ * 而不是靠加载顺序或 `!important`。
+ *
+ * 三件事只有这里能做：
+ *   1. 层级：Sonner 默认 z-index: 999999999，会压过对话框(90)、媒体预览(80)、
+ *      搜索面板(50)。必须降到模态层之下，见下方容器规则。
+ *   2. 色板：Sonner 自带 light/dark 灰阶与 richColors 彩底，全部换成 Folio 语义
+ *      Token；`richColors` 保持关闭。
+ *   3. 形状：Sonner 默认 8px 圆角 + 16px 内边距。Folio 是方角卡片、由自定义
+ *      JSX 自己排版（`data-styled="false"`，Sonner 不会套默认内边距）。
+ */
+
+/* ── 容器 ─────────────────────────────────────────────────────── */
+
+.folio-toaster[data-sonner-toaster][data-sonner-toaster] {
+  /*
+   * 层级：**必须低于所有模态层**，否则默认的 999999999 会把通知压在最上面。
+   *
+   *   z=40 通知　<　50 搜索面板　<　80 图片预览　<　90 对话框　<　70 状态胶囊
+   *
+   * 为什么是 40 而不是迁移前的 70：迁移前通知区在 `z-[70]`，高于搜索面板(50)，
+   * 搜索打开时 toast 会浮在遮罩之上——那是既有行为，但不符合「模态期间不该有
+   * 别的浮层抢注意力」。现在压到 40，搜索/预览/对话框一旦打开，通知自然退到
+   * 遮罩之下（仍留在 DOM 里，关闭模态后继续可见）。
+   *
+   * 为什么不压到 0 附近：`z-index` 需要高于正文内容（正文层级最高约 3），
+   * 否则滚动时会被正文卡片盖住。
+   */
+  z-index: 40;
+  /* 与原容器同宽：24rem 为上限，窄屏左右各留 16px */
+  --width: min(24rem, calc(100vw - 2rem));
+  /* 方角：Sonner 默认 8px */
+  --border-radius: 0;
+  --gap: 8px;
+  font-family: var(--font-sans);
+
+  /*
+   * 覆盖 Sonner 的灰阶/语义色板。这里只映射到 Token，不出现色值字面量；
+   * 明暗主题由 Token 自身切换，因此不需要给 Sonner 传 theme。
+   */
+  --normal-bg: var(--surface-raised);
+  --normal-border: var(--edge);
+  --normal-text: var(--text-primary);
+  --normal-bg-hover: var(--surface-raised);
+  --normal-border-hover: var(--edge-strong);
+  --gray2: var(--surface-sunk);
+  --gray5: var(--edge);
+}
+
+/* ── 单条卡片 ─────────────────────────────────────────────────── */
+
+/*
+ * 自定义 JSX 路径下 Sonner 只负责定位/堆叠/进退场动画，
+ * `data-styled="false"` 意味着它不会加内边距、边框与背景。
+ * 这里只补两件事：去掉圆角（Square 是设计约定）、给可聚焦的 li 一个
+ * Folio 风格焦点环（Sonner 默认是黑色 box-shadow，在纸面上很突兀）。
+ */
+.folio-toaster[data-sonner-toaster] [data-sonner-toast] {
+  border-radius: 0;
+}
+
+.folio-toaster[data-sonner-toaster] [data-sonner-toast]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-pop);
+}
+
+/*
+ * 宽度：**必须在这里补**。
+ *
+ * `width: var(--width)` 写在 Sonner 的 `[data-sonner-toast][data-styled=true]` 里，
+ * 而自定义 JSX 的条目 `data-styled="false"` —— 于是 li 是 `position:absolute`
+ * 但没有任何宽度，shrink-to-fit 后只有约 153px，卡片被挤成窄条（实测）。
+ *
+ * 这里不沿用 `--width`，而是显式写 `min(24rem, 100vw - 2rem)`，与迁移前
+ * 通知容器的 `w-[min(24rem,calc(100vw-2rem))]` 完全一致：
+ *   - 桌面：384px，右贴 24px；
+ *   - 移动 390px：358px，配合 mobileOffset 16px，左右各留 16px。
+ *
+ * 为什么不用 Sonner 自己的 `@media (max-width:600px)` 分支：那条规则把 li 设成
+ * `calc(100% - offset*2)`，依赖 ol 的宽度；而 ol 的宽度又有自己的断点逻辑。
+ * 直接给一个与视口相关的确定值，两档断点都不需要猜。
+ */
+.folio-toaster[data-sonner-toaster] [data-sonner-toast] {
+  width: min(24rem, calc(100vw - 2rem));
+}
+
+/*
+ * 卡片本体铺满 li。Sonner 会把自定义 JSX 包进 `[data-content] > [data-title]`
+ * 两层 div，宽度在那一层已由 li 决定，这里只保证卡片不自行收缩。
+ */
+.folio-toaster[data-sonner-toaster] [data-sonner-toast] > * {
+  width: 100%;
+}
+
+/*
+ * 减少动态效果：Sonner 自带 media query 关掉过渡，但它只覆盖
+ * `[data-sonner-toast]` 与其直接子元素；这里的卡片是自定义 DOM，
+ * 显式再声明一次，避免局部样式带来新的过渡。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .folio-toaster[data-sonner-toaster] [data-sonner-toast],
+  .folio-toaster[data-sonner-toaster] [data-sonner-toast] * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

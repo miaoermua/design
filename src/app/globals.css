@@ -9,6 +9,8 @@
 @import '../design-system/styles/footnotes.css';
 @import '../design-system/styles/mentions.css';
 @import '../design-system/styles/reading.css';
+/* 通知（Sonner）适配：层级、Token 映射、方角。见文件头说明 */
+@import '../design-system/styles/sonner.css';
 /* 系统高对比度与增强对比：只在对应的媒体查询里生效，常规浏览零影响 */
 @import '../design-system/styles/forced-colors.css';
 /* 打印：整份文件只包一个 @media print，屏幕样式零影响。放在最后，
@@ -1090,7 +1092,19 @@ details[open] > .nav-group__summary .nav-group__chevron {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
-  z-index: 50;
+  /*
+   * 层级 30：整站浮层按下面这个顺序叠放，越小越靠下。
+   *
+   *   30 工具浮标(this) < 40 通知与状态胶囊 < 50 搜索面板 < 80 图片预览 < 90 对话框
+   *
+   * 浮标原本是 50，与搜索面板同值。通知层压到 40 之后，浮标（50）就会浮在
+   * 通知之上——实测三条通知堆叠时，圆圈按钮正好压在中间那条的文字上。
+   *
+   * 为什么不反过来把通知抬到 60：那样通知会重新盖住搜索面板(50)，
+   * 违背「模态打开时通知退到遮罩之下」。通知层必须低于所有模态，
+   * 而浮标是常驻便利控件、优先级低于瞬时提示，所以该让位的是浮标。
+   */
+  z-index: 30;
   /*
    * 与导航卡片同一块玻璃：材质层 `.nav-glass.glass-nav` 与光斑层
    * `.nav-spotlight` 都是导航用的那两个类，由这个盒子提供尺寸与圆角

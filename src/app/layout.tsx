@@ -14,7 +14,7 @@ import { ImageViewer } from '@/components/markdown/image-preview'
 import { RealtimeRuntime } from '@/components/realtime/realtime-runtime'
 import { DevtoolNotice } from '@/components/ui/devtool-notice'
 import { StatusCapsule } from '@/components/ui/status-capsule'
-import { Toaster } from '@/components/ui/toaster'
+import { SonnerToaster } from '@/components/ui/sonner-toaster'
 import { SystemNotificationBridge } from '@/components/ui/system-notification-bridge'
 import { getThemeConfig } from '@/core/config/theme'
 import { describeError } from '@/lib/api'
@@ -128,6 +128,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </main>
 
             <SiteFooter identity={identity} />
+
+            {/*
+              通知与状态必须挂在 **`.site-shell` 内部**，不能放在它外面。
+
+              原因：`.site-shell` 有 `z-index: 1` + `position: relative`，
+              自己形成了一个层叠上下文。页面里的模态（搜索面板 50、订阅对话框 90）
+              都在它内部，那些 z-index 只表示「上下文内部的排名」，对外整体只是 1。
+              如果通知挂在 shell 外面（比如 z=40），比较对象就变成 shell 整体的 1，
+              于是通知会盖住**所有**模态——包括对话框，这正是要避免的。
+
+              放进同一个上下文后，比较就回到同一把尺子上：
+                通知/胶囊 40  <  搜索面板 50  <  图片预览 80  <  对话框 90
+              模态一打开，通知自然退到遮罩之下（仍在 DOM 里，关掉后继续可见）。
+              fixed 定位不参与 flex 布局，塞进 `.site-shell` 不会影响页面结构。
+            */}
+            <div className="pointer-events-none fixed right-4 bottom-4 z-40 flex flex-col items-end sm:right-6 sm:bottom-6">
+              <StatusCapsule locale={locale} />
+            </div>
+
+            <SonnerToaster locale={locale} />
           </div>
 
           {/* 全局唯一的图片预览宿主：正文里的普通图片 / 相册 / 轮播共用 */}
@@ -135,12 +155,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
           {/* 全站唯一的实时连接宿主：不渲染可见内容，只维护连接与事件总线 */}
           <RealtimeRuntime origin={realtime.origin} lang={realtime.lang} />
-
-          {/* 通知与状态独立产生，在同一右下区域堆叠显示，避免互相覆盖 */}
-          <div className="pointer-events-none fixed right-4 bottom-4 z-[70] flex max-h-[min(70vh,36rem)] w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2 overflow-y-auto sm:right-6 sm:bottom-6">
-            <Toaster locale={locale} />
-            <StatusCapsule locale={locale} />
-          </div>
 
           {/* 页面切到后台时把新通知镜像到系统通知；未开启或未授权时什么都不做 */}
           <SystemNotificationBridge />
