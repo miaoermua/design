@@ -73,17 +73,28 @@
   font-style: italic;
 }
 
+/*
+ * 正文链接：文字色与正文相同（inherit），所以**下划线是唯一的识别线索**。
+ *
+ * 因此下划线不能只用「装饰级」的 --accent-soft：实测它与纸面的对比度
+ * 亮色 2.94:1、暗色 2.39:1，都低于 3:1 —— 低视力用户看到的就是一段普通文字。
+ * 改用 --accent（亮 4.94:1 / 暗 10.64:1），它在本项目里的定位正是
+ * 「装饰 / 边界 / 填充（≥3:1）」，比强行借用文字强调色更合规。
+ *
+ * hover 相应抬到 --accent-strong（亮 6.63:1 / 暗 6.77:1），保持「更饱和 + 更粗」
+ * 这一层可感知的变化，而不是与静置态同色。
+ */
 .prose a {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: var(--accent-soft);
+  text-decoration-color: var(--accent);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.22em;
   transition: text-decoration-color var(--duration-fast) var(--ease-out-soft);
 }
 
 .prose a:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--accent-strong);
   text-decoration-thickness: 2px;
 }
 

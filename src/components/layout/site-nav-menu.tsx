@@ -6,6 +6,7 @@ import { useCallback, type ReactNode, type RefObject, type SyntheticEvent } from
 import { hasLanding, HOME_NAV, isNavItemActive, type NavEntry } from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { CoverImage } from '@/components/ui/cover-image'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 
 interface SiteNavMenuProps {
   /** 由触发器通过 aria-controls 指向；也是测试定位面板的锚点 */
@@ -183,10 +184,11 @@ function NavEntryRow({
   onNavigate: () => void
   onGroupToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void
 }) {
-  const active = isNavItemActive(entry, pathname)
   const branch = entry.branch
-  // 目录自己的列表页就是入口自身；数据里不再存第二份地址
-  const listHref = entry.href
+  // 列表页默认就是入口自身；日记是例外，由 `listHref` 指明（见导航类型）
+  const listHref = branch?.listHref ?? entry.href
+  // 列表页上「当前页」归列表那一行，入口不再重复声明（见 isNavItemActive）
+  const active = isNavItemActive(entry, pathname, branch?.listHref)
   if (!branch) {
     return (
       <li>
@@ -300,7 +302,7 @@ function NavMoreGroup({
   onGroupToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void
 }) {
   // 子项里有一项是当前页 → 这一行也算「在这里」，和目录型入口同一套判定
-  const active = entries.some((entry) => isNavItemActive(entry, pathname))
+  const active = entries.some((entry) => isNavItemActive(entry, pathname, entry.branch?.listHref))
   const hasActiveChild = entries.some(
     (entry) => entry.href === currentUrl || entry.href === pathname,
   )
@@ -319,7 +321,7 @@ function NavMoreGroup({
 
         <ul className="nav-group__list">
           {entries.map((entry) => {
-            const itemActive = isNavItemActive(entry, pathname)
+            const itemActive = isNavItemActive(entry, pathname, entry.branch?.listHref)
             return (
               <li key={entry.href}>
                 <Link
@@ -341,18 +343,5 @@ function NavMoreGroup({
 }
 
 function ChevronIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="nav-group__chevron"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:right-line" className="nav-group__chevron" />
 }

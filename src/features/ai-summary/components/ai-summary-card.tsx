@@ -5,6 +5,7 @@ import { languageLabel } from '@/lib/i18n/config'
 import { useLocale } from '@/lib/i18n/client'
 import { t, tf } from '@/lib/i18n/dictionary'
 import type { ArticleSummary as ArticleSummaryModel } from '@/lib/api'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { InsightsDialog } from '@/features/ai-insights'
 import type { AiInsightsView } from '@/features/ai-insights'
 
@@ -111,52 +112,14 @@ export function AISummaryCard({ summary, insights }: AISummaryCardProps) {
 }
 
 function AiMark() {
-  return (
-    <svg
-      className="ai-summary__icon"
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-    >
-      <path d="M11 3.8l1.6 4.3 4.3 1.6-4.3 1.6L11 15.6l-1.6-4.3L5.1 9.7l4.3-1.6z" />
-      <path d="M17.6 14.6l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:sparkles-2-line" className="ai-summary__icon" />
 }
 
 function Chevron() {
   // 方向由 `.ai-summary[data-open]` 控制，避免状态既在 JSX 又在 CSS 里各写一份
-  return (
-    <svg
-      className="ai-summary__chevron"
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 15l6-6 6 6" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:up-line" className="ai-summary__chevron" />
 }
 
 function ArrowUpRight() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 16L16 8M9 8h7v7" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:arrow-right-up-line" />
 }

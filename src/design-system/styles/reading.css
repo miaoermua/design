@@ -207,6 +207,221 @@
   height: 1rem;
 }
 
+/* ── 订阅弹窗 ──────────────────────────────────────────────────
+ * 公有模态：邮件表单 + RSS + 浏览器通知 + 外部频道。
+ * 窗口最大宽度 26rem，窄屏变全屏（继承 folio-dialog 的窄屏规则）。
+ */
+
+.subscribe-modal {
+  max-width: 26rem;
+}
+
+.subscribe-modal__head {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.05rem 0.9rem 1.35rem;
+  border-bottom: 1px solid var(--edge);
+}
+
+.subscribe-modal__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.subscribe-modal__intro {
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.subscribe-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem 1.35rem 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.subscribe-modal__section {
+  padding-top: 0.75rem;
+}
+
+.subscribe-modal__section + .subscribe-modal__section {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--edge);
+}
+
+.subscribe-modal__section-label {
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.subscribe-modal__hint {
+  margin-top: 0.3rem;
+  font-size: var(--text-meta);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* 邮件表单 */
+.subscribe-modal__input {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--edge);
+  background: var(--surface);
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.subscribe-modal__input:focus {
+  border-color: var(--accent);
+}
+
+.subscribe-modal__types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.6rem;
+}
+
+.subscribe-modal__type-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.subscribe-modal__checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  accent-color: var(--accent);
+}
+
+.subscribe-modal__submit {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--text-primary);
+  background: var(--text-primary);
+  font-size: var(--text-meta);
+  color: var(--surface);
+  transition: opacity var(--duration-fast) var(--ease-out-soft);
+}
+
+.subscribe-modal__submit:disabled {
+  opacity: 0.6;
+}
+
+.subscribe-modal__message {
+  margin-top: 0.5rem;
+  font-size: var(--text-meta);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.subscribe-modal__message--error {
+  color: var(--state-danger);
+}
+
+/* RSS 链接 */
+.subscribe-modal__rss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  text-decoration: underline;
+  text-decoration-color: var(--edge-strong);
+  text-underline-offset: 4px;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.subscribe-modal__rss-link:hover {
+  color: var(--accent-strong);
+}
+
+/* 浏览器通知 */
+.subscribe-modal__notify-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.subscribe-modal__notify-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.subscribe-modal__notify-toggle {
+  flex: none;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  background: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.subscribe-modal__notify-toggle:not(:disabled):hover {
+  color: var(--text-heading);
+  border-color: var(--text-heading);
+}
+
+.subscribe-modal__notify-toggle--on {
+  color: var(--surface);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.subscribe-modal__notify-toggle--on:not(:disabled):hover {
+  color: var(--surface);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.subscribe-modal__notify-toggle:disabled {
+  opacity: 0.5;
+}
+
+/* 频道列表 */
+.subscribe-modal__channels {
+  margin-top: 0.3rem;
+}
+
+.subscribe-modal__channel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.subscribe-modal__channel:hover {
+  color: var(--accent-strong);
+}
+
 /* ── AI 精读窗口 ──────────────────────────────────────────────── */
 
 .ai-insights {
@@ -289,6 +504,14 @@
   }
 
   .ai-insights__body {
+    padding-inline: var(--spacing-gutter);
+  }
+
+  .subscribe-modal__head {
+    padding-top: max(1.05rem, env(safe-area-inset-top));
+  }
+
+  .subscribe-modal__body {
     padding-inline: var(--spacing-gutter);
   }
 }

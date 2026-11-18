@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { getSiteTimezone, searchArticles } from '@/lib/api'
 import { sanitizeSnippet } from '@/lib/content/snippet'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
-import { articlePath, diaryPath, pageHref } from '@/lib/routes'
+import { articlePath, notePath, pageHref } from '@/lib/routes'
 import { formatCompact } from '@/lib/utils/date'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -52,18 +53,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <label htmlFor="q" className="sr-only">
             {t(locale, 'search.keyword')}
           </label>
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
+          <MingCuteIcon
+            name="mingcute:search-line"
             className="size-[1.15rem] shrink-0 text-[var(--text-tertiary)]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="6.5" />
-            <path d="m16 16 4 4" />
-          </svg>
+          />
           <input
             id="q"
             name="q"
@@ -107,7 +100,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 const href =
                   hit.kind === 'post'
                     ? articlePath(hit.categorySlug, hit.slug ?? '')
-                    : diaryPath(hit.id)
+                    : notePath(hit.nid ?? hit.id)
                 return (
                   <li key={hit.id} className="group py-6">
                     <p className="meta flex flex-wrap items-center gap-x-2 gap-y-1">

@@ -1,16 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
-import { CoverImage } from '@/components/ui/cover-image'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { SectionHeading } from '@/components/ui/page-header'
-import { SocialIcon } from '@/components/ui/social-icon'
+import { HeroSection } from '@/components/home/hero'
 import { HomeMore } from '@/components/home/home-more'
 import { getThemeConfig } from '@/core/config/theme'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { ArticleRow } from '@/features/articles'
 import { DiaryCard } from '@/features/diaries'
+import { readSubscribeOptions } from '@/features/interactions'
 import {
   ConfigurationError,
   getSiteLikeCount,
@@ -22,9 +22,20 @@ import {
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
+import { NOTE_LIST_PATH } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
 import { toSocialItems } from '@/lib/social'
 import { cn } from '@/lib/utils/cn'
+
+/** 首页编辑栅格：左轨放标题/头像，内容列放列表；<lg 单列堆叠 */
+const HOME_GRID =
+  'grid gap-x-[var(--gap-rail)] gap-y-6 lg:grid-cols-[var(--rail-home)_minmax(0,1fr)]'
+/** 区块分隔：统一「5rem 留白 + 虚线 + 2rem 内边距」，首区块除外 */
+const SECTION_RULE =
+  'mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-[var(--spacing-stack)]'
+const SECTION_FIRST = 'pt-[var(--spacing-stack)]'
+/** 左轨里的区块标题：竖排、贴顶（justify-between 在拉伸高度下会把 action 推到底） */
+const RAIL_HEADING = 'lg:flex-col lg:items-start lg:justify-start lg:gap-2.5'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { identity } = await loadSiteContext()
@@ -42,7 +53,21 @@ export async function generateMetadata(): Promise<Metadata> {
  *   Personal Brand → Latest Blogs → Latest Notes → Footer
  *
  * 每一段都只回答一个问题：「这是谁」「最近写了什么」「最近在想什么」。
- * 刻意不做的事情：没有整屏 Hero、没有首篇「头条」大卡片、没有封面图强制位、
+ *
+ * 全页共用一套编辑栅格：≥lg 时 `--rail-home` 左轨 + 自适应内容列
+ * （轨距 `--gap-rail`）。Hero 头像、区块标题落在左轨；身份名、文章索引、
+ * 日记栅格、More 按钮行落在内容列——一条对齐线贯穿全页。
+ * <lg 退化为单列：标题行在上、内容在下。
+ *
+ * 文章区是**单列索引**：一行一篇，标题左、日期贴右缘同基线（≥sm），
+ * 不做双列卡片阵；行距与日记栅格同族（gap-y-8）。
+ * 日记区 <xl 单列、≥xl 三列，同样不经过双列阶段。
+ *
+ * Personal Brand 区块有两种布局，由 theme config 的 `homepage.hero` 决定：
+ *   - 不配置（默认）：经典横排「头像 + 文字」，刻意不做整屏 Hero
+ *   - 配置了 hero：兼容 Shiro 的 `config.hero` 格式，整屏居中模板化标题
+ *
+ * 刻意不做的事情：没有首篇「头条」大卡片、没有封面图强制位、
  * 没有把所有内容都堆在首页——归档、标签、页面各有自己的入口。
  */
 export default async function HomePage() {
@@ -110,115 +135,83 @@ export default async function HomePage() {
     theme.homepage.more.items.some((item) => item.type === 'like')
   const siteLikeCount = needsLikeCount ? await getSiteLikeCount() : null
 
+  // 订阅弹窗需要完整的订阅选项（邮件类型 + 频道），与 More 区块的 subscribe 入口共享
+  const needsSubscribe =
+    showMore &&
+    isFeatureEnabled('interactions') &&
+    theme.homepage.more.items.some((item) => item.type === 'subscribe')
+  const subscribeOptions = needsSubscribe ? await readSubscribeOptions(theme.social) : null
+
   return (
     <Container>
       {/* ── Personal Brand ─────────────────────────────────────── */}
       {showProfile ? (
-        <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.05)] pb-[var(--spacing-stack)]">
-          <div className="flex items-start gap-5 sm:gap-6">
-            {owner?.avatar ? (
-              <CoverImage
-                src={owner.avatar}
-                alt={name}
-                width={72}
-                height={72}
-                priority
-                // 圆形头像，尺寸克制：它是身份的一部分，不是首屏主视觉
-                className="size-14 shrink-0 rounded-full border border-[var(--edge)] sm:size-[4.5rem]"
-              />
-            ) : null}
-
-            <div className="min-w-0 flex-1">
-              {/* 作者名是首页最大的字：它是这个空间的身份标识，
-                用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
-              <h1 className="text-display max-w-[22ch] font-serif text-balance text-[var(--text-heading)]">
-                {name}
-              </h1>
-              {(owner?.introduce ?? identity?.description) ? (
-                <p className="text-lead mt-2 max-w-[34rem] leading-[1.7] text-pretty text-[var(--text-secondary)]">
-                  {owner?.introduce ?? identity?.description}
-                </p>
-              ) : null}
-
-              {socials.length > 0 ? (
-                <ul className="mt-4 flex flex-wrap items-center gap-1.5">
-                  {socials.map((item) => (
-                    <li key={item.id}>
-                      <a
-                        href={item.url}
-                        rel="me noopener noreferrer"
-                        target={item.url.startsWith('mailto:') ? undefined : '_blank'}
-                        title={item.title}
-                        aria-label={item.title}
-                        // 品牌色作为前景色：图标行本身是安静的，
-                        // 用大块背景色会把这行变成按钮墙
-                        style={item.color ? { color: item.color } : undefined}
-                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)] hover:text-[var(--accent-strong)]"
-                      >
-                        <SocialIcon icon={item.icon} className="size-[1.05rem]" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
-            {articles ? (
-              <Link href="/articles" className="link-quiet">
-                {tf(locale, 'home.countArticles', { count: articles.pagination.total })}
-              </Link>
-            ) : null}
-            {diaries ? (
-              <Link href="/diaries" className="link-quiet">
-                <span className={articles ? 'meta-sep' : undefined}>
-                  {tf(locale, 'home.countDiaries', { count: diaries.pagination.total })}
-                </span>
-              </Link>
-            ) : null}
-          </div>
-        </section>
+        <HeroSection
+          name={name}
+          avatar={owner?.avatar ?? null}
+          introduce={owner?.introduce ?? identity?.description ?? null}
+          socials={socials}
+          stats={{
+            articles: articles
+              ? {
+                  total: articles.pagination.total,
+                  href: '/articles',
+                  label: tf(locale, 'home.countArticles', { count: articles.pagination.total }),
+                }
+              : null,
+            diaries: diaries
+              ? {
+                  total: diaries.pagination.total,
+                  // 计数入口的语义是「全部日记」，所以去时间线（不是最新一篇）
+                  href: NOTE_LIST_PATH,
+                  label: tf(locale, 'home.countDiaries', { count: diaries.pagination.total }),
+                }
+              : null,
+            showArticlesSep: !!articles,
+          }}
+          hero={theme.homepage.hero}
+        />
       ) : null}
 
       {/* ── Latest Blogs ───────────────────────────────────────── */}
       {articles ? (
         <section
           className={cn(
-            'motion-fade-in pt-10',
+            'motion-fade-in',
             showProfile && 'motion-delay-1',
-            // profile 关闭时这一块是首页第一段，不需要额外的虚线分隔与上边距
-            showProfile && 'border-t border-dashed border-[var(--edge-strong)]',
+            showProfile ? SECTION_RULE : SECTION_FIRST,
           )}
         >
-          <SectionHeading
-            title={t(locale, 'home.latestBlogs')}
-            action={
-              <Link href="/articles" className="link-quiet meta">
-                {t(locale, 'home.allArticles')} →
-              </Link>
-            }
-          />
+          <div className={HOME_GRID}>
+            <SectionHeading
+              title={t(locale, 'home.latestBlogs')}
+              className={RAIL_HEADING}
+              action={
+                <Link href="/articles" className="link-quiet meta">
+                  {t(locale, 'home.allArticles')} →
+                </Link>
+              }
+            />
 
-          {articles.items.length > 0 ? (
-            <div className="mt-2 divide-y divide-dashed divide-[var(--edge)]">
-              {articles.items.map((article) => (
-                <ArticleRow
-                  key={article.id}
-                  article={article}
-                  timeZone={timeZone}
-                  locale={locale}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-8">
+            {articles.items.length > 0 ? (
+              <div className="flex flex-col gap-y-8">
+                {articles.items.map((article) => (
+                  <ArticleRow
+                    key={article.id}
+                    article={article}
+                    timeZone={timeZone}
+                    locale={locale}
+                    minimal
+                  />
+                ))}
+              </div>
+            ) : (
               <EmptyState
                 title={t(locale, 'home.emptyArticles')}
                 description={t(locale, 'home.emptyArticlesHint')}
               />
-            </div>
-          )}
+            )}
+          </div>
         </section>
       ) : null}
 
@@ -226,37 +219,37 @@ export default async function HomePage() {
       {diaries ? (
         <section
           className={cn(
-            'motion-fade-in mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10',
+            'motion-fade-in',
             showProfile && articles
               ? 'motion-delay-2'
               : (showProfile || articles) && 'motion-delay-1',
-            // 文章区关闭时，日记区紧跟品牌区，不需要再叠一层大间距
-            !articles && 'mt-0',
+            showProfile || articles ? SECTION_RULE : SECTION_FIRST,
           )}
         >
-          <SectionHeading
-            title={t(locale, 'home.latestNotes')}
-            action={
-              <Link href="/diaries" className="link-quiet meta">
-                {t(locale, 'home.allDiaries')} →
-              </Link>
-            }
-          />
+          <div className={HOME_GRID}>
+            <SectionHeading
+              title={t(locale, 'home.latestNotes')}
+              className={RAIL_HEADING}
+              action={
+                <Link href={NOTE_LIST_PATH} className="link-quiet meta">
+                  {t(locale, 'home.allDiaries')} →
+                </Link>
+              }
+            />
 
-          {diaries.items.length > 0 ? (
-            <div className="mt-7 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-              {diaries.items.map((diary) => (
-                <DiaryCard key={diary.id} diary={diary} timeZone={timeZone} />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-8">
+            {diaries.items.length > 0 ? (
+              <div className="grid gap-y-8 xl:grid-cols-3 xl:gap-x-10">
+                {diaries.items.map((diary) => (
+                  <DiaryCard key={diary.id} diary={diary} timeZone={timeZone} />
+                ))}
+              </div>
+            ) : (
               <EmptyState
                 title={t(locale, 'home.emptyNotes')}
                 description={t(locale, 'home.emptyNotesHint')}
               />
-            </div>
-          )}
+            )}
+          </div>
         </section>
       ) : null}
 
@@ -264,18 +257,23 @@ export default async function HomePage() {
       {showMore ? (
         <section
           className={cn(
-            'motion-fade-in mt-[var(--spacing-section)] border-t border-dashed border-[var(--edge-strong)] pt-10 pb-4',
+            'motion-fade-in pb-4',
             // 延迟：根据前面有几个区块递增
             showProfile && articles && diaries
               ? 'motion-delay-3'
               : (showProfile && articles) || (showProfile && diaries) || (articles && diaries)
                 ? 'motion-delay-2'
                 : (showProfile || articles || diaries) && 'motion-delay-1',
+            showProfile || articles || diaries ? SECTION_RULE : SECTION_FIRST,
           )}
         >
-          <SectionHeading title={t(locale, 'home.more')} />
-          <div className="mt-6">
-            <HomeMore items={theme.homepage.more.items} siteLikeCount={siteLikeCount} />
+          <div className={HOME_GRID}>
+            <SectionHeading title={t(locale, 'home.more')} className={RAIL_HEADING} />
+            <HomeMore
+              items={theme.homepage.more.items}
+              siteLikeCount={siteLikeCount}
+              subscribeOptions={subscribeOptions}
+            />
           </div>
         </section>
       ) : null}

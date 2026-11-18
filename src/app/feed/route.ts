@@ -14,17 +14,14 @@
  *
  * core 的 `UrlBuilderService.build()` 生成的是 Shiro / Kami 的路由：
  *   - 文章：`/posts/:category/:slug` → 本主题 `/articles/:category/:slug`
- *   - 日记：`/notes/:nid`            → 本主题 `/diaries/:id`
+ *   - 日记：`/notes/:nid`            → 本主题 `/notes/:nid`（**同形，不改**）
  *
- * 文章直接换前缀就行。日记不行：core 用的是 `nid`（1、13、49 这种），本主题
- * 的路由用的是雪花 id（`/diaries/188522778012422144`），两者不是一回事，只换
- * 前缀会 404。nid → id 有两个来源，互为兜底：
+ * 日记这一条曾经需要改写：早期本主题的详情路由用雪花 id
+ * （`/diaries/188522778012422144`），而 core 用自增 `nid`，只换前缀会 404，
+ * 于是这里维护过一张 `nid → 雪花 id` 的映射表（JSON feed + `<guid>` 两个来源）。
  *
- *   1. JSON 版 feed（`GET /api/v2/aggregate/feed`）—— 每项同时带 `id` 和 `link`；
- *   2. feed 自身 —— 日记的 `<guid>` 就是雪花 id，且它的 `<link>` 带着 nid。
- *
- * 第二条是本轮新加的：它让「JSON 接口挂了」不再等于「日记链接全是 404」，
- * 而且不需要额外请求。
+ * 站点路由改成 `/notes/:nid` 之后，两者同形，那张表和它的补查机制一起删掉了：
+ * 少一次上游请求、少一条失败路径，也不再可能出现「映射查不到 → 链接保持 404」。
  *
  * ## 本站链接怎么认（本轮核心）
  *
@@ -43,8 +40,7 @@
  * 第三方外链一个字节都不动。命中之后按路径决定动作：
  *
  *   - `/posts/...`      → 改写成 `/articles/...`，origin 归一为公开地址；
- *   - `/notes/:nid`     → 查表改写成 `/diaries/:id`；查不到就**保持原样**（不猜）
- *                         并计入告警，绝不产出 `/diaries/undefined`；
+ *   - `/notes/:nid`     → 路径不动（已是本主题路由），只归一 origin；
  *   - 其余本站页面路径   → 只把 origin 归一为公开地址（首页、`/feed`、`/about`）；
  *   - 媒体路径          → 完全不动（见下）。
  *
@@ -65,8 +61,8 @@
  *
  * 这里**不做**路径校验，因为这条路走不通，不是省事：
  *
- * 1. 这个 handler 不接受 request，上游路径是常量 `UPSTREAM_PATH` /
- *    `UPSTREAM_JSON_PATH`。请求侧没有任何字符串能流进 URL，也就没有可穿越的位置。
+ * 1. 这个 handler 不接受 request，上游路径是常量 `UPSTREAM_PATH`。
+ *    请求侧没有任何字符串能流进 URL，也就没有可穿越的位置。
  * 2. core 是静态路由 `@Get(['/feed', '/atom.xml'])`，没有 `${param}` 可以塞
  *    `../`；Next 的路由匹配是精确的，`/feed/../x` 到不了这里。
  *
@@ -74,7 +70,6 @@
  */
 
 import {
-  API_PREFIX,
   THEME_USER_AGENT,
   getServerUrl,
   getTimeoutMs,
@@ -85,9 +80,6 @@ import { loadSiteContext, siteBaseUrl } from '@/lib/site'
 
 /** 上游固定路径；与 core 的 `FeedController` 对齐，运行时不拼接任何输入 */
 const UPSTREAM_PATH = '/feed'
-/** JSON 版 feed，只用来取「nid → 雪花 id」的映射 */
-const UPSTREAM_JSON_PATH = `${API_PREFIX}/aggregate/feed`
-
 const ALLOWED_CONTENT_TYPE = /^(application|text)\/(rss\+xml|atom\+xml|xml)\b/i
 
 /** 绝对 URL 的粗切分：停在空白与标签 / 属性引号处，本身不做语义判断 */
@@ -103,9 +95,6 @@ const MEDIA_DIR = /^\/(?:uploads|objects|files|assets)\//i
 /** 开发 / 内网主机：出现在公开 RSS 里就是不可订阅的地址 */
 const DEV_HOST =
   /^(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[?::1\]?|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/i
-
-/** 日记的雪花 id 形态：15–20 位纯数字。nid 是 1–4 位，落不进这个范围 */
-const SNOWFLAKE = /^\d{15,20}$/
 
 function unavailable(message: string, status: 502 | 503): Response {
   return new Response(message, {
@@ -224,127 +213,15 @@ function* urlHits(xml: string): Generator<UrlHit> {
   }
 }
 
-/** 从 JSON 版 feed 里读出 `nid → 雪花 id`；取不到就返回空表 */
-async function readNidToIdMap(): Promise<Map<string, string>> {
-  const map = new Map<string, string>()
-
-  let response: Response
-  try {
-    response = await fetch(upstreamUrl(UPSTREAM_JSON_PATH), {
-      ...upstreamInit(),
-      headers: { ...upstreamInit().headers, accept: 'application/json' },
-    })
-  } catch {
-    return map
-  }
-  if (!response.ok) return map
-
-  let payload: unknown
-  try {
-    payload = await response.json()
-  } catch {
-    return map
-  }
-
-  const items = (payload as { data?: unknown })?.data
-  if (!Array.isArray(items)) return map
-
-  for (const item of items) {
-    const link = (item as { link?: unknown })?.link
-    const id = (item as { id?: unknown })?.id
-    if (typeof link !== 'string' || typeof id !== 'string') continue
-
-    // 只认日记（`/notes/:nid`），文章和页面不需要这张表
-    const nid = /\/notes\/(\d+)(?:[?#]|$)/.exec(link)?.[1]
-    if (nid) map.set(nid, id)
-  }
-
-  return map
-}
-
-/**
- * 从 feed 自身补 `nid → id`：日记条目的 `<guid>` 就是雪花 id。
- *
- * 为什么需要：JSON 接口挂掉时，上一版会让整份 RSS 的日记链接保持
- * `/notes/:nid`（即 404）。feed 自己已经带着答案，不必依赖第二个请求。
- *
- * `guid` 只在「这条 link 确实是 `/notes/:nid`」且「guid 形如雪花 id」时才采信，
- * 因此不会把 nid、URL 或别的字段误当成日记 id。
- */
-function collectDiaryIdsFromFeed(xml: string, map: Map<string, string>): void {
-  for (const match of xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)) {
-    const body = match[1] ?? ''
-    const link = /<link>([\s\S]*?)<\/link>/i.exec(body)?.[1]?.trim()
-    const guid = /<guid\b[^>]*>([\s\S]*?)<\/guid>/i.exec(body)?.[1]?.trim()
-    if (!link || !guid) continue
-
-    const nid = /\/notes\/(\d+)(?:[?#]|$)/.exec(link)?.[1]
-    if (!nid || !SNOWFLAKE.test(guid)) continue
-    // JSON 版 feed 是更权威的来源，这里只补它没有的
-    if (!map.has(nid)) map.set(nid, guid)
-  }
-}
-
-/** 正文里可能引用不在最近 N 条里的日记，按 nid 单独补查；上限防止被长正文拖慢 */
-const MAX_NID_LOOKUPS = 8
-
-/** `GET /notes/nid/:nid` 拿单篇日记的雪花 id；失败返回 null，链接保持原样 */
-async function readDiaryIdByNid(nid: string): Promise<string | null> {
-  try {
-    const response = await fetch(upstreamUrl(`${API_PREFIX}/notes/nid/${nid}`), {
-      ...upstreamInit(),
-      headers: { ...upstreamInit().headers, accept: 'application/json' },
-    })
-    if (!response.ok) return null
-
-    // v2 的单篇详情包在 `{ data }` 里；兼容一下直接返回的情况
-    const payload = (await response.json()) as { data?: { id?: unknown }; id?: unknown }
-    const id = payload.data?.id ?? payload.id
-    return typeof id === 'string' ? id : null
-  } catch {
-    return null
-  }
-}
-
-/**
- * 补齐映射：feed 正文里引用的日记不一定在最近 N 条里，那些 nid 查不到 id 就
- * 会留下 404 的 `/notes/:nid`。这里只补「正文里真的出现过、且表里没有」的，
- * 没出现过的一个请求都不发。
- */
-async function fillMissingNids(
-  xml: string,
-  nidToId: Map<string, string>,
-  upstream: SiteBase | null,
-): Promise<void> {
-  if (!upstream) return
-
-  const missing = new Set<string>()
-  for (const { url } of urlHits(xml)) {
-    if (url.origin !== upstream.origin) continue
-    const rel = relativePath(url.pathname, upstream.basePath)
-    const nid = /^\/notes\/(\d+)\/?$/.exec(rel)?.[1]
-    if (nid && !nidToId.has(nid)) missing.add(nid)
-  }
-
-  const targets = [...missing].slice(0, MAX_NID_LOOKUPS)
-  const resolved = await Promise.all(
-    targets.map(async (nid) => ({ nid, id: await readDiaryIdByNid(nid) })),
-  )
-  for (const { nid, id } of resolved) {
-    if (id) nidToId.set(nid, id)
-  }
-}
 
 interface RewriteStats {
   /** 改写过的文章链接数 */
   articles: number
-  /** 改写过的日记链接数 */
+  /** 归一过 origin 的日记链接数（`/notes/:nid` 已是本主题路由，无需改路径） */
   diaries: number
   /** 只归一了 origin 的本站页面链接数 */
   origins: number
-  /** 查不到 id、因而保持原样的 `/notes/:nid` 数 */
-  unmapped: number
-  /** 自检：改写后仍残留的站内 `/posts/`、`/notes/` 路径数 */
+  /** 自检：改写后仍残留的站内 `/posts/` 路径数 */
   leftovers: number
   /** 自检：改写后仍指向开发 / 内网主机的链接数 */
   devHosts: number
@@ -368,7 +245,6 @@ interface RewriteStats {
  */
 function rewriteFeedLinks(
   xml: string,
-  nidToId: Map<string, string>,
   upstream: SiteBase | null,
   publicBase: URL | null,
 ): { xml: string; stats: RewriteStats } {
@@ -376,7 +252,6 @@ function rewriteFeedLinks(
     articles: 0,
     diaries: 0,
     origins: 0,
-    unmapped: 0,
     leftovers: 0,
     devHosts: 0,
     publicSiteIsLocal: Boolean(publicBase && DEV_HOST.test(publicBase.hostname)),
@@ -414,14 +289,8 @@ function rewriteFeedLinks(
       nextPath = `/articles/${rel.slice('/posts/'.length)}`
       stats.articles += 1
     } else if (/^\/notes\/\d+\/?$/.test(rel)) {
-      const nid = /^\/notes\/(\d+)\/?$/.exec(rel)?.[1] ?? ''
-      const id = nidToId.get(nid)
-      // 查不到就保持原样：宁可是旧路由，也不产出 /diaries/undefined
-      if (!id) {
-        stats.unmapped += 1
-        return raw
-      }
-      nextPath = `/diaries/${id}`
+      // 站点路由已经是 `/notes/:nid`，与上游同形：路径不需要改，
+      // 只把 origin 归一为公开地址（下面统一处理）
       stats.diaries += 1
     } else {
       stats.origins += 1
@@ -433,6 +302,7 @@ function rewriteFeedLinks(
   })
 
   // 自检：只统计「本站 origin 上仍然不是本主题路由」与「本站链接指向开发主机」这两类。
+  // 日记的 `/notes/:nid` 现在就是本主题路由，不再是残留；只剩 `/posts/` 需要盯。
   // 正文里作者自己写的 `127.0.0.1`（例如一篇讲本机服务的教程）属于内容，不是配置问题，
   // 不能算进来——否则告警会被正常内容刷成噪音。
   // 具体地址不进日志（可能是内网地址），只给计数。
@@ -441,7 +311,8 @@ function rewriteFeedLinks(
     const isPublic = publicBase ? url.origin === publicBase.origin : false
     if (isUpstream || isPublic) {
       const rel = relativePath(url.pathname, isUpstream ? upstream.basePath : targetPath)
-      if (rel.startsWith('/posts/') || /^\/notes\/\d+\/?$/.test(rel)) stats.leftovers += 1
+      // `/notes/:nid` 现在就是本主题路由，不再是残留；只剩文章前缀要盯
+      if (rel.startsWith('/posts/')) stats.leftovers += 1
       // 公开地址本身就在内网时不算问题（本站就是那样部署的）
       if (DEV_HOST.test(url.hostname) && url.origin !== publicBase?.origin) stats.devHosts += 1
     }
@@ -456,11 +327,8 @@ function describeProblems(stats: RewriteStats): string[] {
   if (stats.unidentified) {
     problems.push('无法从 feed 读出站点地址，已跳过路径改写')
   }
-  if (stats.unmapped > 0) {
-    problems.push(`${stats.unmapped} 条日记链接缺少 id 映射，保持上游 /notes/ 路由`)
-  }
   if (stats.leftovers > 0) {
-    problems.push(`${stats.leftovers} 处站内链接仍是 /posts/ 或 /notes/ 路由`)
+    problems.push(`${stats.leftovers} 处站内链接仍是上游 /posts/ 路由`)
   }
   if (stats.devHosts > 0) {
     problems.push(`${stats.devHosts} 处链接指向开发 / 内网地址`)
@@ -486,8 +354,8 @@ export async function GET(): Promise<Response> {
     return unavailable(`Feed 暂时不可用：${reason}`, 503)
   }
 
-  // 三件事并行：上游 feed、nid 映射、站点身份（公开地址的来源）
-  const [feedResult, nidToId, site] = await Promise.all([
+  // 两件事并行：上游 feed、站点身份（公开地址的来源）
+  const [feedResult, site] = await Promise.all([
     (async (): Promise<Response | Error> => {
       try {
         return await fetch(target, {
@@ -502,7 +370,6 @@ export async function GET(): Promise<Response> {
         return error instanceof Error ? error : new Error(String(error))
       }
     })(),
-    readNidToIdMap(),
     loadSiteContext(),
   ])
 
@@ -528,11 +395,7 @@ export async function GET(): Promise<Response> {
   const identity: SiteIdentity | null = site.identity
   const publicBase = siteBaseUrl(identity) ?? null
 
-  // feed 自身带的 guid 先补齐映射，再对正文里引用的陌生 nid 补查
-  collectDiaryIdsFromFeed(xml, nidToId)
-  await fillMissingNids(xml, nidToId, upstream)
-
-  const { xml: body, stats } = rewriteFeedLinks(xml, nidToId, upstream, publicBase)
+  const { xml: body, stats } = rewriteFeedLinks(xml, upstream, publicBase)
 
   const problems = describeProblems(stats)
   if (problems.length > 0) {
@@ -548,7 +411,6 @@ export async function GET(): Promise<Response> {
     // 机读诊断：计数用 ASCII，便于外部监控；不含任何地址
     headers['x-folio-feed-warnings'] = [
       stats.unidentified ? 'unidentified-site=1' : null,
-      stats.unmapped > 0 ? `unmapped-nid=${stats.unmapped}` : null,
       stats.leftovers > 0 ? `leftover-site-path=${stats.leftovers}` : null,
       stats.devHosts > 0 ? `dev-host=${stats.devHosts}` : null,
       stats.publicSiteIsLocal ? 'public-site-url-is-local=1' : null,

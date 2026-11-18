@@ -43,23 +43,6 @@ const CORE_RSS = `<?xml version="1.0" encoding="UTF-8"?>
 </channel>
 </rss>`
 
-/** JSON 版 feed 的形状：每项同时带雪花 `id` 与带 nid 的 `link` */
-const CORE_JSON = {
-  title: 't',
-  data: [
-    {
-      id: '201987341420597248',
-      link: 'https://blog.example.com/posts/tech/hello',
-      title: '文章',
-    },
-    {
-      id: '155695797663436800',
-      link: 'https://blog.example.com/notes/49',
-      title: '日记',
-    },
-  ],
-}
-
 /**
  * `/api/v2/aggregate` 的最小形状：只提供 feed 需要的 `url.webUrl`。
  *
@@ -72,13 +55,6 @@ function rssResponse(body: string = RSS): Response {
   return new Response(body, {
     status: 200,
     headers: { 'content-type': 'application/xml' },
-  })
-}
-
-function jsonResponse(body: unknown = CORE_JSON): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
   })
 }
 
@@ -98,32 +74,23 @@ interface FetchCall {
 /**
  * 装一个假 fetch 到全局：route 里用的是全局 fetch，没有依赖注入的口子。
  *
- * route 会按需打四类上游：XML `/feed`、JSON `/api/v2/aggregate/feed`、
- * 站点身份 `GET /api/v2/aggregate`（公开地址的回退来源），
- * 以及正文引用了陌生 nid 时的 `GET /notes/nid/:nid` 补查。
- * 默认按路径分发，调用方只需要关心自己想要的那一支。
+ * route 现在只打两类上游：XML `/feed` 与站点身份 `GET /api/v2/aggregate`。
+ *
+ * JSON 版 feed（`/aggregate/feed`）与 `GET /notes/nid/:nid` 补查**已经不需要**：
+ * 那两样只是为了维护「nid → 雪花 id」映射，而站点路由改成 `/notes/:nid` 之后
+ * 与上游同形，映射本身消失了。这里不再提供对应的 handler——如果哪天代码
+ * 又把它们加回来，测试会因为「请求数不对」直接失败，而不是静默通过。
  */
 function stubFetch(
   handlers: {
     feed?: (url: URL, init?: RequestInit) => Response | Promise<Response>
-    json?: (url: URL, init?: RequestInit) => Response | Promise<Response>
     identity?: (url: URL, init?: RequestInit) => Response | Promise<Response>
-    nid?: (url: URL, init?: RequestInit) => Response | Promise<Response>
   } = {},
 ) {
   const calls: FetchCall[] = []
   const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof URL ? input : new URL(String(input))
     calls.push({ url, init })
-
-    if (url.pathname.includes('/notes/nid/')) {
-      // 默认 404：没显式给 handler 就当查不到，链接保持原样
-      return (handlers.nid ?? (() => new Response('', { status: 404 })))(url, init)
-    }
-
-    if (url.pathname.endsWith('/aggregate/feed')) {
-      return (handlers.json ?? (() => jsonResponse()))(url, init)
-    }
 
     if (url.pathname.endsWith('/aggregate')) {
       return (handlers.identity ?? (() => identityResponse()))(url, init)
@@ -140,12 +107,9 @@ async function getFeed(): Promise<Response> {
   return GET()
 }
 
-/** 只取 XML 那次上游调用，避免断言里混进 JSON / 身份 / 补查那几次 */
+/** 只取 XML 那次上游调用，避免断言里混进站点身份那一次 */
 function feedCalls(calls: FetchCall[]): FetchCall[] {
-  return calls.filter(
-    (call) =>
-      !call.url.pathname.includes('/aggregate') && !call.url.pathname.includes('/notes/nid/'),
-  )
+  return calls.filter((call) => !call.url.pathname.includes('/aggregate'))
 }
 
 const originalEnv = { ...process.env }
@@ -194,13 +158,15 @@ describe('Feed 代理：上游地址构造', () => {
     expect(feedCalls(calls)[0].url.toString()).toBe('https://api.example.com/sub/feed')
   })
 
-  it('JSON 版 feed 走 /api/v2/aggregate/feed，同样保留反代前缀', async () => {
+  it('不再请求 JSON 版 feed：日记路由与上游同形，不需要 id 映射', async () => {
     process.env.MX_SERVER_URL = 'https://api.example.com/sub'
     const calls = stubFetch()
     await getFeed()
 
+    // 这张映射表是为了把 `/notes/:nid` 换成 `/diaries/:雪花id` 而存在的；
+    // 两者同形之后它没有用途，请求也就该消失
     const json = calls.find((call) => call.url.pathname.endsWith('/aggregate/feed'))
-    expect(json?.url.toString()).toBe('https://api.example.com/sub/api/v2/aggregate/feed')
+    expect(json).toBeUndefined()
   })
 })
 
@@ -218,8 +184,8 @@ describe('Feed 代理：转发行为', () => {
     const calls = stubFetch()
     await getFeed()
 
-    // 上游 feed、JSON 版 feed、站点身份：三条都不带 query
-    expect(calls).toHaveLength(3)
+    // 上游 feed + 站点身份：两条都不带 query
+    expect(calls).toHaveLength(2)
     for (const call of calls) expect(call.url.search).toBe('')
   })
 
@@ -257,25 +223,16 @@ describe('Feed 代理：转发行为', () => {
     expect(await response.text()).toContain('ECONNREFUSED')
   })
 
-  it('JSON 版 feed 挂了不影响正文：只是日记链接保持原样', async () => {
-    stubFetch({ feed: () => rssResponse(CORE_RSS), json: () => new Response('', { status: 500 }) })
+  it('只有 XML 上游也能完整改写：不依赖第二个接口', async () => {
+    // 旧实现这里要等 JSON 版 feed 才能改写日记链接；现在完全不请求它，
+    // 因此「JSON 挂了」这一类失败模式在结构上就不存在了
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
     const response = await getFeed()
 
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('https://blog.example.com/articles/tech/hello')
     expect(xml).toContain('https://blog.example.com/notes/49')
-  })
-
-  it('JSON 版 feed 返回非 JSON 也不炸', async () => {
-    stubFetch({
-      feed: () => rssResponse(CORE_RSS),
-      json: () => new Response('<html>', { status: 200 }),
-    })
-    const response = await getFeed()
-
-    expect(response.status).toBe(200)
-    expect(await response.text()).toContain('https://blog.example.com/notes/49')
   })
 })
 
@@ -288,12 +245,13 @@ describe('Feed 代理：URL 重写成本主题路由', () => {
     expect(xml).not.toContain('blog.example.com/posts/tech/hello')
   })
 
-  it('日记 /notes/:nid → /diaries/:雪花id（nid 与详情页 id 不是同一个值）', async () => {
+  it('日记 /notes/:nid 与上游同形：路径不动，只把 origin 归一为公开地址', async () => {
     stubFetch({ feed: () => rssResponse(CORE_RSS) })
     const xml = await (await getFeed()).text()
 
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
-    expect(xml).not.toContain('blog.example.com/notes/49')
+    // 上游 host → 公开 host，nid 原样保留（不再换算成雪花 id）
+    expect(xml).toContain('https://blog.example.com/notes/49')
+    expect(xml).not.toContain('https://upstream.example.net/notes/49')
   })
 
   it('#comments 锚点跟着一起重写', async () => {
@@ -301,7 +259,7 @@ describe('Feed 代理：URL 重写成本主题路由', () => {
     const xml = await (await getFeed()).text()
 
     expect(xml).toContain('https://blog.example.com/articles/tech/hello#comments')
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800#comments')
+    expect(xml).toContain('https://blog.example.com/notes/49#comments')
   })
 
   it('CDATA 正文里的链接也重写', async () => {
@@ -321,42 +279,21 @@ describe('Feed 代理：URL 重写成本主题路由', () => {
     expect(xml).toContain('https://external.example.org/notes/1')
   })
 
-  it('映射里没有的 nid 保持原样，不瞎猜', async () => {
-    const onlyPosts = {
-      data: [{ id: '201987341420597248', link: 'https://blog.example.com/posts/tech/hello' }],
-    }
-    stubFetch({ feed: () => rssResponse(CORE_RSS), json: () => jsonResponse(onlyPosts) })
+  it('日记链接不依赖任何映射表：上游怎么写就怎么出', async () => {
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
     const xml = await (await getFeed()).text()
 
+    // 无需「查到 id 才改写」这一步，因此不存在「映射漏了 → 链接 404」
     expect(xml).toContain('https://blog.example.com/notes/49')
+    expect(xml).not.toContain('undefined')
   })
 
-  it('映射里没有、但正文引用了的 nid，按 /notes/nid/:nid 补查后再重写', async () => {
-    const onlyPosts = {
-      data: [{ id: '201987341420597248', link: 'https://blog.example.com/posts/tech/hello' }],
-    }
-    stubFetch({
-      feed: () => rssResponse(CORE_RSS),
-      json: () => jsonResponse(onlyPosts),
-      nid: () => jsonResponse({ data: { id: '155695797663436800' } }),
-    })
-    const xml = await (await getFeed()).text()
-
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
-    expect(xml).not.toContain('blog.example.com/notes/49')
-  })
-
-  it('补查只针对正文里真的出现过的 nid，不预先扫全站', async () => {
-    const calls = stubFetch({
-      feed: () => rssResponse(CORE_RSS),
-      json: () => jsonResponse({ data: [] }),
-      nid: () => jsonResponse({ data: { id: '155695797663436800' } }),
-    })
+  it('不再按 nid 补查单篇：映射消失后这条请求路径也一并消失', async () => {
+    const calls = stubFetch({ feed: () => rssResponse(CORE_RSS) })
     await getFeed()
 
     const lookups = calls.filter((call) => call.url.pathname.includes('/notes/nid/'))
-    expect(lookups).toHaveLength(1)
-    expect(lookups[0].url.pathname).toBe('/api/v2/notes/nid/49')
+    expect(lookups).toHaveLength(0)
   })
 
   it('未配置 NEXT_PUBLIC_SITE_URL 时回退到 identity，仍然完成改写', async () => {
@@ -366,9 +303,8 @@ describe('Feed 代理：URL 重写成本主题路由', () => {
 
     // identity.siteUrl 与上游同源：路径该换，origin 保持不变
     expect(xml).toContain('https://blog.example.com/articles/tech/hello')
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
+    expect(xml).toContain('https://blog.example.com/notes/49')
     expect(xml).not.toContain('blog.example.com/posts/')
-    expect(xml).not.toContain('blog.example.com/notes/49')
   })
 })
 
@@ -435,7 +371,7 @@ describe('Feed 代理：本站链接识别与 origin 归一', () => {
     const xml = await (await getFeed()).text()
 
     expect(xml).toContain('https://new.example.com/articles/tech/hello')
-    expect(xml).toContain('https://new.example.com/diaries/155695797663436800')
+    expect(xml).toContain('https://new.example.com/notes/49')
     // 旧 origin 一个都不该留下（包括 channel 的 <link> 与 atom:link）
     expect(xml).not.toContain('https://blog.example.com/')
   })
@@ -447,7 +383,7 @@ describe('Feed 代理：本站链接识别与 origin 归一', () => {
     const xml = await response.text()
 
     expect(xml).toContain('https://blog.example.com/articles/tech/hello')
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
+    expect(xml).toContain('https://blog.example.com/notes/49')
     expect(xml).not.toContain('127.0.0.1:3000')
     // 没有异常，就不该带告警头
     expect(response.headers.get('x-folio-feed-warnings')).toBeNull()
@@ -459,7 +395,7 @@ describe('Feed 代理：本站链接识别与 origin 归一', () => {
     const xml = await (await getFeed()).text()
 
     expect(xml).toContain('https://blog.example.com/blog/articles/tech/hello')
-    expect(xml).toContain('https://blog.example.com/blog/diaries/155695797663436800')
+    expect(xml).toContain('https://blog.example.com/blog/notes/49')
     // 没有把 /blog 重复两次，也没有丢掉它
     expect(xml).not.toContain('/blog/blog/')
   })
@@ -518,8 +454,8 @@ describe('Feed 代理：本站链接识别与 origin 归一', () => {
     const response = await getFeed()
     const xml = await response.text()
 
-    // 站点基准仍是 localhost，但映射可用 → 路径改写、origin 保持上游
-    expect(xml).toContain('http://127.0.0.1:3000/diaries/155695797663436800')
+    // 站点基准仍是 localhost：日记路径本来就同形，origin 保持上游
+    expect(xml).toContain('http://127.0.0.1:3000/notes/49')
     // 前端域名没被编造出来
     expect(xml).not.toContain('blog.example.com')
     expect(response.headers.get('x-folio-feed-warnings')).toContain('dev-host=')
@@ -527,12 +463,14 @@ describe('Feed 代理：本站链接识别与 origin 归一', () => {
 })
 
 /**
- * nid → 雪花 id 的两种来源
+ * 日记链接不再需要 id 映射
  *
- * JSON 版 feed 是主来源，feed 自身的 `<guid>` 是兜底。后者让「JSON 接口挂了」
- * 不再等于「日记链接全 404」。
+ * 旧实现要在 `/notes/:nid` 与 `/diaries/:雪花id` 之间换算，因此维护了
+ * 「JSON feed 主来源 + `<guid>` 兜底」两条路径，还要处理查不到时的降级。
+ * 路由统一成 `/notes/:nid` 之后，这三件事一起消失了。这一组测试守住这个前提：
+ * 一旦有人把映射加回来，这里会立刻失败。
  */
-describe('Feed 代理：日记 id 映射与降级', () => {
+describe('Feed 代理：日记链接无需 id 映射', () => {
   /** 日记条目自带 guid（core 的真实形状），且没有 JSON 映射可用 */
   const GUID_RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
@@ -545,48 +483,35 @@ describe('Feed 代理：日记 id 映射与降级', () => {
 </item>
 </channel></rss>`
 
-  it('JSON 映射挂了也能用 guid 兜底', async () => {
-    stubFetch({
-      feed: () => rssResponse(GUID_RSS),
-      json: () => new Response('', { status: 500 }),
-      nid: () => new Response('', { status: 404 }),
-    })
+  it('带 guid 的日记条目：guid 不参与路由，链接保持 nid', async () => {
+    stubFetch({ feed: () => rssResponse(GUID_RSS) })
     const xml = await (await getFeed()).text()
 
-    expect(xml).toContain('https://blog.example.com/diaries/155695797663436800')
-    expect(xml).not.toContain('/notes/49')
+    expect(xml).toContain('https://blog.example.com/notes/49')
+    // guid（雪花 id）是条目身份，不是地址的一部分
+    expect(xml).not.toContain('/diaries/')
   })
 
-  it('guid 不是雪花 id 时不采信：不把 nid 当 id', async () => {
-    // guid 写成 nid（4 位）——这正是「把 nid 错当雪花 id」的场景
+  it('guid 写成 nid 也不会被误当成地址：链接原样', async () => {
     const bad = GUID_RSS.replace('<guid>155695797663436800</guid>', '<guid>49</guid>')
-    stubFetch({
-      feed: () => rssResponse(bad),
-      json: () => jsonResponse({ data: [] }),
-      nid: () => new Response('', { status: 404 }),
-    })
+    stubFetch({ feed: () => rssResponse(bad) })
     const response = await getFeed()
     const xml = await response.text()
 
-    // 保持上游路由，绝不产出 /diaries/49 或 /diaries/undefined
+    expect(xml).toContain('https://blog.example.com/notes/49')
+    expect(xml).not.toContain('undefined')
+    // 没有映射环节，就不该再报 unmapped
+    expect(response.headers.get('x-folio-feed-warnings') ?? '').not.toContain('unmapped-nid')
+  })
+
+  it('日记链接不会再被改写成 /diaries/：那已是历史路由', async () => {
+    stubFetch({ feed: () => rssResponse(CORE_RSS) })
+    const xml = await (await getFeed()).text()
+
+    expect(xml).toContain('https://blog.example.com/articles/tech/hello')
     expect(xml).toContain('https://blog.example.com/notes/49')
     expect(xml).not.toContain('/diaries/49')
     expect(xml).not.toContain('undefined')
-    expect(response.headers.get('x-folio-feed-warnings')).toContain('unmapped-nid=')
-  })
-
-  it('映射失败的链接不进入「已改写」统计，且不影响同一份 feed 的其它条目', async () => {
-    const mixed = CORE_RSS.replace('<title>日记</title>', '<title>日记</title>\n  <guid>49</guid>')
-    stubFetch({
-      feed: () => rssResponse(mixed),
-      json: () => jsonResponse({ data: [] }),
-      nid: () => new Response('', { status: 404 }),
-    })
-    const xml = await (await getFeed()).text()
-
-    // 文章照常改写，日记保持原样：一条失败不拖垮整份 feed
-    expect(xml).toContain('https://blog.example.com/articles/tech/hello')
-    expect(xml).toContain('https://blog.example.com/notes/49')
   })
 })
 

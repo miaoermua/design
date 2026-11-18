@@ -12,6 +12,7 @@ import {
 } from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { CoverImage } from '@/components/ui/cover-image'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { SearchPanel } from './search-panel'
 import { SiteNavMenu } from './site-nav-menu'
 import { ToolbarButton, ToolbarGroup } from './toolbar-button'
@@ -295,7 +296,8 @@ export function SiteHeaderClient({
                 </li>
 
                 {quickNav.map((item) => {
-                  const active = isNavItemActive(item, pathname)
+                  // 列表页上「当前页」归列表那一行（见 isNavItemActive）
+                  const active = isNavItemActive(item, pathname, item.branch?.listHref)
                   // 只在桌面顶栏出现的入口：手机断点由 CSS 收起
                   const compact = item.inBar === 'desktop' ? 'hide' : undefined
                   const branch = item.branch
@@ -328,13 +330,18 @@ export function SiteHeaderClient({
                    * 普通导航链接，是否还有一层只在鼠标停上去（或菜单抽屉里）
                    * 才显现，不靠装饰性符号暗示。
                    *
-                   * 下拉里**一律不出现「全部 X」那一行**，没有例外：
-                   * 有鼠标时「点入口 = 去那里」是同一件事，再列一行只是把
-                   * 同一个目的地说两遍。手机相反——没有悬停，抽屉里必须保留
-                   * 这一行做二次确认，对手指来说「展开子项」与「进入列表页」
-                   * 是两次不同的点击。抽屉里那一行的地址直接取入口自己的
-                   * `href`，数据里不存第二份。
+                   * 下拉里通常**不出现「全部 X」那一行**：有鼠标时「点入口 = 去那里」
+                   * 是同一件事，再列一行只是把同一个目的地说两遍。手机相反——
+                   * 没有悬停，抽屉里必须保留这一行做二次确认，对手指来说
+                   * 「展开子项」与「进入列表页」是两次不同的点击。
+                   *
+                   * 例外是「入口 ≠ 列表页」的目录：日记的入口 `/notes` 跳到最新
+                   * 一篇，列表在 `/notes/list`。这时如果仍省掉这一行，桌面端就没有
+                   * 任何路径进时间线——所以 `listHref` 与 `href` 不同时必须补出来。
                    */
+                  const flyoutList =
+                    branch.listHref && branch.listHref !== item.href ? branch.listHref : null
+
                   return (
                     <li key={item.href} className="nav-flyout" data-compact={compact}>
                       <Link
@@ -349,6 +356,17 @@ export function SiteHeaderClient({
                       <div className="nav-flyout__panel">
                         <div className="nav-flyout__card">
                           <ul className="nav-flyout__list">
+                            {flyoutList && branch.entryLabel ? (
+                              <li>
+                                <Link
+                                  href={flyoutList}
+                                  aria-current={flyoutList === pathname ? 'page' : undefined}
+                                  className="nav-row nav-row--child"
+                                >
+                                  {messages[branch.entryLabel]}
+                                </Link>
+                              </li>
+                            ) : null}
                             {branch.status === 'ok' ? (
                               branch.items.map((child) => (
                                 <li key={child.href}>
@@ -563,18 +581,5 @@ function prefersReducedMotion(): boolean {
 }
 
 function ArrowUpIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 19V5M6 11l6-6 6 6" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:arrow-up-line" className="size-[1.05rem]" />
 }

@@ -18,9 +18,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { applyTheme, launchChrome, navigate, openPage, preparePage, sleep } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3021'
 const OUT_DIR = 'docs/audits/assets/phase-4d'
+
+// 样张页的图片同样走拦截。实测不滚动视口，懒加载图不发请求（拦截 0 命中）；
+// 保留是为了页面自己发图时不把 404 混进请求数。素材用完即删。
+const fixtures = materializeFixtures()
 
 const PAGES = [
   { key: 'home', route: '/', label: '首页' },
@@ -149,6 +154,7 @@ async function main() {
   // ── 冷缓存：全新 profile + 清空缓存 + 禁用内存/磁盘缓存 ──────────
   let chrome = await launchChrome({ port: 9338, profile })
   let client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
   client.browserVersion = chrome.version
   await client.send('Page.enable')
   await client.send('Runtime.enable')
@@ -172,6 +178,7 @@ async function main() {
   // ── 热缓存：同一个 profile，缓存放开，二次访问 ──────────────────
   chrome = await launchChrome({ port: 9339, profile })
   client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
   client.browserVersion = chrome.version
   await client.send('Page.enable')
   await client.send('Runtime.enable')
@@ -210,9 +217,11 @@ async function main() {
   client.close()
   await chrome.close()
   rmSync(profile, { recursive: true, force: true })
+  fixtures.dispose()
 }
 
 main().catch((error) => {
+  fixtures.dispose()
   console.error(error)
   process.exitCode = 1
 })

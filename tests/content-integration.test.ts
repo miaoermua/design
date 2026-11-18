@@ -15,7 +15,7 @@ import { SRC } from './helpers/design-tokens'
  */
 
 const ARTICLE_PAGE = join(SRC, 'app/articles/[category]/[slug]/page.tsx')
-const DIARY_PAGE = join(SRC, 'app/diaries/[id]/page.tsx')
+const DIARY_PAGE = join(SRC, 'app/notes/[nid]/page.tsx')
 const CONTENT_PAGE = join(SRC, 'app/pages/[slug]/page.tsx')
 
 function source(path: string): string {

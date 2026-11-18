@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useRef, type ReactElement } from 'react'
+import { mingcuteSvgMarkup } from '@/components/ui/mingcute-icon'
 import { useLocale } from '@/lib/i18n/client'
 import { t } from '@/lib/i18n/dictionary'
 import { locateProseScope } from './content-scope'
@@ -25,12 +26,9 @@ const BLOCK_SELECTOR = '.code-block'
 const MERMAID_SELECTOR = '.mermaid-block'
 const SCOPE_FLAG = 'codeEnhanced'
 
-const COPY_ICON =
-  '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M5.5 5.5V3.25A1.25 1.25 0 0 1 6.75 2h6A1.25 1.25 0 0 1 14 3.25v6A1.25 1.25 0 0 1 12.75 10.5H10.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="2" y="5.5" width="8.5" height="8.5" rx="1.25" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>'
-const CHECK_ICON =
-  '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-const WARN_ICON =
-  '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 4.5v4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.4" r="1" fill="currentColor"/></svg>'
+const COPY_ICON = mingcuteSvgMarkup('mingcute:copy-line')
+const CHECK_ICON = mingcuteSvgMarkup('mingcute:check-line')
+const WARN_ICON = mingcuteSvgMarkup('mingcute:alert-line')
 
 /** 折叠阈值：视口一半，与 Shiro 的 `max-h-[50vh]` 同口径 */
 const COLLAPSE_RATIO = 0.5

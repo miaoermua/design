@@ -335,11 +335,13 @@ describe('图标与无障碍名称', () => {
     const glyph = (option: HTMLInputElement) =>
       option.closest('label')?.querySelector('svg')?.innerHTML ?? ''
 
-    // 显示器：有 rect；太阳：有 circle；月亮：两者都没有，只有 path
-    expect(glyph(systemOption())).toContain('<rect')
-    expect(glyph(lightOption())).toContain('<circle')
-    expect(glyph(darkOption())).not.toContain('<circle')
-    expect(glyph(darkOption())).not.toContain('<rect')
+    // MingCute Line 统一用单条 fill path 画出线条外观；三态的差异体现在
+    // path 数据本身。旧的 rect / circle 断言描述的是上一版自绘图标的实现细节。
+    for (const option of [systemOption(), lightOption(), darkOption()]) {
+      expect(glyph(option)).toContain('<path')
+      expect(glyph(option)).not.toContain('<circle')
+      expect(glyph(option)).not.toContain('<rect')
+    }
 
     expect(new Set([glyph(systemOption()), glyph(lightOption()), glyph(darkOption())]).size).toBe(3)
   })

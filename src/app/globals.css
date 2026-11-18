@@ -9,6 +9,8 @@
 @import '../design-system/styles/footnotes.css';
 @import '../design-system/styles/mentions.css';
 @import '../design-system/styles/reading.css';
+/* 通知（Sonner）适配：层级、Token 映射、方角。见文件头说明 */
+@import '../design-system/styles/sonner.css';
 /* 系统高对比度与增强对比：只在对应的媒体查询里生效，常规浏览零影响 */
 @import '../design-system/styles/forced-colors.css';
 /* 打印：整份文件只包一个 @media print，屏幕样式零影响。放在最后，
@@ -1090,7 +1092,19 @@ details[open] > .nav-group__summary .nav-group__chevron {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
-  z-index: 50;
+  /*
+   * 层级 30：整站浮层按下面这个顺序叠放，越小越靠下。
+   *
+   *   30 工具浮标(this) < 40 通知与状态胶囊 < 50 搜索面板 < 80 图片预览 < 90 对话框
+   *
+   * 浮标原本是 50，与搜索面板同值。通知层压到 40 之后，浮标（50）就会浮在
+   * 通知之上——实测三条通知堆叠时，圆圈按钮正好压在中间那条的文字上。
+   *
+   * 为什么不反过来把通知抬到 60：那样通知会重新盖住搜索面板(50)，
+   * 违背「模态打开时通知退到遮罩之下」。通知层必须低于所有模态，
+   * 而浮标是常驻便利控件、优先级低于瞬时提示，所以该让位的是浮标。
+   */
+  z-index: 30;
   /*
    * 与导航卡片同一块玻璃：材质层 `.nav-glass.glass-nav` 与光斑层
    * `.nav-spotlight` 都是导航用的那两个类，由这个盒子提供尺寸与圆角
@@ -1180,7 +1194,7 @@ details[open] > .toc-summary .toc-chevron {
    只给右侧间距——左侧间距由 `.site-footer__meta` 的 `column-gap` 提供，
    这样分隔符本身落到行首时不会带出一段缩进（见下方说明）。 */
 .footer-sep {
-  margin-inline-end: 0.55em;
+  margin-inline-end: 0.45em;
   color: var(--text-tertiary);
   font-size: var(--text-meta);
   font-weight: 300;
@@ -1202,14 +1216,14 @@ details[open] > .toc-summary .toc-chevron {
 .site-footer__inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.75rem;
-  padding-block: 2.5rem;
+  gap: 1.5rem;
+  padding-block: 1.75rem 2rem;
 }
 
 .site-footer__info {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.5rem;
   /* 信息区可能含长链接，允许收缩到列宽以内，不撑破 grid */
   min-width: 0;
 }
@@ -1252,8 +1266,8 @@ details[open] > .toc-summary .toc-chevron {
 @media (min-width: 48rem) {
   .site-footer__inner {
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 2rem 3rem;
+    align-items: center;
+    gap: 1.5rem 3rem;
   }
 
   /*
@@ -1296,7 +1310,7 @@ details[open] > .toc-summary .toc-chevron {
  */
 @media (max-width: 39.999rem) {
   .site-footer__inner {
-    padding-bottom: 4rem;
+    padding-bottom: 3.5rem;
   }
 }
 
@@ -1329,7 +1343,7 @@ details[open] > .toc-summary .toc-chevron {
   align-items: center;
   /* 两者是一组的两个控件，不是同一个控件：间距要够读出「这是两个」，
      又不能大到像分居两处 */
-  gap: 0.625rem 1.25rem;
+  gap: 0.375rem 0.75rem;
 }
 
 .footer-lang {
@@ -1340,15 +1354,15 @@ details[open] > .toc-summary .toc-chevron {
 
 /*
  * 触发器：透明底、无完整胶囊边框，只有 hover 时铺一层很浅的沉面。
- * 高度给到 2.5rem：文字只有 13px，点击区域必须自己撑起来。
+ * 高度给到 2rem：与 Shiro 的 32px 一致，紧凑但点击区域仍然足够。
  */
 .footer-lang__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   max-width: 100%;
-  min-height: 2.5rem;
-  padding: 0.25rem 0.5rem;
+  min-height: 2rem;
+  padding: 0.125rem 0.375rem;
   border: var(--border-hairline) solid transparent;
   border-radius: var(--radius-sm);
   font-size: var(--text-small);
@@ -1387,8 +1401,8 @@ details[open] > .toc-summary .toc-chevron {
 .footer-lang__icon,
 .footer-lang__chevron {
   flex: none;
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   opacity: 0.85;
 }
 
@@ -1408,14 +1422,14 @@ details[open] > .toc-summary .toc-chevron {
 .footer-lang__menu {
   position: absolute;
   z-index: 20;
-  bottom: calc(100% + 0.4rem);
+  bottom: calc(100% + 0.3rem);
   left: 0;
   display: flex;
   flex-direction: column;
   gap: 0.0625rem;
-  min-width: 10.5rem;
-  max-width: min(18rem, calc(100vw - 2.5rem));
-  padding: 0.25rem;
+  min-width: 8.5rem;
+  max-width: min(14rem, calc(100vw - 2.5rem));
+  padding: 0.2rem;
   border: var(--border-hairline) solid var(--edge);
   border-radius: var(--radius-md);
   background-color: var(--surface-lift);
@@ -1426,10 +1440,10 @@ details[open] > .toc-summary .toc-chevron {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 2.25rem;
-  padding: 0.4rem 0.6rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem;
   border: 0;
   border-radius: var(--radius-sm);
   font-size: var(--text-small);
@@ -1461,8 +1475,8 @@ details[open] > .toc-summary .toc-chevron {
    任何「画出来的颜色」都走 strong（图标也算）。 */
 .footer-lang__check {
   flex: none;
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.8rem;
+  height: 0.8rem;
   color: var(--accent-strong);
 }
 
@@ -1470,13 +1484,14 @@ details[open] > .toc-summary .toc-chevron {
  * 三态主题：一枚横向胶囊装三个圆形格子。
  * 选中项浮起成一张小纸片（lift + 细边 + 轻投影），未选中只有灰图标——
  * 选中与否是「形状 + 表面」的差别，不只是颜色差别。
+ * 尺寸与 Shiro 对齐：每格 32px（2rem），图标 16px，胶囊 padding 3px。
  */
 .footer-theme {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 0.125rem;
-  padding: 0.2rem;
+  gap: 0.0625rem;
+  padding: 0.1875rem;
   border: var(--border-hairline) solid var(--edge);
   border-radius: var(--radius-pill);
   background-color: var(--surface-raised);
@@ -1485,8 +1500,8 @@ details[open] > .toc-summary .toc-chevron {
 .footer-theme__option {
   display: grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   cursor: pointer;
@@ -1516,8 +1531,8 @@ details[open] > .toc-summary .toc-chevron {
 }
 
 .footer-theme__option svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 /* 阅读操作栏按钮
@@ -1580,6 +1595,7 @@ details[open] > .toc-summary .toc-chevron {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.6rem;
 }
 
@@ -1692,16 +1708,9 @@ details[open] > .toc-summary .toc-chevron {
   color: var(--text-secondary);
 }
 
-/* 权限状态是这一行的副标题，不抢标题的注意力 */
-.home-more__notify-state {
-  margin-left: auto;
-  font-size: 0.95em;
-  color: var(--text-secondary);
-}
-
-.home-more__panel-row[aria-pressed='true'] .home-more__notify-state {
-  color: var(--accent-strong);
-}
+/* `.home-more__notify-state` 的两条规则已删除（2026-11-17）：
+   订阅面板迁成 SubscribeModal 后，TSX 里再无该类的生产者，
+   而它是 0.95em 的小字号，留在样式表里会被当成「真实豁免」登记。 */
 
 /* 屏幕阅读器专用 */
 .sr-only {

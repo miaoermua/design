@@ -187,24 +187,66 @@ describe('DonateSlot 可见性开关', () => {
   })
 })
 
-describe('文章与日记共用同一个 Donate 组件', () => {
+describe('赞赏入口的归属：列表不给，详情页给', () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 
-  it('文章页与日记条目都复用 Donate 实现，没有第二份浮层', () => {
-    const articlePage = read('src/app/articles/[category]/[slug]/page.tsx')
-    const actionRail = read('src/components/reading/action-rail.tsx')
+  /**
+   * 这条规则来自一次真实回归：`f13da24` 建 donate 模块时把 `DonateSlot`
+   * 直接写进了列表条目组件，导致日记列表每条都带一个赞赏入口
+   * （5 条日记 = 5 个募捐按钮），而 `/articles` 列表没有。
+   * 两个同构页面的行为不该不一致，所以规则写在这里而不是靠人记。
+   */
+
+  it('日记列表不承载赞赏入口', () => {
+    // 列表条目：唯一消费者是 diary-day-group（列表），详情页从不 import 它
     const diaryEntry = read('src/features/diaries/components/diary-entry.tsx')
+    expect(diaryEntry).not.toContain('DonateSlot')
+    expect(diaryEntry).not.toContain("from '@/features/donate'")
+    // 不再为了渲染赞赏去读主题配置
+    expect(diaryEntry).not.toContain('getThemeConfig')
 
-    // 文章页只决定「是否可见 + 用哪份配置」，浮层仍由 donate 模块提供
-    expect(articlePage).toContain("from '@/features/donate'")
-    expect(articlePage).not.toContain('role="dialog"')
+    // 列表链路的另外两层也不该有
+    expect(read('src/features/diaries/components/diary-day-group.tsx')).not.toContain('Donate')
+    expect(read('src/app/diaries/page.tsx')).not.toContain('Donate')
+  })
 
+  it('文章列表不承载赞赏入口', () => {
+    expect(read('src/app/articles/page.tsx')).not.toContain('Donate')
+    expect(read('src/features/articles/components/article-row.tsx')).not.toContain('Donate')
+  })
+
+  it('文章详情与日记详情都经 ActionRail 提供赞赏', () => {
+    const articlePage = read('src/app/articles/[category]/[slug]/page.tsx')
+    const diaryPage = read('src/app/notes/[nid]/page.tsx')
+
+    for (const [name, page] of [
+      ['文章详情', articlePage],
+      ['日记详情', diaryPage],
+    ] as const) {
+      // 配置在页面侧读，可见性判定同一入口
+      expect(page, `${name} 缺少 donate 配置读取`).toContain('isDonateVisible')
+      expect(page, `${name} 缺少 ActionRail`).toContain('<ActionRail')
+      // 赞赏必须作为 prop 交给 ActionRail，而不是页面自己渲染一个浮层
+      expect(page, `${name} 没把 donate 传给 ActionRail`).toContain('donate={donate}')
+      expect(page, `${name} 不该自己渲染弹层`).not.toContain('role="dialog"')
+    }
+  })
+
+  it('赞赏实现仍然只有一套：浮层只在 donate 模块里', () => {
+    const actionRail = read('src/components/reading/action-rail.tsx')
+
+    // 唯一的浮层实现经 DonateAction 暴露，ActionRail 只做挂载
     expect(actionRail).toContain("from '@/features/donate'")
     expect(actionRail).toContain('<DonateAction')
     expect(actionRail).not.toContain('role="dialog"')
 
-    expect(diaryEntry).toContain("from '@/features/donate'")
-    expect(diaryEntry).toContain('<DonateSlot')
-    expect(diaryEntry).not.toContain('role="dialog"')
+    // 页面与列表都不得自行拼出赞赏弹层
+    for (const path of [
+      'src/app/articles/[category]/[slug]/page.tsx',
+      'src/app/notes/[nid]/page.tsx',
+      'src/features/diaries/components/diary-entry.tsx',
+    ]) {
+      expect(read(path), `${path} 出现了第二份弹层`).not.toContain('role="dialog"')
+    }
   })
 })

@@ -4,6 +4,7 @@ import {
   EXTERNAL_PREFIXES,
   KNOWN_DEAD_ALIASES,
   KNOWN_UNUSED_MOTION_TOKENS,
+  RUNTIME_INJECTED_PROPERTIES,
   SRC,
   TOKENS,
   contrast,
@@ -102,15 +103,30 @@ describe('Design Token：结构', () => {
 })
 
 describe('Design Token：引用完整性', () => {
-  it('CSS 里消费的每个变量都有定义（外部库前缀除外）', () => {
+  it('CSS 里消费的每个变量都有定义（外部库前缀与运行时注入除外）', () => {
     const missing: string[] = []
 
     for (const [name, file] of used) {
       if (EXTERNAL_PREFIXES.some((prefix) => name.startsWith(prefix))) continue
+      if (name in RUNTIME_INJECTED_PROPERTIES) continue
       if (!defined.has(name)) missing.push(`${name}（${file}）`)
     }
 
     expect(missing, '以下变量没有定义:\n' + missing.join('\n')).toEqual([])
+  })
+
+  it('运行时注入的属性必须在白名单里，且消费处带 fallback', () => {
+    // 白名单不是免死金牌：一旦某个变量在 tokens.css 里被定义成常量，
+    // 它就不再是「每次渲染都不同」的参数，应移出名单。
+    for (const [name, reason] of Object.entries(RUNTIME_INJECTED_PROPERTIES)) {
+      expect(reason.length, `${name} 的白名单缺理由`).toBeGreaterThan(10)
+      expect(defined.has(name), `${name} 已在 tokens.css 定义，请移出运行时注入白名单`).toBe(false)
+
+      // CSS 侧每一处 var(--x …) 都必须带逗号形式的默认值
+      const withoutFallback = new RegExp(`var\\(\\s*${name}\\s*\\)`, 'g')
+      const occurrences = (styleCss.match(withoutFallback) ?? []).length
+      expect(occurrences, `${name} 在 CSS 里有一处没有 fallback`).toBe(0)
+    }
   })
 
   it('TS/TSX 里 var() 引用的变量同样有定义', () => {

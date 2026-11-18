@@ -126,7 +126,19 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
   }
 
   const nidMatch = /^\/notes\/nid\/(\d+)$/.exec(path)
-  if (nidMatch) return mockNoteDetail(String(nidMatch[1])) ?? notFound(path)
+  if (nidMatch) {
+    const result = mockNoteDetail(String(nidMatch[1]))
+    if (!result) return notFound(path)
+    // 错误响应（403 密码保护等）原样透传，不包 data
+    if (result.status >= 400) return result
+    /*
+     * ⚠️ 线上这个端点是 `{ data: 日记, next: … }`，而 `/notes/:id` 返回裸对象。
+     * mock 必须复制这个差异——本文件开头的承诺就是「与线上完全相同的响应形状」。
+     * 之前 mock 返回裸对象，于是「真实端点多包了一层」在离线预览里完全看不出来，
+     * 直到接真后端才发现详情页读不到字段。
+     */
+    return { status: 200, body: { data: result.body, next: null } }
+  }
 
   // 专栏：列表与「按专栏取日记」（线上只认 entity id）
   if (path === '/topics/all') return { status: 200, body: { data: mockTopics } }

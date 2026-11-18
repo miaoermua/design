@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ThemeHomepageMoreItem } from '@/core/config/theme'
+import type { SubscribeOptions } from '@/features/interactions'
 
 const system = vi.hoisted(() => ({
   getState: vi.fn(() => 'off'),
@@ -20,8 +21,8 @@ import { HomeMore } from '@/components/home/home-more'
  * 首页「更多」
  *
  * 重点不是"三个按钮都渲染出来了"，而是：
- * - `subscribe` 不是直接跳 `/feed`，而是展开两条渠道；
- * - 浏览器通知的权限只在用户点那一行时才申请（这里断言 `enable()` 的调用时机）；
+ * - `subscribe` 点击后打开公有订阅弹窗（SubscribeModal）；
+ * - 浏览器通知的权限只在弹窗内用户点那一行时才申请；
  * - `link` 的站内 / 站外分别用 `<a>` 的两种形态。
  */
 
@@ -63,9 +64,21 @@ const EXTERNAL: ThemeHomepageMoreItem = {
   color: null,
 }
 
+const SUBSCRIBE_OPTIONS: SubscribeOptions = {
+  enabled: true,
+  types: ['post_c', 'note_c'],
+  channels: [],
+}
+
 describe('首页更多：入口渲染', () => {
   it('三种入口都在，链接的站内 / 站外形态不同', () => {
-    render(<HomeMore items={[LIKE, SUBSCRIBE, INTERNAL, EXTERNAL]} siteLikeCount={627} />)
+    render(
+      <HomeMore
+        items={[LIKE, SUBSCRIBE, INTERNAL, EXTERNAL]}
+        siteLikeCount={627}
+        subscribeOptions={SUBSCRIBE_OPTIONS}
+      />,
+    )
 
     expect(screen.getByRole('button', { name: /点赞/ }).textContent).toContain('627')
 
@@ -79,79 +92,146 @@ describe('首页更多：入口渲染', () => {
   })
 
   it('没有点赞数时不渲染计数占位', () => {
-    render(<HomeMore items={[LIKE]} siteLikeCount={null} />)
+    render(<HomeMore items={[LIKE]} siteLikeCount={null} subscribeOptions={null} />)
     const button = screen.getByRole('button', { name: /点赞/ })
     expect(button.querySelector('.home-more__count')).toBeNull()
   })
 })
 
 describe('首页更多：订阅入口', () => {
-  it('默认收起，不渲染任何渠道', () => {
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
+  it('点击之前不渲染 dialog', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
 
-    expect(screen.getByRole('button', { name: '订阅' }).getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('link', { name: /RSS/ })).toBeNull()
+    // 关闭态必须是「没有节点」，不是「有节点但藏起来」
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('点开后有 RSS 与浏览器通知两条渠道', () => {
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
-    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+  it('订阅按钮存在，点击后打开弹窗', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
 
-    expect(screen.getByRole('link', { name: /RSS/ }).getAttribute('href')).toBe('/feed')
+    const button = screen.getByRole('button', { name: '订阅' })
+    expect(button).toBeTruthy()
 
-    const notifyRow = screen.getByRole('button', { name: /浏览器通知/ })
-    expect(notifyRow.getAttribute('aria-pressed')).toBe('false')
-    // 还没点过，就不该申请过权限
-    expect(system.enable).not.toHaveBeenCalled()
+    fireEvent.click(button)
+
+    // 弹窗打开后应该有模态 dialog
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeTruthy()
+    expect(dialog.getAttribute('aria-modal')).toBe('true')
   })
 
-  it('Escape 收起面板', () => {
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
+  it('Escape 关闭首页入口打开的弹窗', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
     fireEvent.click(screen.getByRole('button', { name: '订阅' }))
-    expect(screen.getByRole('link', { name: /RSS/ })).toBeTruthy()
+    expect(screen.getByRole('dialog')).toBeTruthy()
 
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('link', { name: /RSS/ })).toBeNull()
+
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('点开时才读权限状态：不支持时那一行禁用并给出原因', () => {
-    system.getState.mockReturnValue('unsupported')
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
+  it('subscribeOptions 的邮件类型与频道被完整传进弹窗', () => {
+    render(
+      <HomeMore
+        items={[SUBSCRIBE]}
+        siteLikeCount={null}
+        subscribeOptions={{
+          enabled: true,
+          types: ['post_c'],
+          channels: [
+            {
+              id: 'channel:0',
+              title: 'Telegram 频道',
+              url: 'https://t.me/folio_demo',
+              icon: { type: 'builtin', name: 'telegram' },
+              color: null,
+            },
+          ],
+        }}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: '订阅' }))
 
-    const notifyRow = screen.getByRole('button', { name: /浏览器通知/ })
-    // 用原生 disabled 断言：本仓库没有引入 jest-dom 的 toBeDisabled
-    expect((notifyRow as HTMLButtonElement).disabled).toBe(true)
-    expect(notifyRow.textContent).toContain('浏览器不支持')
+    // 只有 post_c → 只出现「新文章」一个勾选项，没有「新日记」
+    expect(screen.getByText('新文章')).toBeTruthy()
+    expect(screen.queryByText('新日记')).toBeNull()
+    expect(screen.getByRole('link', { name: /Telegram 频道/ })).toBeTruthy()
   })
 
-  it('点击通知行会申请权限，并把结果写回界面', async () => {
+  it('弹窗内有 RSS 链接', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+
+    expect(screen.getByRole('link', { name: /feed/ }).getAttribute('href')).toBe('/feed')
+  })
+
+  it('弹窗内有浏览器通知开关', () => {
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+
+    const notifyToggle = screen.getByRole('button', { name: /未开启/ })
+    expect(notifyToggle).toBeTruthy()
+    expect(notifyToggle.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('不支持时通知开关禁用并给出原因', () => {
+    system.getState.mockReturnValue('unsupported')
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+
+    const notifyToggle = screen.getByRole('button', { name: /浏览器不支持/ })
+    expect((notifyToggle as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('点击通知开关会申请权限', async () => {
     system.getState.mockReturnValue('off')
     system.enable.mockResolvedValue('blocked')
 
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
     fireEvent.click(screen.getByRole('button', { name: '订阅' }))
-    fireEvent.click(screen.getByRole('button', { name: /浏览器通知/ }))
+    fireEvent.click(screen.getByRole('button', { name: /未开启/ }))
 
     await waitFor(() => expect(system.enable).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /浏览器通知/ }).textContent).toContain(
-        '浏览器已阻止',
-      ),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /浏览器已阻止/ })).toBeTruthy())
   })
 
   it('已开启时再点是关闭，不再次申请权限', async () => {
     system.getState.mockReturnValue('on')
 
-    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} />)
+    render(
+      <HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={SUBSCRIBE_OPTIONS} />,
+    )
     fireEvent.click(screen.getByRole('button', { name: '订阅' }))
 
-    const notifyRow = screen.getByRole('button', { name: /浏览器通知/ })
-    await waitFor(() => expect(notifyRow.getAttribute('aria-pressed')).toBe('true'))
+    const notifyToggle = screen.getByRole('button', { name: /已开启/ })
+    await waitFor(() => expect(notifyToggle.getAttribute('aria-pressed')).toBe('true'))
 
-    fireEvent.click(notifyRow)
+    fireEvent.click(notifyToggle)
     expect(system.disable).toHaveBeenCalledTimes(1)
     expect(system.enable).not.toHaveBeenCalled()
+  })
+
+  it('subscribeOptions 为 null 时弹窗内无邮件表单', () => {
+    render(<HomeMore items={[SUBSCRIBE]} siteLikeCount={null} subscribeOptions={null} />)
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeTruthy()
+    // 无邮件类型时不应渲染邮件输入框
+    expect(screen.queryByPlaceholderText('name@example.com')).toBeNull()
   })
 })

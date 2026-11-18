@@ -85,3 +85,39 @@ export function groupDiariesByDay(diaries: Diary[], timeZone: string): DiaryDayG
 
   return groups
 }
+
+/**
+ * 从一批日记里挑出「最新一篇」。
+ *
+ * 为什么不在页面里 `items[0]`：数组顺序是**后端返回顺序**，不是契约承诺。
+ * `/notes` 要跳转到最新一篇，跳错一次就是明显的错误，所以这里显式按发布时间
+ * 比较，而不是把正确性押在响应顺序上。
+ *
+ * 实测后端只按 `createdAt` 排序（`sortBy` 只接受 createdAt / modifiedAt /
+ * weather / mood，**没有 publishedAt**），而读者看到的是公开时间
+ * （`publicAt ?? createdAt`）。两者可能不一致——定时发布、事后补 publicAt
+ * 都会让顺序反过来。因此取一个窗口后在这里重挑，而不是完全相信第一页第一条。
+ *
+ * 并列时用 `nid` 兜底：结果必须确定，否则两次请求可能跳到不同日记。
+ */
+export function pickLatestDiary(diaries: readonly Diary[]): Diary | null {
+  let latest: Diary | null = null
+
+  for (const diary of diaries) {
+    if (!latest) {
+      latest = diary
+      continue
+    }
+    const current = Date.parse(diary.publishedAt)
+    const best = Date.parse(latest.publishedAt)
+    // 时间不可解析时不当成「最新」，避免 NaN 比较把顺序钉死在第一条
+    if (Number.isNaN(current)) continue
+    if (Number.isNaN(best) || current > best) {
+      latest = diary
+      continue
+    }
+    if (current === best && diary.nid > latest.nid) latest = diary
+  }
+
+  return latest
+}

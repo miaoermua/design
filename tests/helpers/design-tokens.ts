@@ -36,6 +36,24 @@ export const KNOWN_DEAD_ALIASES = [] as const
 /** 由 @theme 生成、当前源码里既无 var() 也无同名工具类的动效 Token */
 export const KNOWN_UNUSED_MOTION_TOKENS = ['--ease-in-out-soft'] as const
 
+/**
+ * 由内联 `style` 在运行期注入的 CSS 自定义属性。
+ *
+ * 它们不是设计 Token，而是**每次渲染都不同的局部参数**（第几个字符、第几个块），
+ * 因此不该也**不能**写进 `tokens.css`——写死一个值就等于把动画参数固定成常量。
+ *
+ * 判定条件（三者必须同时成立，缺一不算）：
+ *   1. 消费处带 fallback，例如 `var(--char-index, 0)`，CSS 单独加载也不会失效；
+ *   2. 源码里有 `style={{ '--x': ... }}` 的注入点；
+ *   3. 名字不带 Token 语义前缀（不是 `--text-` / `--surface-` / `--nav-` 这类）。
+ *
+ * 这份名单同样是**债务登记式白名单**：新增一项必须补理由，否则测试失败。
+ */
+export const RUNTIME_INJECTED_PROPERTIES: Record<string, string> = {
+  '--char-index': 'home/hero.tsx 逐字错峰动画：每个字符的序号，消费处带 `, 0` fallback',
+  '--block-delay': 'home/hero.tsx 区块入场延迟：每个块的毫秒数，消费处带 `, 0ms` fallback',
+}
+
 export function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry)

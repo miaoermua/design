@@ -40,7 +40,7 @@ export function ToolbarButton({
       title={label}
       data-active={active ? 'true' : undefined}
       className={cn(
-        'group/tt relative flex size-10 items-center justify-center rounded-[var(--radius-pill)]',
+        'group/tt relative flex size-[2.1875rem] items-center justify-center rounded-[var(--radius-pill)]',
         'transition-colors duration-[var(--duration-fast)]',
         'outline-none focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]',
         active

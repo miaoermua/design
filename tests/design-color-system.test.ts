@@ -439,11 +439,6 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       reason: '目录折叠箭头，aria-hidden',
     },
     {
-      file: 'src/components/reading/subscribe-panel.tsx',
-      match: 'aria-hidden="true"',
-      reason: '箭头图标，aria-hidden',
-    },
-    {
       file: 'src/components/ui/pagination.tsx',
       match: 'disabledClass',
       // 这是白名单里**唯一承载可读文字**的一处（其余都是分隔符与图标）。
@@ -457,6 +452,11 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       file: 'src/components/ui/mermaid-hydrator.tsx',
       match: "'lineColor'",
       reason: 'Mermaid 图表连线，非文本图形',
+    },
+    {
+      file: 'src/components/ui/subscribe-modal.tsx',
+      match: 'text-[var(--text-tertiary)]',
+      reason: '箭头图标「↗」，aria-hidden',
     },
   ]
 
@@ -517,5 +517,72 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
     expect(tagNote).not.toContain('var(--text-tertiary)')
     expect(tagNote).toContain('color: var(--text-heading)')
     expect(tagNote).toContain('color: var(--text-primary)')
+  })
+})
+
+/* ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * 链接可辨识度（WCAG 1.4.1「不能只靠颜色」+ 1.4.11「非文本对比 3:1」）
+ *
+ * 正文链接的 `color` 是 `inherit` —— 与周围文字**完全同色**，
+ * 所以下划线是唯一的识别线索。它因此不能是「装饰级」的弱色：
+ * 一旦下划线低于 3:1，链接在低视力用户眼里就是普通文字，
+ * 这同时违反 1.4.1（缺少非颜色线索）与 1.4.11（线索对比不足）。
+ *
+ * 断言的是「下划线在任何承载正文的表面上 ≥ 3:1」，
+ * 而不是钉死某个 Token 名 —— 换色可以，但不能换回不合格的值。
+ */
+describe('正文链接下划线的可辨识度', () => {
+  const linkCss = stripCssComments(readFileSync(`${SRC}/design-system/styles/prose.css`, 'utf8'))
+
+  /** 取某个选择器的规则块内容 */
+  const ruleBody = (selector: string): string => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(escaped + '\\s*\\{([^}]*)\\}')
+    return re.exec(linkCss)?.[1] ?? ''
+  }
+
+  const DECORATION = /text-decoration-color:\s*var\((--[a-z0-9-]+)\)/
+
+  it('静置态与 hover 态都显式声明了下划线颜色', () => {
+    expect(ruleBody('.prose a'), '.prose a 缺少 text-decoration-color').toMatch(DECORATION)
+    expect(ruleBody('.prose a:hover'), '.prose a:hover 缺少 text-decoration-color').toMatch(
+      DECORATION,
+    )
+  })
+
+  it('静置态下划线在纸面与卡片面都 ≥ 3:1（两套主题）', () => {
+    const token = DECORATION.exec(ruleBody('.prose a'))?.[1]
+    expect(token).toBeDefined()
+
+    const problems: string[] = []
+    for (const theme of THEMES) {
+      const p = palette(theme)
+      const color = p.get(token!.replace(/^--/, '--color-')) ?? p.get(token!)
+      expect(color, `${theme} 中找不到 ${token} 对应的调色板值`).toBeDefined()
+      for (const surface of ['--color-paper', '--color-paper-raised']) {
+        const bg = p.get(surface)
+        if (!bg) continue
+        const ratio = contrast(color!, bg)
+        if (ratio < 3) problems.push(`${theme} ${token} / ${surface} = ${ratio.toFixed(2)} < 3`)
+      }
+    }
+    expect(problems, '链接下划线对比度不足:\n' + problems.join('\n')).toEqual([])
+  })
+
+  it('hover 态与静置态用不同颜色（悬停必须有视觉反馈）', () => {
+    const base = DECORATION.exec(ruleBody('.prose a'))?.[1]
+    const hover = DECORATION.exec(ruleBody('.prose a:hover'))?.[1]
+    expect(base).toBeDefined()
+    expect(hover).toBeDefined()
+    expect(base).not.toBe(hover)
+  })
+
+  it('链接与正文同色，因此下划线不可省略（WCAG 1.4.1）', () => {
+    // 本项目选「同色 + 下划线」；一旦有人把 underline 改成 none，
+    // 链接就只剩颜色差异 —— 而颜色其实也没变，等于完全不可辨。
+    expect(linkCss).toMatch(/\.prose a\s*\{[^}]*color:\s*inherit/)
+    expect(linkCss).toMatch(/\.prose a\s*\{[^}]*text-decoration:\s*underline/)
   })
 })

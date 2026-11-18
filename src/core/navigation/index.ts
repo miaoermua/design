@@ -78,7 +78,7 @@ export interface NavItem extends NavLink {
  */
 const ALL_NAV: NavItem[] = [
   { href: '/articles', label: 'nav.articles', feature: 'articles', matchPrefixes: ['/articles'] },
-  { href: '/diaries', label: 'nav.diaries', feature: 'diaries', matchPrefixes: ['/diaries'] },
+  { href: '/notes', label: 'nav.diaries', feature: 'diaries', matchPrefixes: ['/notes'] },
   {
     href: '/explore',
     label: 'nav.explore',
@@ -198,6 +198,13 @@ export interface NavBranchItem {
 export interface NavBranch {
   /** 目录自己的列表页文案；省略 = 该目录没有列表页，不画「全部 X」那一行 */
   entryLabel?: MessageKey
+  /**
+   * 「全部 X」那一行指向的地址；省略时取入口自身的 `href`。
+   *
+   * 只有日记需要这一项：`/notes` 定位到最新一篇，列表在 `/notes/list`。
+   * 入口链接与列表地址第一次分家，所以不能再用「列表页 = 入口自身」那条简化。
+   */
+  listHref?: string
   emptyLabel: MessageKey
   errorLabel: MessageKey
   status: 'ok' | 'empty' | 'error'
@@ -235,8 +242,24 @@ export function buildNav(branches: Partial<Record<string, NavBranch>> = {}): Nav
  * 首页单独判定：`matchPrefixes: ['/']` 的前缀匹配在下一条规则里会命中**所有**路径，
  * 首页只应在自己身上高亮。
  */
-export function isNavItemActive(item: NavLink, pathname: string): boolean {
+/**
+ * 入口是否处于「当前页」。
+ *
+ * `listHref` 是为「入口 ≠ 列表页」准备的（目前只有日记）：`/notes` 落最新一篇、
+ * `/notes/list` 是时间线。两者是父子前缀关系，只看前缀会把**入口与列表页同时**
+ * 标成 `aria-current="page"`——同一份导航里两个「当前页」，读屏播报两次，
+ * 视觉上也是两处高亮。
+ *
+ * 所以列表页在场时，当前页归列表那一行；入口只保留「所属分区」语义。
+ * 详情页 `/notes/:nid` 不受影响，仍然高亮入口。
+ */
+export function isNavItemActive(
+  item: NavLink,
+  pathname: string,
+  listHref?: string,
+): boolean {
   if (item.href === '/') return pathname === '/'
+  if (listHref && listHref !== item.href && pathname === listHref) return false
   const prefixes = item.matchPrefixes ?? [item.href]
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }

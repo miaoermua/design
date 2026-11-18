@@ -3,7 +3,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import type { Article, Diary } from '@/lib/api'
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
 import { t, tf, type MessageKey } from '@/lib/i18n/dictionary'
-import { articlePath, diaryPath } from '@/lib/routes'
+import { articlePath, notePath } from '@/lib/routes'
 import { cn } from '@/lib/utils/cn'
 import { formatMonthLabel, toDateTimeAttr } from '@/lib/utils/date'
 
@@ -62,7 +62,9 @@ export function buildYears(articles: Article[], diaries: Diary[], timeZone: stri
         kind: 'archive.kindNote' as const,
         title: diary.title,
         date: diary.publishedAt,
-        href: diaryPath(diary.id),
+        // nid 缺失（适配器兜底为 0）时不产出链接：宁可条目不可点，
+        // 也不要生成 /notes/0 这种注定 404 的地址
+        href: Number.isInteger(diary.nid) && diary.nid > 0 ? notePath(diary.nid) : null,
         day: attr.slice(8, 10),
       }
     }),

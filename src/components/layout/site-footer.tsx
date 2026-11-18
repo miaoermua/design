@@ -67,7 +67,7 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
           <div className="site-footer__info">
             <p className="site-footer__line text-meta">
               <span className="meta">© {yearRange}</span>{' '}
-              <span className="text-body font-serif font-medium text-[var(--text-heading)]">
+              <span className="text-small font-serif font-medium text-[var(--text-heading)]">
                 {authorName}
               </span>
               {authorSign ? (

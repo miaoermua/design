@@ -42,7 +42,7 @@ export default async function MarkdownVisualTestsPage() {
               <h1 className="text-headline mt-5 font-serif text-[var(--text-heading)]">
                 Markdown 视觉验收样张
               </h1>
-              <p className="sm:text-lead mt-4 font-serif text-[1.0625rem] leading-[1.8] text-[var(--text-secondary)] sm:mt-5 sm:leading-[1.75]">
+              <p className="text-lead mt-4 font-serif text-[var(--text-secondary)] sm:mt-5">
                 覆盖 Folio 实际支持的全部 Markdown
                 扩展。正文按「喵二」博客的题材重写过，仍是演示样张而不是站上文章，仅用于截图比对。
               </p>

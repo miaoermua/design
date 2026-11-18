@@ -20,11 +20,15 @@ import {
   settle,
   sleep,
 } from './cdp.mjs'
+import { attachFixtureInterception, materializeFixtures } from './fixtures.mjs'
 
 const BASE = process.env.FOLIO_BASE_URL ?? 'http://127.0.0.1:3021'
 const OUT_DIR = 'docs/audits/assets/phase-4d'
 const SHOT_DIR = join(OUT_DIR, 'screenshots')
 const ROUTE = '/visual-tests/markdown'
+
+// 样张里的五张 SVG 不再随仓库分发：先用到临时目录，再靠请求拦截喂给浏览器
+const fixtures = materializeFixtures()
 
 const results = []
 const shots = []
@@ -89,6 +93,7 @@ async function main() {
   mkdirSync(SHOT_DIR, { recursive: true })
   const chrome = await launchChrome({ port: 9340 })
   const client = await openPage(chrome.port)
+  await attachFixtureInterception(client, fixtures)
 
   await preparePage(client, { width: 1280, height: 800, theme: 'light' })
   await navigate(client, `${BASE}${ROUTE}`)
@@ -151,6 +156,20 @@ async function main() {
 
   // ── 单图预览：点击打开 ─────────────────────────────────────────
   const before = await client.evaluate(PREVIEW_STATE)
+
+  // 正文图是 `loading="lazy"`：滚动到位之后才开始加载。先等它真的解码完成，
+  // 再量点击坐标——否则量到的是 0×0 的占位盒，点击会落到别的元素上。
+  await client.evaluate(`(async () => {
+    const img = document.querySelector('.prose figure img')
+    if (!img) return false
+    img.scrollIntoView({ block: 'center', behavior: 'instant' })
+    const deadline = Date.now() + 4000
+    while (Date.now() < deadline && !(img.complete && img.naturalWidth > 0)) {
+      await new Promise((r) => setTimeout(r, 60))
+    }
+    return img.complete && img.naturalWidth > 0
+  })()`)
+
   const figurePoint = await client.evaluate(centerOf('.prose figure img'))
   if (!figurePoint) {
     record('图片预览 · 打开', 'BLOCKED', '页面里没有 figure img')
@@ -211,10 +230,12 @@ async function main() {
   )
 
   client.close()
+  fixtures.dispose()
   await chrome.close()
 }
 
 main().catch((error) => {
+  fixtures.dispose()
   console.error(error)
   process.exitCode = 1
 })

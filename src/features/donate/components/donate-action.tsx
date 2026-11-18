@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { useLocale } from '@/lib/i18n/client'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
@@ -146,22 +147,10 @@ export function DonateAction({ label, qrcodes, className, variant = 'inline' }: 
             : 'meta inline-flex items-center gap-1.5 text-[var(--text-secondary)] transition-colors duration-200 hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-offset-[var(--focus-ring-offset)] focus-visible:outline-[var(--focus-ring-color)] focus-visible:outline-[var(--focus-ring-width)]'
         }
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
+        <MingCuteIcon
+          name="mingcute:gift-line"
           className={variant === 'rail' ? 'size-[1.05rem]' : 'size-[0.95rem]'}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" />
-          <path d="M2 7h20v5H2z" />
-          <path d="M12 22V7" />
-          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Z" />
-          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z" />
-        </svg>
+        />
         <span>{label}</span>
       </button>
 

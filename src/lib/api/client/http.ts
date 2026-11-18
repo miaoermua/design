@@ -24,6 +24,36 @@ import type { V2ErrorBody } from '../contracts/v2/common'
 /** 日记密码保护的业务码（core: ErrorCodeEnum.NoteForbidden） */
 const NOTE_FORBIDDEN_CODE = 14000
 
+/**
+ * 上游对「id / nid 本身不合法」返回 422 时的报文形态（实测 core 12.x）：
+ *
+ *   GET /api/v2/notes/0    → 422 `{"message":"id: Invalid entity id"}`
+ *   GET /api/v2/notes/nid/0 → 422 `{"message":"nid: Invalid input"}`
+ *
+ * 这类 422 对调用方的语义是「你要的这个实体不存在」，与 404 同义，页面应当
+ * 出 404 而不是 500。但**不能把所有 422 都当 404**——`sortBy=publishedAt`
+ * 这类参数错误同样返回 422（`sortBy: Invalid input`），那是调用方写错了请求，
+ * 必须继续以 ApiError 冒泡，否则会被静默吞成「查无此页」。
+ *
+ * 因此只认「字段名恰好是 id 或 nid」且「错误性质是 Invalid」的报文。
+ */
+const INVALID_ENTITY_ID = /^(?:id|nid):\s*Invalid\b/i
+
+/**
+ * 去掉 URL 的查询串与片段，只留 origin + path。
+ *
+ * 为什么需要：错误信息里曾拼的是完整 URL（`请求失败：GET ${url}`），而
+ * `GET /notes/:id?password=…` 正是密码保护的日记详情——一旦网络异常，
+ * 这条消息会进 `error.tsx` 的页面、服务器日志与前端控制台，密码就跟着走了。
+ *
+ * 查询串本身对排障价值很低（上游只接受固定的几个参数），路径已经足够定位，
+ * 所以这里一律裁掉，不做「只删 password 参数」这种需要持续维护的白名单。
+ */
+export function redactUrl(raw: string): string {
+  const cut = raw.search(/[?#]/)
+  return cut === -1 ? raw : raw.slice(0, cut)
+}
+
 export type QueryValue = string | number | boolean | null | undefined
 
 export interface RequestOptions {
@@ -102,7 +132,7 @@ export async function requestV2<T>(path: string, options: RequestOptions = {}): 
       },
     })
   } catch (error) {
-    throw new NetworkError(`请求失败：GET ${url}`, { path, cause: error })
+    throw new NetworkError(`请求失败：GET ${redactUrl(url)}`, { path, cause: error })
   }
 
   const rawText = await response.text()
@@ -160,7 +190,7 @@ export async function postV2<T>(path: string, body: unknown): Promise<T> {
       cache: 'no-store',
     })
   } catch (error) {
-    throw new NetworkError(`请求失败：POST ${url}`, { path, cause: error })
+    throw new NetworkError(`请求失败：POST ${redactUrl(url)}`, { path, cause: error })
   }
 
   const rawText = await response.text()
@@ -189,6 +219,14 @@ function throwMappedError(path: string, status: number, body: unknown): never {
 
   if (status === 404) {
     throw new NotFoundError(message ?? `资源不存在：${path}`, { path, body })
+  }
+
+  /*
+   * 422 只在「id / nid 非法」时转为 NotFoundError，其余 422 原样冒泡。
+   * 判断依据是报文前缀，见 INVALID_ENTITY_ID 的注释。
+   */
+  if (status === 422 && message && INVALID_ENTITY_ID.test(message)) {
+    throw new NotFoundError(message, { path, body })
   }
 
   if (!message && typeof body === 'string' && body.trim()) {

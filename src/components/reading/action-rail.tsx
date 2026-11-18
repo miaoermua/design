@@ -8,6 +8,7 @@ import { useLocale } from '@/lib/i18n/client'
 import { t } from '@/lib/i18n/dictionary'
 import { notify } from '@/lib/notifications/store'
 import { cn } from '@/lib/utils/cn'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { SubscribePanel } from './subscribe-panel'
 
 export interface ActionRailProps {
@@ -141,36 +142,13 @@ export function ActionRail({
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
+    <MingCuteIcon
+      name={filled ? 'mingcute:heart-fill' : 'mingcute:heart-line'}
       className="size-[1.05rem]"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20s-7-4.35-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 4.65-7 9-7 9Z" />
-    </svg>
+    />
   )
 }
 
 function ShareIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 16V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:share-2-line" className="size-[1.05rem]" />
 }

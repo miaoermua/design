@@ -137,7 +137,7 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
     expect(barLinks().map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/articles',
-      '/diaries',
+      '/notes',
       '/explore',
       '/friends',
     ])
@@ -157,7 +157,7 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
       // 所以这里只认 li。
       expect(link?.closest('li')?.getAttribute('data-compact')).toBe('hide')
     }
-    for (const href of ['/articles', '/diaries']) {
+    for (const href of ['/articles', '/notes']) {
       expect(barLinks().find((link) => link.getAttribute('href') === href)?.dataset.compact).toBe(
         undefined,
       )
@@ -265,7 +265,7 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
       const expected: Record<string, string> = {
         '/': messages['nav.home'],
         '/articles': messages['nav.articles'],
-        '/diaries': messages['nav.diaries'],
+        '/notes': messages['nav.diaries'],
         '/explore': messages['nav.explore'],
         '/friends': messages['nav.friends'],
       }
@@ -397,7 +397,7 @@ describe('菜单：完整导航与分区', () => {
     const counts = new Map<string, number>()
     for (const href of hrefs) counts.set(href!, (counts.get(href!) ?? 0) + 1)
 
-    for (const href of ['/', '/articles', '/diaries', '/explore', '/friends']) {
+    for (const href of ['/', '/articles', '/notes', '/explore', '/friends']) {
       expect([href, counts.get(href)]).toEqual([href, 1])
     }
     // 「页面」没有索引页：抽屉里不该有指向 `/pages` 的链接
@@ -447,7 +447,7 @@ describe('菜单：完整导航与分区', () => {
     // 子项是标了 more 的入口，且不重复主导航
     const childHrefs = [...details.querySelectorAll('a')].map((link) => link.getAttribute('href'))
     expect(childHrefs).toEqual(['/says', '/projects'])
-    for (const href of ['/articles', '/diaries', '/explore', '/friends']) {
+    for (const href of ['/articles', '/notes', '/explore', '/friends']) {
       expect(childHrefs).not.toContain(href)
     }
   })

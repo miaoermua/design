@@ -314,7 +314,9 @@ describe('Footer 分区结构', () => {
     const sep = ruleBody(css, '.footer-sep')
 
     // 双侧 margin 会让换到行首的分隔符带着左间距一起换行，第二行看着像缩进了一格
-    expect(sep).toContain('margin-inline-end: 0.55em;')
+    // 0.45em 是 78df0e2「footer 布局与间距收紧」定下的值（此前是 0.55em，
+    // 断言当时没跟改）。这里守的是「只有右侧间距」这条规则，不是某个具体数值。
+    expect(sep).toContain('margin-inline-end: 0.45em;')
     expect(sep).not.toContain('margin-inline:')
     // 间距的承担者
     expect(ruleBody(css, '.site-footer__meta')).toContain('column-gap: 0.55em;')

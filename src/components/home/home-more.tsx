@@ -1,18 +1,22 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import type { ThemeHomepageMoreItem, ThemeSocialIcon } from '@/core/config/theme'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { SocialIcon } from '@/components/ui/social-icon'
+import { SubscribeModal } from '@/components/ui/subscribe-modal'
+import type { SubscribeOptions } from '@/features/interactions'
 import { useLocale } from '@/lib/i18n/client'
 import { t } from '@/lib/i18n/dictionary'
 import { notify } from '@/lib/notifications/store'
-import { systemNotifications, type SystemNotifyState } from '@/lib/notifications/system'
 
 interface HomeMoreProps {
   items: ThemeHomepageMoreItem[]
   /** 站点总「喜欢」数；null = 后端没给，界面上不显示计数 */
   siteLikeCount: number | null
+  /** 订阅选项；null = 首页不需要订阅入口或交互模块已关闭 */
+  subscribeOptions: SubscribeOptions | null
 }
 
 /**
@@ -20,17 +24,22 @@ interface HomeMoreProps {
  *
  * 三种入口类型：
  *   - `like`：喜欢本站（core 的 `POST /like_this`，按 IP 一天一次）
- *   - `subscribe`：展开订阅渠道（RSS 走 /feed，或浏览器通知）
+ *   - `subscribe`：打开公有订阅弹窗（邮件 + RSS + 频道 + 浏览器通知）
  *   - `link`：自定义链接，站内路径用客户端路由、外部地址新标签打开
  *
  * 图标支持 CSS / builtin 两套体系，与社交图标同源；
  * 图标字体样式表由根布局的 SocialIconStylesheets 统一加载，这里不重复引入。
  */
-export function HomeMore({ items, siteLikeCount }: HomeMoreProps) {
+export function HomeMore({ items, siteLikeCount, subscribeOptions }: HomeMoreProps) {
   return (
     <div className="home-more" role="group">
       {items.map((item, index) => (
-        <MoreEntry key={`${item.type}-${index}`} item={item} siteLikeCount={siteLikeCount} />
+        <MoreEntry
+          key={`${item.type}-${index}`}
+          item={item}
+          siteLikeCount={siteLikeCount}
+          subscribeOptions={subscribeOptions}
+        />
       ))}
     </div>
   )
@@ -39,16 +48,18 @@ export function HomeMore({ items, siteLikeCount }: HomeMoreProps) {
 function MoreEntry({
   item,
   siteLikeCount,
+  subscribeOptions,
 }: {
   item: ThemeHomepageMoreItem
   siteLikeCount: number | null
+  subscribeOptions: SubscribeOptions | null
 }) {
   if (item.type === 'like') {
     return <LikeEntry item={item} initialCount={siteLikeCount} />
   }
 
   if (item.type === 'subscribe') {
-    return <SubscribeEntry item={item} />
+    return <SubscribeEntry item={item} subscribeOptions={subscribeOptions} />
   }
 
   if (!item.url) return null
@@ -85,92 +96,25 @@ function MoreEntry({
 /**
  * 订阅入口
  *
- * 点开是两条并列的渠道，而不是直接跳 `/feed`：
- *   - RSS：唯一的「真订阅」，不依赖任何权限；
- *   - 浏览器通知：**权限只在这里、且只在用户点了这一行之后才申请**。
- *     页面加载时不去问，是为了不在读者第一次进来就弹一个他还没决定要的框。
- *
- * 面板用 `absolute` 展开、不占布局；开着时点外部或 `Escape` 关闭，关闭后焦点
- * 仍留在触发按钮上（不用 dialog，这是一个轻量 popover，不是模态）。
+ * 点击打开公有的 SubscribeModal 弹窗，合并了邮件表单、RSS、频道和浏览器通知
+ * 四种渠道。不再自己管 popover 面板——弹窗内部处理所有订阅交互。
  */
-function SubscribeEntry({ item }: { item: ThemeHomepageMoreItem }) {
-  const locale = useLocale()
+function SubscribeEntry({
+  item,
+  subscribeOptions,
+}: {
+  item: ThemeHomepageMoreItem
+  subscribeOptions: SubscribeOptions | null
+}) {
   const [open, setOpen] = useState(false)
-  /** 权限状态只有浏览器知道，挂载前一律按「未开启」渲染，避免 SSR 与首帧不一致 */
-  const [notifyState, setNotifyState] = useState<SystemNotifyState>('off')
-  const wrapperRef = useRef<HTMLSpanElement | null>(null)
-  const panelId = useId()
-
-  /**
-   * 打开面板。
-   *
-   * 权限状态只在**打开这一刻**读一次，而不是放进 effect：在 effect 里同步
-   * `setState` 会触发一轮级联渲染（eslint 的 `set-state-in-effect` 正是拦这个）。
-   * 这里是在用户点击的事件处理里读写，React 会把它和 `setOpen` 合并成一次渲染。
-   */
-  const openPanel = () => {
-    setNotifyState(systemNotifications.getState())
-    setOpen(true)
-  }
-
-  useEffect(() => {
-    if (!open) return
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (wrapperRef.current?.contains(event.target as Node)) return
-      setOpen(false)
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open])
-
-  const handleToggleNotify = async () => {
-    if (notifyState === 'on') {
-      systemNotifications.disable()
-      setNotifyState('off')
-      notify({ level: 'info', title: t(locale, 'home.moreNotifyDisabled') })
-      return
-    }
-
-    // enable() 内部才会调用 requestPermission()，且必须落在这次点击的调用栈上
-    const next = await systemNotifications.enable()
-    setNotifyState(next)
-
-    if (next === 'on') {
-      notify({ level: 'success', title: t(locale, 'home.moreNotifyEnabled') })
-    } else if (next === 'blocked') {
-      notify({ level: 'warning', title: t(locale, 'home.moreNotifyDenied'), durationMs: 0 })
-    } else if (next === 'unsupported') {
-      notify({ level: 'info', title: t(locale, 'home.moreNotifyUnsupported') })
-    }
-  }
-
-  const stateLabel =
-    notifyState === 'on'
-      ? t(locale, 'home.moreNotifyOn')
-      : notifyState === 'blocked'
-        ? t(locale, 'home.moreNotifyBlocked')
-        : notifyState === 'unsupported'
-          ? t(locale, 'home.moreNotifyUnsupported')
-          : t(locale, 'home.moreNotifyOff')
-
-  const notifyDisabled = notifyState === 'blocked' || notifyState === 'unsupported'
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <span ref={wrapperRef} className="home-more__subscribe">
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        onClick={() => (open ? setOpen(false) : openPanel())}
+        onClick={() => setOpen(true)}
         style={item.color ? { color: item.color } : undefined}
         className="home-more__entry"
       >
@@ -178,39 +122,14 @@ function SubscribeEntry({ item }: { item: ThemeHomepageMoreItem }) {
         <span>{item.title}</span>
       </button>
 
-      {open ? (
-        <div
-          id={panelId}
-          className="home-more__panel"
-          role="group"
-          aria-label={t(locale, 'home.moreSubscribeTitle')}
-        >
-          <Link href="/feed" className="home-more__panel-row">
-            <span className="home-more__panel-title">
-              <RssIcon />
-              <span>{t(locale, 'home.moreSubscribeRss')}</span>
-            </span>
-            <span className="home-more__panel-hint">{t(locale, 'home.moreSubscribeRssHint')}</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleToggleNotify}
-            disabled={notifyDisabled}
-            aria-pressed={notifyState === 'on'}
-            className="home-more__panel-row"
-          >
-            <span className="home-more__panel-title">
-              <span>{t(locale, 'home.moreSubscribeNotify')}</span>
-              <span className="home-more__notify-state">{stateLabel}</span>
-            </span>
-            <span className="home-more__panel-hint">
-              {t(locale, 'home.moreSubscribeNotifyHint')}
-            </span>
-          </button>
-        </div>
-      ) : null}
-    </span>
+      <SubscribeModal
+        types={subscribeOptions?.types ?? []}
+        channels={subscribeOptions?.channels ?? []}
+        open={open}
+        onClose={() => setOpen(false)}
+        returnFocusRef={triggerRef}
+      />
+    </>
   )
 }
 
@@ -297,53 +216,17 @@ function MoreIcon({
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
+    <MingCuteIcon
+      name={filled ? 'mingcute:heart-fill' : 'mingcute:heart-line'}
       className="size-[0.95rem]"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20s-7-4.35-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 4.65-7 9-7 9Z" />
-    </svg>
+    />
   )
 }
 
 function RssIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[0.95rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="5.5" cy="18.5" r="1.2" />
-      <path d="M5.5 11.5a7 7 0 0 1 7 7M5.5 5a13.5 13.5 0 0 1 13.5 13.5" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:rss-line" className="size-[0.95rem]" />
 }
 
 function LinkIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[0.95rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.5.5" />
-      <path d="M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.5-.5" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:link-line" className="size-[0.95rem]" />
 }

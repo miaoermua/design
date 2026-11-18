@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useSyncExternalStore } from 'react'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 
 /**
  * 三态主题
@@ -144,60 +145,11 @@ export function useThemePreference() {
 
 /** 主题三态的图标：页脚三段单选与文档示例共用，避免各画一套 */
 export function ThemeGlyph({ value }: { value: ThemePreference }) {
-  if (value === 'light') return <SunIcon />
-  if (value === 'dark') return <MoonIcon />
-  return <MonitorIcon />
-}
-
-function MonitorIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4.5" width="18" height="12" rx="2" />
-      <path d="M9 20h6M12 16.5V20" />
-    </svg>
-  )
-}
-
-function SunIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
-    </svg>
-  )
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[1.05rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />
-    </svg>
-  )
+  if (value === 'light') {
+    return <MingCuteIcon name="mingcute:sun-line" className="size-[1.05rem]" />
+  }
+  if (value === 'dark') {
+    return <MingCuteIcon name="mingcute:moon-line" className="size-[1.05rem]" />
+  }
+  return <MingCuteIcon name="mingcute:monitor-line" className="size-[1.05rem]" />
 }

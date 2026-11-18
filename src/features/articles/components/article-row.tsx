@@ -13,6 +13,12 @@ interface ArticleRowProps {
   /** 无日期栏的紧凑行（首页侧栏） */
   compact?: boolean
   /**
+   * 首页单列索引行：只留标题 + 日期，去掉分类/标签/阅读数/摘要。
+   * ≥sm 日期贴右缘、与标题同基线（账目式索引）；<sm 日期落到标题下方。
+   * 行间距交给首页列表的 gap 统一节奏。
+   */
+  minimal?: boolean
+  /**
    * 一行正文概览的显式开关：只有 /articles（含分页）开启。
    * 首页、探索页、分类页、标签页的文章条目保持简洁，默认关闭，
    * 新增调用点不会意外多出一行。
@@ -34,10 +40,31 @@ export function ArticleRow({
   article,
   timeZone,
   compact = false,
+  minimal = false,
   withExcerpt = false,
   locale = DEFAULT_LOCALE,
 }: ArticleRowProps) {
   const href = articlePath(article.category?.slug, article.slug)
+
+  /* ── minimal 模式：首页单列索引行，只有标题 + 日期 ────────────── */
+  if (minimal) {
+    return (
+      <article className="group flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+        <h3 className="text-rowtitle min-w-0 font-serif text-[var(--text-heading)]">
+          {href ? (
+            <Link href={href} className="link-quiet">
+              {article.title}
+            </Link>
+          ) : (
+            <span>{article.title}</span>
+          )}
+        </h3>
+        <p className="meta shrink-0 transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--text-secondary)]">
+          <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
+        </p>
+      </article>
+    )
+  }
 
   const summary = article.summary ?? ''
   // `text` 是列表返回的截断正文，与官方 summary 是两份独立数据
