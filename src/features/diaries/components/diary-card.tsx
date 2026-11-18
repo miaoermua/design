@@ -31,7 +31,7 @@ export async function DiaryCard({ diary, timeZone }: DiaryCardProps) {
       {diary.hasPassword ? (
         <p className="meta mt-2">{t(locale, 'diary.protectedTitle')}</p>
       ) : preview ? (
-        <p className="mt-2 line-clamp-2 text-small text-[var(--text-secondary)]">
+        <p className="text-small mt-2 line-clamp-2 max-w-[var(--measure-note)] text-[var(--text-secondary)]">
           {preview}
         </p>
       ) : null}

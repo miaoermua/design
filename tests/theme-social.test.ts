@@ -206,3 +206,29 @@ describe('Social：图标样式表按需加载', () => {
     expect(needsIconStylesheets(social)).toBe(false)
   })
 })
+
+describe('Social：极端品牌色归一', () => {
+  const withColor = (color: string) =>
+    toSocialItems(null, {
+      theme: { items: [{ title: 'GitHub', url: 'https://github.com/a', color }] },
+    })[0]?.color
+
+  it('近黑品牌色落回 null（暗色纸面上不可见）', () => {
+    expect(withColor('#181717')).toBeNull()
+    expect(withColor('#000')).toBeNull()
+  })
+
+  it('近白品牌色落回 null（亮色纸面上不可见）', () => {
+    expect(withColor('#ffffff')).toBeNull()
+    expect(withColor('#fff')).toBeNull()
+  })
+
+  it('中间亮度品牌色保留原值', () => {
+    expect(withColor('#2AABEE')).toBe('#2AABEE')
+    expect(withColor('#FB7299')).toBe('#FB7299')
+  })
+
+  it('CSS var 色是语义 Token，不做归一', () => {
+    expect(withColor('var(--accent-strong)')).toBe('var(--accent-strong)')
+  })
+})

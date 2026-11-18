@@ -1581,7 +1581,7 @@ details[open] > .toc-summary .toc-chevron {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.6rem;
 }
 

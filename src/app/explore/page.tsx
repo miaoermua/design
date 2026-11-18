@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { ArchiveSection, ExploreTabs, buildYears, type ExploreTab } from '@/features/explore'
+import { ArchiveFilter, type ArchiveFilterType } from '@/features/explore/components/archive-filter'
 import { TagNoteList } from '@/features/taxonomy'
 import { getSiteTimezone, getTimeline, listCategories, listTags } from '@/lib/api'
 import { t, tf } from '@/lib/i18n/dictionary'
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface ExplorePageProps {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; type?: string; memory?: string }>
 }
 
 /** 归一化 Tab 参数：未知值一律回到归档，避免出现空白面板 */
@@ -28,11 +29,20 @@ function toTab(value: string | undefined): ExploreTab {
   return value === 'tags' ? 'tags' : 'archives'
 }
 
+/** 归一化类型筛选参数 */
+function toFilter(type?: string, memory?: string): ArchiveFilterType {
+  if (memory === '1') return 'memory'
+  if (type === 'post') return 'post'
+  if (type === 'note') return 'note'
+  return 'all'
+}
+
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   requireFeature('archives')
 
-  const [{ tab }, locale] = await Promise.all([searchParams, getLocale()])
-  const active = toTab(tab)
+  const [params, locale] = await Promise.all([searchParams, getLocale()])
+  const active = toTab(params.tab)
+  const filter = toFilter(params.type, params.memory)
 
   const timeZone = getSiteTimezone()
 
@@ -43,8 +53,17 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
     listCategories(),
   ])
 
-  const years = buildYears(timeline.articles, timeline.diaries, timeZone)
-  const total = timeline.articles.length + timeline.diaries.length
+  // 按筛选类型过滤时间线数据
+  const filteredArticles = filter === 'note' || filter === 'memory' ? [] : timeline.articles
+  const filteredDiaries =
+    filter === 'post'
+      ? []
+      : filter === 'memory'
+        ? timeline.diaries.filter((d) => d.bookmark)
+        : timeline.diaries
+
+  const years = buildYears(filteredArticles, filteredDiaries, timeZone)
+  const total = filteredArticles.length + filteredDiaries.length
   const sortedTags = [...tags].sort(
     (a, b) => (b.count ?? 0) - (a.count ?? 0) || a.name.localeCompare(b.name, 'zh-CN'),
   )
@@ -69,12 +88,17 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
             <h2 id="explore-archives-heading" className="sr-only">
               {t(locale, 'explore.archivesTitle')}
             </h2>
-            <ArchiveSection
-              years={years}
-              total={total}
-              idPrefix="explore-year"
-              locale={locale}
+            <ArchiveFilter
+              active={filter}
+              label={t(locale, 'explore.filterLabel')}
+              labels={{
+                all: t(locale, 'explore.filterAll'),
+                post: t(locale, 'explore.filterPosts'),
+                note: t(locale, 'explore.filterNotes'),
+                memory: t(locale, 'explore.filterMemories'),
+              }}
             />
+            <ArchiveSection years={years} total={total} idPrefix="explore-year" locale={locale} />
           </section>
         }
         tags={
@@ -110,7 +134,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                         href={categoryPath(category.slug)}
                         className="group flex items-center gap-3 border-b border-dashed border-[var(--edge)] py-3"
                       >
-                        <span className="shrink-0 font-serif text-lead leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
+                        <span className="text-lead shrink-0 font-serif leading-[1.4] text-[var(--text-heading)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--accent-strong)]">
                           {category.name}
                         </span>
                         {category.count !== null ? (
@@ -119,7 +143,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                               aria-hidden="true"
                               className="mt-1 h-px flex-1 border-b border-dotted border-[var(--edge-strong)]"
                             />
-                            <span className="text-meta tabular-nums text-[var(--text-secondary)]">
+                            <span className="text-meta text-[var(--text-secondary)] tabular-nums">
                               {tf(locale, 'explore.countArticles', { count: category.count })}
                             </span>
                           </>

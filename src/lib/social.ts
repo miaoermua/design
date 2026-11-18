@@ -57,6 +57,29 @@ function isHttpUrl(value: string): boolean {
 }
 
 /**
+ * 近黑 / 近白的品牌色在另一套主题纸面上对比度≈1（实测 GitHub 品牌黑
+ * 在暗色下整枚图标不可见），等于没配；落回语义次级色。
+ * 中间亮度的品牌色保留原值。CSS var 色是语义 Token、自带主题反演，不动。
+ */
+function readableBrandColor(color: string | null): string | null {
+  if (!color || !color.startsWith('#')) return color
+  const hex = color.slice(1)
+  const full =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : hex
+  if (full.length !== 6) return color
+  const [r, g, b] = [0, 2, 4]
+    .map((i) => parseInt(full.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance < 0.05 || luminance > 0.95 ? null : color
+}
+
+/**
  * 从 `/aggregate` 的 `user.social_ids` 派生项目。
  *
  * `social_ids` 的语义是「平台 → 账号」：一个平台只能有一个值，
@@ -127,7 +150,7 @@ export function toSocialItems(
     title: item.title,
     url: item.url,
     icon: item.icon,
-    color: item.color,
+    color: readableBrandColor(item.color),
     source: 'theme',
     platform: null,
   }))

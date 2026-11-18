@@ -59,14 +59,15 @@ export function HeroSection({ name, avatar, introduce, socials, stats, hero }: H
 /* ── Classic Layout ──────────────────────────────────────────── */
 
 /**
- * 经典横排布局：与 Folio 原始 Personal Brand 区块视觉完全一致。
+ * 经典横排布局：与首页编辑栅格共用左轨（`--rail-home`）。
  *
- * 结构：左头像(64/88px) + 右侧（display 名字 + lead 简介 + 社交图标 + meta 统计）
+ * ≥lg：头像落左轨，名字/导语/社交/统计落内容列，与下方区块标题轨对齐；
+ * <lg：横排「头像 + 文字」。无头像时文字跨两列，不留空轨。
  */
 function ClassicHero({ name, avatar, introduce, socials, stats }: Omit<HeroSectionProps, 'hero'>) {
   return (
-    <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.5)] pb-[var(--spacing-stack)]">
-      <div className="flex items-start gap-5 sm:gap-7">
+    <section className="motion-fade-in pt-[calc(var(--spacing-section)*1.5)]">
+      <div className="flex items-start gap-5 sm:gap-7 lg:grid lg:grid-cols-[var(--rail-home)_minmax(0,1fr)] lg:gap-x-[var(--gap-rail)]">
         {avatar ? (
           <CoverImage
             src={avatar}
@@ -79,7 +80,7 @@ function ClassicHero({ name, avatar, introduce, socials, stats }: Omit<HeroSecti
           />
         ) : null}
 
-        <div className="min-w-0 flex-1">
+        <div className={cn('min-w-0 flex-1', !avatar && 'lg:col-span-2')}>
           {/* 作者名是首页最大的字：它是这个空间的身份标识，
               用 display 级而不是把每一段都做大——只有一处需要这个重量。 */}
           <h1 className="text-display max-w-[22ch] font-serif text-balance text-[var(--text-heading)]">
@@ -112,22 +113,22 @@ function ClassicHero({ name, avatar, introduce, socials, stats }: Omit<HeroSecti
               ))}
             </ul>
           ) : null}
-        </div>
-      </div>
 
-      <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
-        {stats.articles ? (
-          <Link href={stats.articles.href} className="link-quiet">
-            {stats.articles.label}
-          </Link>
-        ) : null}
-        {stats.diaries ? (
-          <Link href={stats.diaries.href} className="link-quiet">
-            <span className={stats.showArticlesSep ? 'meta-sep' : undefined}>
-              {stats.diaries.label}
-            </span>
-          </Link>
-        ) : null}
+          <div className="meta mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
+            {stats.articles ? (
+              <Link href={stats.articles.href} className="link-quiet">
+                {stats.articles.label}
+              </Link>
+            ) : null}
+            {stats.diaries ? (
+              <Link href={stats.diaries.href} className="link-quiet">
+                <span className={stats.showArticlesSep ? 'meta-sep' : undefined}>
+                  {stats.diaries.label}
+                </span>
+              </Link>
+            ) : null}
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -226,6 +227,8 @@ function totalCharCount(template: ThemeHeroTitleElement[]): number {
  * 与 Shiro 的差异（Folio 的设计立场）：
  *   - 不引入 motion/react：用 CSS animation 实现，零 JS 运行时开销
  *   - 不做整屏高（dvh），用自然高度 + 充足留白
+ *   - ≥lg 整体缩进内容列（与下方区块同一条对齐线），头像贴版心右缘；
+ *     竖向节奏与经典布局一致：顶 1.5×section，底部留白交给区块分隔
  *   - 颜色和字体走 Folio 的 token 体系
  *   - Emoji 和特殊字符（👋 ✦ 等）直接写在 text 字段里，正常渲染
  */
@@ -250,7 +253,7 @@ function TemplatedHero({
   const avatarDelay = `${titleDurationMs + 100}ms`
 
   return (
-    <section className="py-[calc(var(--spacing-section)*2)]">
+    <section className="pt-[calc(var(--spacing-section)*1.5)] lg:pl-[calc(var(--rail-home)+var(--gap-rail))]">
       <div className="flex flex-col-reverse items-center gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
         {/* ── 左侧：文字内容 ────────────────────────── */}
         <div className="min-w-0 flex-1 text-center lg:text-left">

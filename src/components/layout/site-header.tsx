@@ -79,6 +79,22 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
     }
   }
 
+  // 探索下拉：内容类型筛选入口（对标 Shiro「时光」菜单），子项全部静态
+  if (isFeatureEnabled('archives')) {
+    branches['/explore'] = {
+      entryLabel: 'nav.allExplore',
+      emptyLabel: 'nav.noCategories', // 不可能走到：子项是静态的
+      errorLabel: 'nav.categoriesUnavailable',
+      status: 'ok',
+      items: [
+        { href: '/explore?type=note', label: messages['nav.exploreNotes'] },
+        { href: '/explore?type=post', label: messages['nav.explorePosts'] },
+        { href: '/explore?memory=1', label: messages['nav.exploreMemories'] },
+        { href: '/diaries', label: messages['nav.exploreTopics'] },
+      ],
+    }
+  }
+
   if (isFeatureEnabled('pages')) {
     const items =
       pages.status === 'fulfilled'

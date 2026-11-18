@@ -43,6 +43,12 @@ const zhCN = {
   // 目录型入口折叠后的第一项：进入该入口自己的列表页
   'nav.allArticles': '全部文章',
   'nav.allDiaries': '全部日记',
+  'nav.allExplore': '全部',
+  // 探索下拉子项（对标 Shiro「时光」菜单）
+  'nav.exploreNotes': '手记',
+  'nav.explorePosts': '文稿',
+  'nav.exploreMemories': '回忆',
+  'nav.exploreTopics': '专栏',
   'toolbar.group': '站点工具',
 
   // ── 通用动作 ───────────────────────────────────────────────────
@@ -250,6 +256,12 @@ const zhCN = {
   'explore.archivesTitle': '时间轴',
   'explore.archivesDescription': '文章与日记共用一条时间轴：最近的月份在最上面。',
   'explore.modes': '探索方式',
+  // 时间轴内容类型筛选
+  'explore.filterAll': '全部',
+  'explore.filterPosts': '博文',
+  'explore.filterNotes': '日记',
+  'explore.filterMemories': '回忆',
+  'explore.filterLabel': '内容类型',
   'explore.tags': '标签',
   'explore.categories': '分类',
   'explore.noTags': '还没有标签',
@@ -523,6 +535,11 @@ const en: Record<MessageKey, string> = {
   'nav.pagesUnavailable': 'Pages unavailable',
   'nav.allArticles': 'All articles',
   'nav.allDiaries': 'All notes',
+  'nav.allExplore': 'All',
+  'nav.exploreNotes': 'Notes',
+  'nav.explorePosts': 'Posts',
+  'nav.exploreMemories': 'Memories',
+  'nav.exploreTopics': 'Topics',
   'toolbar.group': 'Site tools',
 
   'action.search': 'Search',
@@ -727,6 +744,11 @@ const en: Record<MessageKey, string> = {
   'explore.archivesTitle': 'Timeline',
   'explore.archivesDescription': 'Articles and notes share one timeline, newest month first.',
   'explore.modes': 'Explore by',
+  'explore.filterAll': 'All',
+  'explore.filterPosts': 'Posts',
+  'explore.filterNotes': 'Notes',
+  'explore.filterMemories': 'Memories',
+  'explore.filterLabel': 'Content type',
   'explore.tags': 'Tags',
   'explore.categories': 'Categories',
   'explore.noTags': 'No tags yet',

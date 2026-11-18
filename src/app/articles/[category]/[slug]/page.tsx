@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { CoverImage } from '@/components/ui/cover-image'
 import { Prose } from '@/components/ui/prose'
-import { SectionHeading } from '@/components/ui/page-header'
 import { ActionRail } from '@/components/reading/action-rail'
 import { AiDisclosure } from '@/components/reading/ai-disclosure'
 import { ArticleInfo } from '@/components/reading/article-info'
@@ -13,7 +12,6 @@ import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { readArticleInsights } from '@/features/ai-insights'
 import { AISummaryCard, readArticleSummary } from '@/features/ai-summary'
-import { ArticleCard } from '@/features/articles'
 import { CommentsSection } from '@/features/comments'
 import { LiveArticleUpdater } from '@/features/articles/live/live-updater'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
@@ -284,6 +282,31 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               )}
             </div>
 
+            {article.related.length > 0 ? (
+              <aside data-hide-print className="mt-10 sm:mt-12">
+                <h3 className="text-small font-medium text-[var(--text-heading)] flex items-center gap-2">
+                  <span aria-hidden="true" className="inline-block h-px w-5 bg-[var(--accent-line)]" />
+                  <span>{t(locale, 'article.related')}</span>
+                </h3>
+                <ul className="mt-3 list-none space-y-2 pl-0">
+                  {article.related.map((item) => {
+                    const href = articlePath(item.category?.slug, item.slug)
+                    return (
+                      <li key={item.id} className="text-body leading-relaxed">
+                        {href ? (
+                          <Link href={href} className="link-quiet text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]">
+                            {item.title}
+                          </Link>
+                        ) : (
+                          <span className="text-[var(--text-secondary)]">{item.title}</span>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </aside>
+            ) : null}
+
             <div aria-hidden="true" className="mt-16 flex items-center justify-center gap-3">
               <span className="h-px w-10 bg-[var(--edge)]" />
               <span className="size-1.5 rotate-45 bg-[var(--accent-soft)]" />
@@ -344,16 +367,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </div>
       </div>
 
-      {article.related.length > 0 ? (
-        <section className="border-t border-dashed border-[var(--edge-strong)] pt-10">
-          <SectionHeading title={t(locale, 'article.related')} />
-          <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {article.related.map((item) => (
-              <ArticleCard key={item.id} article={item} timeZone={timeZone} />
-            ))}
-          </div>
-        </section>
-      ) : null}
     </Container>
   )
 }
