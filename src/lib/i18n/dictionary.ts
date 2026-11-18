@@ -220,6 +220,9 @@ const zhCN = {
   'diaries.intro': '没有主题，没有结构，只有时间。',
   'diaries.topicIntro': '只看「{name}」里的日记。',
   'diaries.viewAll': '← 查看全部日记',
+  // 时间线内的专栏筛选（导航不展开专栏，筛选入口只在这里）
+  'diaries.filterLabel': '专栏',
+  'diaries.filterAll': '全部',
   'diaries.topicMissingTitle': '没有找到这个专栏',
   'diaries.topicMissingDescription': '它可能已被删除或改名。可以从顶栏的「日记」重新选择。',
   'diaries.emptyTopic': '这个专栏还没有日记',
@@ -227,6 +230,9 @@ const zhCN = {
   'diaries.emptyTopicHint': '专栏存在，但里面暂时没有公开内容。',
   'diaries.emptyOutOfRange': '请求的页码超出了范围，请回到第 1 页。',
   'diaries.emptyNone': '还没有发布任何日记。',
+  // `/notes` 是「最新一篇」入口：没有日记时不能重定向，只能给空状态
+  'diaries.emptyEntryHint': '第一篇日记还没出现。时间线页在有内容后会显示全部记录。',
+  'diaries.emptyEntryBack': '← 回到首页',
   'diary.meta': '日记',
   'diary.protectedTitle': '受保护的日记',
   'diary.protectedHeading': '这篇日记受密码保护',
@@ -706,6 +712,8 @@ const en: Record<MessageKey, string> = {
   'diaries.intro': 'No theme, no structure, just time.',
   'diaries.topicIntro': 'Only notes in “{name}”.',
   'diaries.viewAll': '← View all notes',
+  'diaries.filterLabel': 'Topics',
+  'diaries.filterAll': 'All',
   'diaries.topicMissingTitle': 'Topic not found',
   'diaries.topicMissingDescription':
     'It may have been deleted or renamed. Pick another one from “Notes” in the header.',
@@ -714,6 +722,9 @@ const en: Record<MessageKey, string> = {
   'diaries.emptyTopicHint': 'The topic exists, but has no public content yet.',
   'diaries.emptyOutOfRange': 'That page is past the end of the results. Go back to page 1.',
   'diaries.emptyNone': 'No notes have been published yet.',
+  'diaries.emptyEntryHint':
+    'Nothing has been written yet. The timeline will list everything once it is.',
+  'diaries.emptyEntryBack': '← Back to home',
   'diary.meta': 'Note',
   'diary.protectedTitle': 'Protected note',
   'diary.protectedHeading': 'This note is password protected',

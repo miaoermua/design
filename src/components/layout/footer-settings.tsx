@@ -5,6 +5,7 @@ import { LOCALES, localeName, type Locale } from '@/lib/i18n/config'
 import { t } from '@/lib/i18n/dictionary'
 import type { MessageKey } from '@/lib/i18n/dictionary'
 import { useLocale } from '@/lib/i18n/client'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { ThemeGlyph, useThemePreference, type ThemePreference } from './theme-toggle'
 import { useLocaleSwitcher } from './use-locale-switcher'
 
@@ -239,54 +240,19 @@ const THEME_LABEL: Record<ThemePreference, MessageKey> = {
 }
 
 function LanguagesIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="footer-lang__icon"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 5h12M7 2h1M4 14l6-6 2-3M5 8l6 6" />
-      <path d="m22 22-5-10-5 10M14 18h6" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:translate-line" className="footer-lang__icon" />
 }
 
 function ChevronDownIcon({ open }: { open: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
+    <MingCuteIcon
+      name="mingcute:down-line"
       className="footer-lang__chevron"
       data-open={open ? 'true' : undefined}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
+    />
   )
 }
 
 function CheckIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="footer-lang__check"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:check-line" className="footer-lang__check" />
 }

@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest'
 import { buildYears } from '@/features/explore'
 import { tagTone } from '@/features/taxonomy/components/tag-note-list'
 import type { Article, Diary } from '@/lib/api'
-import { articlePath, diaryPath } from '@/lib/routes'
+import { articlePath, notePath } from '@/lib/routes'
 
 const TZ = 'Asia/Shanghai'
 
@@ -44,6 +44,7 @@ function makeArticle(over: Partial<Article>): Article {
 function makeDiary(over: Partial<Diary>): Diary {
   return {
     id: 'n1',
+    nid: 1,
     title: '日记',
     content: '',
     contentFormat: 'markdown',
@@ -84,7 +85,7 @@ describe('归档：文章与日记混排后按时间倒序分组', () => {
   it('文章与日记用各自的路径规则，不互相借用', () => {
     const years = buildYears(
       [makeArticle({ id: 'a1', slug: 'hello', category: { id: 'c', name: '博客', slug: 'blog' } })],
-      [makeDiary({ id: '155695797663436800' })],
+      [makeDiary({ id: '155695797663436800', nid: 13 })],
       TZ,
     )
     const entries = years.flatMap((y) => y.months.flatMap((m) => m.entries))
@@ -93,9 +94,9 @@ describe('归档：文章与日记混排后按时间倒序分组', () => {
 
     expect(post?.href).toBe(articlePath('blog', 'hello'))
     expect(post?.href).toMatch(/^\/articles\/blog\/hello$/)
-    // 日记走雪花 id，不是 nid
-    expect(note?.href).toBe(diaryPath('155695797663436800'))
-    expect(note?.href).toMatch(/^\/diaries\/\d+$/)
+    // 日记走自增 nid（与上游 /notes/:nid 同形），不再是雪花 id
+    expect(note?.href).toBe(notePath(13))
+    expect(note?.href).toMatch(/^\/notes\/\d+$/)
   })
 
   it('空数据返回空数组，不造一个空年份', () => {

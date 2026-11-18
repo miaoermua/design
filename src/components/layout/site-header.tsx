@@ -1,9 +1,9 @@
-import { listCategories, listPages, listTopics } from '@/lib/api'
+import { listCategories, listPages } from '@/lib/api'
 import { buildNav, type NavBranch } from '@/core/navigation'
 import { isFeatureEnabled } from '@/core/registry/features'
 import { dictionary } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
-import { categoryPath, pagePath } from '@/lib/routes'
+import { categoryPath, NOTE_LIST_PATH, pagePath } from '@/lib/routes'
 import { siteTitle } from '@/lib/site'
 import type { SiteIdentity } from '@/lib/api'
 import { SiteHeaderClient } from './site-header-client'
@@ -33,11 +33,7 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
   const locale = await getLocale()
   const messages = dictionary(locale)
 
-  const [categories, topics, pages] = await Promise.allSettled([
-    listCategories(),
-    listTopics(),
-    listPages(),
-  ])
+  const [categories, pages] = await Promise.allSettled([listCategories(), listPages()])
 
   // 键是父级入口的 href：装配时不需要再认识「分组」这个概念
   const branches: Record<string, NavBranch> = {}
@@ -61,21 +57,25 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
   }
 
   if (isFeatureEnabled('diaries')) {
-    const items =
-      topics.status === 'fulfilled'
-        ? topics.value.map((topic) => ({
-            // 专栏没有独立详情路由：日记列表按 topic 过滤，路由形状不变
-            href: `/diaries?topic=${encodeURIComponent(topic.id)}`,
-            label: topic.name,
-          }))
-        : []
-
-    branches['/diaries'] = {
+    /*
+     * 日记分支**不出专栏子项**：导航只留两条主线——「日记」进最新一篇、
+     * 「全部日记」进时间线。专栏是时间线内部的组织方式，几十个专栏名铺进菜单
+     * 会把导航读成资源清单；筛选入口只放在 `/notes/list` 页面里。
+     *
+     * 因此这里也不请求专栏清单：顶栏对专栏没有任何消费点，多一次请求只是为
+     * 一个不显示的列表付代价（每页渲染都付）。
+     *
+     * `items` 为空 + `status: 'ok'`：分支本身是「入口 + 列表」两条链接，不是
+     * 取数失败。用 `'empty'` 会渲染出「还没有专栏」这句已经不成立的提示。
+     */
+    branches['/notes'] = {
       entryLabel: 'nav.allDiaries',
+      // 入口 `/notes` 跳到最新一篇，列表在 `/notes/list`（见 routes.ts）
+      listHref: NOTE_LIST_PATH,
       emptyLabel: 'nav.noTopics',
       errorLabel: 'nav.topicsUnavailable',
-      status: topics.status === 'rejected' ? 'error' : items.length > 0 ? 'ok' : 'empty',
-      items,
+      status: 'ok',
+      items: [],
     }
   }
 
@@ -90,7 +90,6 @@ export async function SiteHeader({ identity }: { identity: SiteIdentity | null }
         { href: '/explore?type=note', label: messages['nav.exploreNotes'] },
         { href: '/explore?type=post', label: messages['nav.explorePosts'] },
         { href: '/explore?memory=1', label: messages['nav.exploreMemories'] },
-        { href: '/diaries', label: messages['nav.exploreTopics'] },
       ],
     }
   }

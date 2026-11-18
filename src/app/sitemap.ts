@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import { featureFlags } from '@/core/registry/features'
 import { listArticles, listCategories, listDiaries, listTags } from '@/lib/api'
 import { describeError } from '@/lib/api/errors'
-import { articlePath, categoryPath, tagPath } from '@/lib/routes'
+import { articlePath, categoryPath, notePath, tagPath } from '@/lib/routes'
 import { loadSiteContext, siteBaseUrl } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ['/', 'daily', 1],
   ]
   if (featureFlags.articles) staticRoutes.push(['/articles', 'daily', 0.9])
-  if (featureFlags.diaries) staticRoutes.push(['/diaries', 'daily', 0.8])
+  // `/notes` 只做重定向，不进 sitemap；时间线才是可索引的稳定地址
+  if (featureFlags.diaries) staticRoutes.push(['/notes/list', 'daily', 0.8])
   if (featureFlags.archives) staticRoutes.push(['/archives', 'weekly', 0.6])
   if (featureFlags.taxonomy) {
     staticRoutes.push(['/tags', 'weekly', 0.5])
@@ -51,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (path) entries.push({ url: toUrl(path), lastModified: article.modifiedAt ?? article.createdAt })
     }
     for (const diary of diaries?.items ?? []) {
-      entries.push({ url: toUrl(`/diaries/${encodeURIComponent(diary.id)}`), lastModified: diary.modifiedAt ?? diary.publishedAt })
+      entries.push({ url: toUrl(notePath(diary.nid)), lastModified: diary.modifiedAt ?? diary.publishedAt })
     }
     for (const category of categories ?? []) {
       entries.push({ url: toUrl(categoryPath(category.slug)) })

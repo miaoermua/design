@@ -22,6 +22,7 @@ import {
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
+import { NOTE_LIST_PATH } from '@/lib/routes'
 import { loadSiteContext, siteDescription, siteTitle } from '@/lib/site'
 import { toSocialItems } from '@/lib/social'
 import { cn } from '@/lib/utils/cn'
@@ -161,7 +162,8 @@ export default async function HomePage() {
             diaries: diaries
               ? {
                   total: diaries.pagination.total,
-                  href: '/diaries',
+                  // 计数入口的语义是「全部日记」，所以去时间线（不是最新一篇）
+                  href: NOTE_LIST_PATH,
                   label: tf(locale, 'home.countDiaries', { count: diaries.pagination.total }),
                 }
               : null,
@@ -229,7 +231,7 @@ export default async function HomePage() {
               title={t(locale, 'home.latestNotes')}
               className={RAIL_HEADING}
               action={
-                <Link href="/diaries" className="link-quiet meta">
+                <Link href={NOTE_LIST_PATH} className="link-quiet meta">
                   {t(locale, 'home.allDiaries')} →
                 </Link>
               }

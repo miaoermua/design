@@ -18,7 +18,16 @@ export * from './domain/project'
 export * from './errors'
 
 export { listArticles, getArticle } from './repositories/posts'
-export { listDiaries, listDiariesByTopic, getDiary, getDiaryByNid } from './repositories/notes'
+export {
+  listDiaries,
+  listDiariesByTopic,
+  getDiary,
+  getDiaryByNid,
+  getLatestDiary,
+  type LatestDiaryResult,
+  NOTE_LATEST_SCAN_MAX_PAGES,
+  NOTE_LATEST_SCAN_PAGE_SIZE,
+} from './repositories/notes'
 export {
   listCategories,
   listTags,

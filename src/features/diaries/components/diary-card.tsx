@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Diary } from '@/lib/api'
 import { t } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
-import { diaryPath } from '@/lib/routes'
+import { notePath } from '@/lib/routes'
 import { formatCompact } from '@/lib/utils/date'
 import { excerpt } from '@/lib/utils/text'
 
@@ -24,7 +24,7 @@ export async function DiaryCard({ diary, timeZone }: DiaryCardProps) {
         {chips.length > 0 ? <span className="meta-sep">{chips.join(' · ')}</span> : null}
       </p>
       <h3 className="mt-2 font-serif text-h3 leading-[1.4] text-[var(--text-heading)]">
-        <Link href={diaryPath(diary.id)} className="link-quiet">
+        <Link href={notePath(diary.nid)} className="link-quiet">
           {diary.title}
         </Link>
       </h3>

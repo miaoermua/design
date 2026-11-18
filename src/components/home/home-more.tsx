@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import type { ThemeHomepageMoreItem, ThemeSocialIcon } from '@/core/config/theme'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { SocialIcon } from '@/components/ui/social-icon'
 import { SubscribeModal } from '@/components/ui/subscribe-modal'
 import type { SubscribeOptions } from '@/features/interactions'
@@ -215,53 +216,17 @@ function MoreIcon({
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
+    <MingCuteIcon
+      name={filled ? 'mingcute:heart-fill' : 'mingcute:heart-line'}
       className="size-[0.95rem]"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20s-7-4.35-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 4.65-7 9-7 9Z" />
-    </svg>
+    />
   )
 }
 
 function RssIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[0.95rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="5.5" cy="18.5" r="1.2" />
-      <path d="M5.5 11.5a7 7 0 0 1 7 7M5.5 5a13.5 13.5 0 0 1 13.5 13.5" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:rss-line" className="size-[0.95rem]" />
 }
 
 function LinkIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-[0.95rem]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.5.5" />
-      <path d="M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.5-.5" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:link-line" className="size-[0.95rem]" />
 }

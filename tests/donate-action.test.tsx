@@ -192,7 +192,7 @@ describe('赞赏入口的归属：列表不给，详情页给', () => {
 
   /**
    * 这条规则来自一次真实回归：`f13da24` 建 donate 模块时把 `DonateSlot`
-   * 直接写进了列表条目组件，导致 `/diaries` 每条日记都带一个赞赏入口
+   * 直接写进了列表条目组件，导致日记列表每条都带一个赞赏入口
    * （5 条日记 = 5 个募捐按钮），而 `/articles` 列表没有。
    * 两个同构页面的行为不该不一致，所以规则写在这里而不是靠人记。
    */
@@ -217,7 +217,7 @@ describe('赞赏入口的归属：列表不给，详情页给', () => {
 
   it('文章详情与日记详情都经 ActionRail 提供赞赏', () => {
     const articlePage = read('src/app/articles/[category]/[slug]/page.tsx')
-    const diaryPage = read('src/app/diaries/[id]/page.tsx')
+    const diaryPage = read('src/app/notes/[nid]/page.tsx')
 
     for (const [name, page] of [
       ['文章详情', articlePage],
@@ -243,7 +243,7 @@ describe('赞赏入口的归属：列表不给，详情页给', () => {
     // 页面与列表都不得自行拼出赞赏弹层
     for (const path of [
       'src/app/articles/[category]/[slug]/page.tsx',
-      'src/app/diaries/[id]/page.tsx',
+      'src/app/notes/[nid]/page.tsx',
       'src/features/diaries/components/diary-entry.tsx',
     ]) {
       expect(read(path), `${path} 出现了第二份弹层`).not.toContain('role="dialog"')

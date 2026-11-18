@@ -1,5 +1,6 @@
 'use client'
 
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { useLocale } from '@/lib/i18n/client'
 import { t } from '@/lib/i18n/dictionary'
 import { cn } from '@/lib/utils/cn'
@@ -35,18 +36,7 @@ export function BackToTop({ label, className }: BackToTopProps) {
         className,
       )}
     >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className="size-[0.875rem]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 19V5M6 11l6-6 6 6" />
-      </svg>
+      <MingCuteIcon name="mingcute:arrow-up-line" className="size-[0.875rem]" />
       <span>{label ?? t(locale, 'action.backToTop')}</span>
     </button>
   )

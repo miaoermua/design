@@ -1,3 +1,4 @@
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import type { Project } from '@/lib/api/domain/project'
 import type { Locale } from '@/lib/i18n/config'
 import { t } from '@/lib/i18n/dictionary'
@@ -123,38 +124,9 @@ function GitHubIcon() {
 }
 
 function ExternalLinkIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:external-link-line" className="size-3.5" />
 }
 
 function BookIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    </svg>
-  )
+  return <MingCuteIcon name="mingcute:book-line" className="size-3.5" />
 }

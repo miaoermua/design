@@ -30,7 +30,7 @@ describe('getPrimaryNav', () => {
   it('顶栏普通链接顺序固定：文章 / 日记 / 探索 / 友链 / 页面，其后是一言与项目', () => {
     expect(getPrimaryNav().map((entry) => entry.href)).toEqual([
       '/articles',
-      '/diaries',
+      '/notes',
       '/explore',
       '/friends',
       '/pages',
@@ -81,6 +81,23 @@ describe('isNavItemActive', () => {
     expect(isNavItemActive(friends, '/friends')).toBe(true)
     expect(isNavItemActive(friends, '/about')).toBe(false)
   })
+
+  it('入口与列表页分开时，列表页上只由列表那一行声明当前页', () => {
+    const notes = item('/notes')
+    // 没有 listHref：老行为不变，/notes 及其子路径都高亮
+    expect(isNavItemActive(notes, '/notes')).toBe(true)
+    expect(isNavItemActive(notes, '/notes/31')).toBe(true)
+
+    // 有 listHref 且与入口不同：列表页归子项，入口让出 aria-current
+    expect(isNavItemActive(notes, '/notes/list', '/notes/list')).toBe(false)
+    // 详情页与入口页仍然高亮入口
+    expect(isNavItemActive(notes, '/notes/31', '/notes/list')).toBe(true)
+    expect(isNavItemActive(notes, '/notes', '/notes/list')).toBe(true)
+
+    // listHref 与 href 相同时不产生「让出」：文章这类目录依旧高亮
+    const articles = item('/articles')
+    expect(isNavItemActive(articles, '/articles', '/articles')).toBe(true)
+  })
 })
 
 /**
@@ -93,7 +110,7 @@ describe('buildNav', () => {
   it('顺序与 ALL_NAV 一致；首页不在这棵树里（由 HOME_NAV 单独提供）', () => {
     expect(buildNav().map((entry) => entry.href)).toEqual([
       '/articles',
-      '/diaries',
+      '/notes',
       '/explore',
       '/friends',
       '/pages',
@@ -131,7 +148,7 @@ describe('buildNav', () => {
     expect(getQuickNav(nav).map((entry) => entry.href)).toEqual([
       '/',
       '/articles',
-      '/diaries',
+      '/notes',
       '/explore',
       '/friends',
     ])

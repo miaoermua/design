@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import type { SubscribeType } from '@/lib/api/contracts/v2/interaction'
 import type { SubscribeChannel } from '@/features/interactions'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { SubscribeModal } from '@/components/ui/subscribe-modal'
 import { useLocale } from '@/lib/i18n/client'
 import { t } from '@/lib/i18n/dictionary'
@@ -35,19 +36,7 @@ export function SubscribePanel({ types, channels, className }: SubscribePanelPro
         onClick={() => setOpen(true)}
         className="action-rail-button"
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="size-[1.05rem]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 6h16v12H4z" />
-          <path d="m4 7 8 6 8-6" />
-        </svg>
+        <MingCuteIcon name="mingcute:mail-line" className="size-[1.05rem]" />
         <span>{t(locale, 'subscribe.button')}</span>
       </button>
 

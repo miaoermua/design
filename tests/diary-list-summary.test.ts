@@ -179,6 +179,6 @@ describe('列表组件契约：不渲染正文', () => {
 
   it('详情入口存在（标题 + 继续阅读）', () => {
     expect(source).toContain("t(locale, 'diary.continueReading')")
-    expect(source).toContain('diaryPath(diary.id)')
+    expect(source).toContain('notePath(diary.nid)')
   })
 })

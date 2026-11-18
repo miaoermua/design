@@ -132,7 +132,7 @@ describe('一棵 DOM', () => {
       link.getAttribute('href'),
     )
     // 两态共享的入口：首页 / 文章 / 日记 / 探索 / 友链，各一条
-    expect(links).toEqual(['/', '/articles', '/diaries', '/explore', '/friends'])
+    expect(links).toEqual(['/', '/articles', '/notes', '/explore', '/friends'])
     expect(new Set(links).size).toBe(links.length)
   })
 

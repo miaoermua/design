@@ -210,7 +210,10 @@ describe('Social：图标样式表按需加载', () => {
 describe('Social：极端品牌色归一', () => {
   const withColor = (color: string) =>
     toSocialItems(null, {
-      theme: { items: [{ title: 'GitHub', url: 'https://github.com/a', color }] },
+      // icon / channel 是 ThemeSocialItem 的必填字段，这里给 null / false 表示「未指定」
+      theme: {
+        items: [{ title: 'GitHub', url: 'https://github.com/a', icon: null, color, channel: false }],
+      },
     })[0]?.color
 
   it('近黑品牌色落回 null（暗色纸面上不可见）', () => {

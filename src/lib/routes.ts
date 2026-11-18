@@ -13,8 +13,34 @@ export function articlePath(
   return `/articles/${encodeURIComponent(categorySlug)}/${encodeURIComponent(slug)}`
 }
 
-export function diaryPath(id: string): string {
-  return `/diaries/${encodeURIComponent(id)}`
+/**
+ * 日记详情：`/notes/:nid`。
+ *
+ * 用**自增 nid** 而不是雪花 id，是为了与 Shiro / Kami 的 `/notes/:nid` 约定
+ * 一致——上游 RSS、`UrlBuilderService.build()` 产出的就是这种地址，站点路由
+ * 与它同形之后，feed 不再需要维护 `nid → 雪花 id` 的映射表。
+ *
+ * `nid` 是后端稳定字段（`Diary.nid`），与雪花 `id` 一一对应。雪花 id 仍留在
+ * 数据层给点赞/评论用（`ActivityType` 认的是它），只是不再出现在 URL 里。
+ */
+export function notePath(nid: number | string): string {
+  return `/notes/${encodeURIComponent(String(nid))}`
+}
+
+/**
+ * 日记时间线（全部日记 + 专栏筛选）。
+ *
+ * `/notes` 是「最新一篇」的入口，不承载列表；列表在这条静态路由上，承接
+ * 分页与 `?topic=`。任何「看全部」的地方都必须指向这里——指回 `/notes`
+ * 会落到最新一篇，入口语义就断了。
+ *
+ * `list` 是静态段，优先于 `/notes/[nid]` 匹配；nid 是纯数字，不会与它撞车。
+ */
+export const NOTE_LIST_PATH = '/notes/list'
+
+/** 时间线地址；传 topic 时带筛选参数 */
+export function noteListPath(topicId?: string | null): string {
+  return topicId ? `${NOTE_LIST_PATH}?topic=${encodeURIComponent(topicId)}` : NOTE_LIST_PATH
 }
 
 export function tagPath(name: string): string {

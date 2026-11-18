@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { SearchHit } from '@/lib/api/domain/taxonomy'
 import { searchPath } from '@/lib/routes'
 import { statusStore } from '@/lib/status/store'
+import { MingCuteIcon } from '@/components/ui/mingcute-icon'
 import { cn } from '@/lib/utils/cn'
 
 interface SearchPanelProps {
@@ -175,18 +176,10 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
         )}
       >
         <div className="flex items-center gap-3 border-b border-[var(--edge)] px-4 py-3">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
+          <MingCuteIcon
+            name="mingcute:search-line"
             className="size-[1.05rem] shrink-0 text-[var(--text-tertiary)]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="6.5" />
-            <path d="m16 16 4 4" />
-          </svg>
+          />
           <label htmlFor={inputId} className="sr-only">
             {labels.title}
           </label>
@@ -226,7 +219,7 @@ export function SearchPanel({ open, onClose, labels }: SearchPanelProps) {
                     href={
                       hit.kind === 'post' && hit.categorySlug
                         ? `/articles/${encodeURIComponent(hit.categorySlug)}/${encodeURIComponent(hit.slug ?? '')}`
-                        : `/diaries/${encodeURIComponent(hit.id)}`
+                        : `/notes/${encodeURIComponent(String(hit.nid ?? hit.id))}`
                     }
                     onClick={onClose}
                     className="group flex flex-col gap-1 px-4 py-3 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--accent-wash)]"
