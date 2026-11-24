@@ -25,7 +25,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (featureFlags.articles) staticRoutes.push(['/articles', 'daily', 0.9])
   // `/notes` 只做重定向，不进 sitemap；时间线才是可索引的稳定地址
   if (featureFlags.diaries) staticRoutes.push(['/notes/list', 'daily', 0.8])
-  if (featureFlags.archives) staticRoutes.push(['/archives', 'weekly', 0.6])
+  // 同理：`/archives` 只做 308 到 `/explore`，可索引的落地页是 `/explore`
+  if (featureFlags.archives) staticRoutes.push(['/explore', 'weekly', 0.6])
   if (featureFlags.taxonomy) {
     staticRoutes.push(['/tags', 'weekly', 0.5])
     staticRoutes.push(['/categories', 'weekly', 0.5])
@@ -41,18 +42,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const [articles, diaries, categories, tags] = await Promise.all([
-      featureFlags.articles ? listArticles({ page: 1, size: 50, sortBy: 'createdAt', sortOrder: -1 }) : null,
-      featureFlags.diaries ? listDiaries({ page: 1, size: 50, sortBy: 'createdAt', sortOrder: -1 }) : null,
+      featureFlags.articles
+        ? listArticles({ page: 1, size: 50, sortBy: 'createdAt', sortOrder: -1 })
+        : null,
+      featureFlags.diaries
+        ? listDiaries({ page: 1, size: 50, sortBy: 'createdAt', sortOrder: -1 })
+        : null,
       featureFlags.taxonomy ? listCategories() : null,
       featureFlags.taxonomy ? listTags() : null,
     ])
 
     for (const article of articles?.items ?? []) {
       const path = articlePath(article.category?.slug, article.slug)
-      if (path) entries.push({ url: toUrl(path), lastModified: article.modifiedAt ?? article.createdAt })
+      if (path)
+        entries.push({ url: toUrl(path), lastModified: article.modifiedAt ?? article.createdAt })
     }
     for (const diary of diaries?.items ?? []) {
-      entries.push({ url: toUrl(notePath(diary.nid)), lastModified: diary.modifiedAt ?? diary.publishedAt })
+      entries.push({
+        url: toUrl(notePath(diary.nid)),
+        lastModified: diary.modifiedAt ?? diary.publishedAt,
+      })
     }
     for (const category of categories ?? []) {
       entries.push({ url: toUrl(categoryPath(category.slug)) })

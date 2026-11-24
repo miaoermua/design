@@ -5,8 +5,10 @@ import { getLocale } from '@/lib/i18n/server'
 /**
  * 服务端渲染的加载骨架：不使用全局 spinner，保持版面稳定。
  *
- * 只挂在**不会 404** 的路由上（archives/tags/search/about/friends，
+ * 只挂在**不会 404** 的路由上（tags/search/about/friends，
  * 以及 articles/diaries/explore/projects/says/categories 这些列表页）。
+ * 纯重定向路由（`/notes`、`/archives`）一律不挂：有 Suspense 边界时
+ * 重定向会降级成 200 + `<meta refresh>`，拿不到真正的 3xx。
  *
  * **详情页刻意不挂**。根级或详情段的 `loading.tsx` 会让响应立刻开始流式输出，
  * 于是 `notFound()` 只能在状态码 200 之后才渲染出来，硬 404 变成软 404 ——
