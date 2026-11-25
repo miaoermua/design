@@ -128,12 +128,14 @@ describe('一棵 DOM', () => {
     expect(container.ownerDocument.querySelectorAll('header.site-nav')).toHaveLength(1)
     expect(container.querySelectorAll('.nav-panel')).toHaveLength(0)
 
-    const links = [...container.querySelectorAll('.nav-link')].map((link) =>
+    const links = [...container.querySelectorAll('a.nav-link')].map((link) =>
       link.getAttribute('href'),
     )
     // 两态共享的入口：首页 / 文章 / 日记 / 探索 / 友链，各一条
     expect(links).toEqual(['/', '/articles', '/notes', '/explore', '/friends'])
     expect(new Set(links).size).toBe(links.length)
+    // 「更多」是容器（没有 /more 路由），渲染成按钮：它不是一条可去的链接
+    expect(container.querySelectorAll('button.nav-link')).toHaveLength(1)
   })
 
   it('状态写在 data-mode 上，不再是布尔值 data-hidden', () => {

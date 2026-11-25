@@ -57,9 +57,13 @@ export interface NavItem extends NavLink {
  * 配置仍保持扁平：文章 / 日记 / 探索 / 友链 / 页面 / 一言 / 项目；首页是
  * 单独的路由入口（`HOME_NAV`，不归任何模块开关管）。
  *
- * 顶栏直接可见的是 **首页 / 文章 / 日记 / 探索 / 友链** 五条，与旧版一致：
+ * 顶栏直接可见的是 **首页 / 文章 / 日记 / 探索 / 友链 / 更多** 六条：
  * 桌面横向空间足够，不需要为了「精简」把常规入口藏起来。手机上只有
  * 文章与日记留在顶栏（头像承担首页），其余由菜单承载。
+ *
+ * 「更多」是**顶栏上的一个容器**（`MORE_NAV`）：一言与项目收在它的下拉里，
+ * 自己不是一个路由。桌面取消了菜单托盘之后，常规入口必须全部在顶栏可达，
+ * 这条下拉就是最后两个入口的落点。
  *
  * 「归档」与「标签」合并为「探索」：两者都是「按某个维度找到文章」，
  * 并列成两个顶栏入口会让导航退化成资源清单。合并只改入口，
@@ -134,6 +138,9 @@ export function getPrimaryNav(): NavItem[] {
  */
 export const HOME_NAV: NavLink = { href: '/', label: 'nav.home', matchPrefixes: ['/'] }
 
+/** 桌面顶栏的「更多」容器：自己没有落地页，下级收容 section === 'more' 的入口 */
+export const MORE_NAV: NavLink = { href: '/more', label: 'nav.more' }
+
 /**
  * 这个入口自身有没有可去的落地页。
  *
@@ -166,10 +173,34 @@ export function hasLanding(entry: { linkable?: boolean }): boolean {
 export function getQuickNav(nav: NavEntry[]): NavBarItem[] {
   // 「页面」只有一个目录、没有自己的列表页，它的下级挂到首页入口上
   const pagesBranch = nav.find((entry) => entry.href === '/pages')?.branch
-  return [
+  const moreEntries = nav.filter((item) => item.section === 'more' && hasLanding(item))
+
+  const items: NavBarItem[] = [
     { ...HOME_NAV, inBar: 'desktop', branch: pagesBranch },
     ...nav.filter((item) => (item.section ?? 'main') === 'main' && hasLanding(item)),
   ]
+
+  if (moreEntries.length > 0) {
+    items.push({
+      ...MORE_NAV,
+      inBar: 'desktop',
+      linkable: false,
+      matchPrefixes: moreEntries.flatMap((item) => item.matchPrefixes ?? [item.href]),
+      branch: {
+        emptyLabel: 'nav.more',
+        errorLabel: 'nav.more',
+        status: 'ok',
+        items: moreEntries.map((item) => ({
+          href: item.href,
+          // 「更多」的子项直接来自 `ALL_NAV`，只有字典键；成品文案在渲染处取
+          label: item.label,
+          labelKey: item.label,
+        })),
+      },
+    })
+  }
+
+  return items
 }
 
 /** 该入口是否只在桌面顶栏出现（手机上由 CSS 收起） */
@@ -181,6 +212,15 @@ export function isDesktopOnly(item: NavBarItem): boolean {
 export interface NavBranchItem {
   href: string
   label: string
+  /**
+   * 文案是**字典键**而不是成品字符串时给出，渲染处优先用它。
+   *
+   * 目录型入口的子项通常是运行时取到的名字（分类名、专栏名、页面标题），
+   * 只能是成品字符串。但「更多」的子项直接来自 `ALL_NAV`，手里只有
+   * `MessageKey`——把它硬塞进 `label` 再在渲染处强转，类型上是在撒谎。
+   * 因此这里显式留一个可选的键位：有键走键，没有就按成品字符串渲染。
+   */
+  labelKey?: MessageKey
 }
 
 /**
@@ -216,10 +256,11 @@ export interface NavEntry extends NavItem {
   branch?: NavBranch
 }
 
-/** 顶栏里的一个入口：可能是固定的首页，也可能是 `ALL_NAV` 里的一条 */
+/** 顶栏里的一个入口：可能是固定的首页、更多容器，或 `ALL_NAV` 里的一条 */
 export interface NavBarItem extends NavLink {
   branch?: NavBranch
   inBar?: 'always' | 'desktop'
+  linkable?: boolean
 }
 
 /**

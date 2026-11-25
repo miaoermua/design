@@ -11,8 +11,10 @@ import {
   type NavEntry,
 } from '@/core/navigation'
 import type { MessageKey } from '@/lib/i18n/dictionary'
+import { useTocItems } from '@/lib/reading/use-toc'
 import { CoverImage } from '@/components/ui/cover-image'
 import { MingCuteIcon } from '@/components/ui/mingcute-icon'
+import { TocList } from '@/components/ui/toc-list'
 import { SearchPanel } from './search-panel'
 import { SiteNavMenu } from './site-nav-menu'
 import { ToolbarButton, ToolbarGroup } from './toolbar-button'
@@ -58,9 +60,11 @@ interface SiteHeaderClientProps {
  *     —— 手机上它是唯一的导航，滑走就等于没有导航。三态的视觉规则全部写在
  *     桌面断点里，因此手机不需要 JS 判断视口，也不会被这套逻辑碰到。
  *
- * 信息架构：桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链，
- * 文章与日记悬停即展开下级；一言与项目收进菜单。手机只留文章与日记
- * （头像承担首页），其余走菜单按钮。两端消费的是同一棵树。
+ * 信息架构：桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链 / 更多，
+ * 文章、日记、探索、更多悬停即展开下级；「页面」的目录挂在首页下拉上。
+ * 桌面**不提供菜单托盘**（`.nav-actions` 在 ≥48rem 收起），所有入口都在顶栏。
+ * 手机只留文章与日记（头像承担首页）+ 菜单键，其余走抽屉；抽屉里还会挂上
+ * 当前阅读页的「本文目录」。两端消费的是同一棵树。
  *
  * 为什么状态用「在哪个路由上打开的」而不是布尔值：路由一变 `open` 自然
  * 变 false，不需要在 effect 里 setState 同步，也不会在浏览器后退回到
@@ -74,6 +78,7 @@ export function SiteHeaderClient({
   searchEnabled,
 }: SiteHeaderClientProps) {
   const pathname = usePathname()
+  const tocItems = useTocItems()
   // 顶栏直接可见的高频入口：同一棵树上的投影，不另存一份清单
   const quickNav = getQuickNav(nav)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -344,14 +349,30 @@ export function SiteHeaderClient({
 
                   return (
                     <li key={item.href} className="nav-flyout" data-compact={compact}>
-                      <Link
-                        href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        data-active={active ? 'true' : undefined}
-                        className="nav-link"
-                      >
-                        {messages[item.label]}
-                      </Link>
+                      {hasLanding(item) ? (
+                        <Link
+                          href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          data-active={active ? 'true' : undefined}
+                          className="nav-link"
+                        >
+                          {messages[item.label]}
+                        </Link>
+                      ) : (
+                        /*
+                         * 「更多」是容器，没有 `/more` 这个路由，所以不是链接。
+                         * 仍然用 button 而不是 span：它必须可聚焦，键盘用户
+                         * 靠 `:focus-within` 展开下拉，再 Tab 进去就能拿到
+                         * 一言与项目——桌面取消了菜单托盘之后，这是唯一通路。
+                         */
+                        <button
+                          type="button"
+                          data-active={active ? 'true' : undefined}
+                          className="nav-link"
+                        >
+                          {messages[item.label]}
+                        </button>
+                      )}
 
                       <div className="nav-flyout__panel">
                         <div className="nav-flyout__card">
@@ -368,18 +389,25 @@ export function SiteHeaderClient({
                               </li>
                             ) : null}
                             {branch.status === 'ok' ? (
-                              branch.items.map((child) => (
-                                <li key={child.href}>
-                                  <Link
-                                    href={child.href}
-                                    aria-current={child.href === pathname ? 'page' : undefined}
-                                    title={child.label}
-                                    className="nav-row nav-row--child"
-                                  >
-                                    {child.label}
-                                  </Link>
-                                </li>
-                              ))
+                              branch.items.map((child) => {
+                                // 「更多」的子项存的是字典键（见 NavBranchItem.labelKey）；
+                                // 分类 / 专栏 / 页面取到的是成品名字，原样渲染。
+                                const childLabel = child.labelKey
+                                  ? messages[child.labelKey]
+                                  : child.label
+                                return (
+                                  <li key={child.href}>
+                                    <Link
+                                      href={child.href}
+                                      aria-current={child.href === pathname ? 'page' : undefined}
+                                      title={childLabel}
+                                      className="nav-row nav-row--child"
+                                    >
+                                      {childLabel}
+                                    </Link>
+                                  </li>
+                                )
+                              })
                             ) : (
                               <li className="nav-flyout__empty">
                                 {
@@ -444,6 +472,20 @@ export function SiteHeaderClient({
                 avatarUrl={avatarUrl}
                 onNavigate={() => closeMenu(false)}
                 panelRef={panelRef}
+                tocSlot={
+                  tocItems.length >= 2 ? (
+                    <section aria-label={messages['toc.label']} className="nav-toc">
+                      <p className="nav-panel__label">{messages['toc.title']}</p>
+                      <div className="nav-toc__list">
+                        <TocList
+                          items={tocItems}
+                          variant="rail"
+                          onSelect={() => closeMenu(false)}
+                        />
+                      </div>
+                    </section>
+                  ) : undefined
+                }
               />
             ) : null}
           </div>

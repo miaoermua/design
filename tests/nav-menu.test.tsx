@@ -3,19 +3,25 @@
  * 悬浮导航的信息架构
  *
  * 这一组固化两件事：
- *   1. 快捷栏只有四条（头像 / 博客 / 日记 / 菜单），探索与更多不在里面；
- *   2. 菜单是唯一承载完整导航的地方，顺序为 身份 → 主导航 → 更多。
+ *   1. 桌面顶栏是完整的横向导航——首页 / 文章 / 日记 / 探索 / 友链 / 更多，
+ *      菜单托盘在桌面被收起（`.nav-actions { display: none }`）；
+ *   2. 手机顶栏只留头像 + 文章 + 日记 + 菜单键，其余走抽屉；
+ *      抽屉与顶栏消费的是同一棵树，顺序为 身份 → 目录 → 主导航 → 更多。
+ *
+ * 手机端抽屉里还要能展开「本文目录」：它来自阅读页同步过来的 TocItem[]，
+ * 与站点导航用标题和虚线分开（见 SiteNavMenu 的 tocSlot）。
  *
  * 设置（语言 / 主题）已迁到页脚，菜单里不再有第二份入口 ——
  * 这条契约由「设置已迁到页脚」那条用例钉住。
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildNav } from '@/core/navigation'
 import { dictionary } from '@/lib/i18n/dictionary'
+import { tocStore } from '@/lib/reading/toc-store'
 
 const state = vi.hoisted(() => ({ pathname: '/articles' }))
 
@@ -131,16 +137,20 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
         .querySelectorAll('.nav-link'),
     ] as HTMLElement[]
 
-  it('桌面完整横向导航：首页 / 文章 / 日记 / 探索 / 友链，头像仍在', () => {
+  it('桌面完整横向导航：首页 / 文章 / 日记 / 探索 / 友链 / 更多，头像仍在', () => {
     renderHeader()
 
-    expect(barLinks().map((link) => link.getAttribute('href'))).toEqual([
+    const links = barLinks()
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/articles',
       '/notes',
       '/explore',
       '/friends',
+      // 「更多」是容器：没有 /more 这个路由，渲染成按钮而不是链接
+      null,
     ])
+    expect(links.at(-1)?.textContent?.trim()).toBe(messages['nav.more'])
     // 头像没有被桌面断点藏掉
     const avatar = document.querySelector('.nav-avatar') as HTMLElement
     expect(avatar.getAttribute('href')).toBe('/')
@@ -164,10 +174,23 @@ describe('快捷栏：桌面横向舒展，手机只留内容主线', () => {
     }
   })
 
-  it('「更多」不在顶栏：页面的目录归到菜单抽屉里', () => {
+  it('「更多」搬回顶栏：容器在栏上，一言与项目在它的下拉里', () => {
     renderHeader()
     const quick = screen.getByRole('navigation', { name: messages['nav.quick'] })
-    expect(quick.textContent).not.toContain(messages['nav.more'])
+    expect(quick.textContent).toContain(messages['nav.more'])
+
+    const more = [...quick.querySelectorAll('.nav-flyout')].find(
+      (node) => node.querySelector('.nav-link')?.textContent?.trim() === messages['nav.more'],
+    ) as HTMLElement
+
+    expect(more).toBeTruthy()
+    // 容器自身不是链接（没有 /more 这个路由），子项才可去
+    expect(more.querySelector('a.nav-link')).toBeNull()
+    expect(
+      [...more.querySelectorAll('.nav-flyout__panel a')].map((link) => link.getAttribute('href')),
+    ).toEqual(['/says', '/projects'])
+    // 顶栏不再有「页面」这一条：它的目录挂在首页下拉上
+    expect(quick.textContent).not.toContain(messages['nav.pages'])
   })
 
   it('头像也是首页入口，且不展开任何资料菜单', () => {
@@ -232,7 +255,7 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
     ).not.toContain('/pages')
   })
 
-  it('下拉是抽屉的子集：抽屉多出的正是二次确认行与「更多」的子项', () => {
+  it('下拉是抽屉的子集：抽屉多出的只有二次确认行', () => {
     renderHeader()
     const flyoutHrefs = [...document.querySelectorAll('.nav-flyout__panel a')].map((link) =>
       link.getAttribute('href'),
@@ -245,33 +268,29 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
 
     // 同一份 branch：下拉里的每一项都能在抽屉里找到
     for (const href of flyoutHrefs) expect(menuHrefs).toContain(href)
-    // 抽屉多出来的是两类东西，都不是第二套配置：
-    //   1. 目录入口自己列表页的二次确认行（/articles）
-    //   2. 「更多」的折叠子项——它们没有桌面下拉，只在抽屉里
-    expect(menuHrefs.filter((href) => !flyoutHrefs.includes(href))).toEqual([
-      '/articles',
-      '/says',
-      '/projects',
-    ])
+    // 「更多」搬回顶栏后也有了自己的下拉，于是抽屉里唯一多出来的
+    // 就是目录入口自己列表页的二次确认行（触屏没有悬停，需要再点一次）
+    expect(menuHrefs.filter((href) => !flyoutHrefs.includes(href))).toEqual(['/articles'])
   })
 
   it('顶栏入口不带箭头 / more 图标：折叠箭头只在菜单抽屉里出现', () => {
     renderHeader()
     const quick = screen.getByRole('navigation', { name: messages['nav.quick'] })
 
-    // 顶栏里每个入口都只有文字，没有任何 svg 图标
+    // 顶栏里每个入口都只有文字，没有任何 svg 图标（「更多」同样不带箭头）
     for (const link of quick.querySelectorAll('.nav-link')) {
-      const href = link.getAttribute('href')
-      const expected: Record<string, string> = {
-        '/': messages['nav.home'],
-        '/articles': messages['nav.articles'],
-        '/notes': messages['nav.diaries'],
-        '/explore': messages['nav.explore'],
-        '/friends': messages['nav.friends'],
-      }
       expect(link.querySelector('svg')).toBeNull()
-      expect((link.textContent ?? '').trim()).toBe(expected[href ?? ''])
     }
+    expect(
+      [...quick.querySelectorAll('.nav-link')].map((link) => (link.textContent ?? '').trim()),
+    ).toEqual([
+      messages['nav.home'],
+      messages['nav.articles'],
+      messages['nav.diaries'],
+      messages['nav.explore'],
+      messages['nav.friends'],
+      messages['nav.more'],
+    ])
 
     // 抽屉里的折叠箭头仍在：它是唯一表示「还有一层」的地方
     const node = openMenu()
@@ -305,6 +324,70 @@ describe('桌面悬停下拉：也是同一棵树的另一种展示', () => {
     expect(css).toContain(':focus-within > .nav-flyout__panel')
     // 顶栏不再有箭头图标
     expect(css).not.toContain('.nav-link__chevron')
+  })
+})
+
+describe('手机抽屉里的「本文目录」', () => {
+  const toc = [
+    { id: 'h-intro', text: '写在前面', depth: 2 as const },
+    { id: 'h-detail', text: '具体做法', depth: 2 as const },
+    { id: 'h-sub', text: '一个子节', depth: 3 as const },
+  ]
+
+  afterEach(() => {
+    act(() => tocStore.clear())
+  })
+
+  it('阅读页把目录推进抽屉：与站点导航各有标题、互不混读', () => {
+    renderHeader()
+    act(() => tocStore.setItems(toc))
+
+    const node = openMenu()
+    const tocSection = node.querySelector('.nav-toc') as HTMLElement
+
+    expect(tocSection).toBeTruthy()
+    // A. 文章内目录：标题 + 锚点，点击后收起菜单
+    expect(tocSection.textContent).toContain(messages['toc.title'])
+    expect([...tocSection.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
+      '#h-intro',
+      '#h-detail',
+      '#h-sub',
+    ])
+
+    // B. 博客导航：紧随其后，带自己的标题，并用 data-has-toc 标出「上面还有目录」
+    const navSection = node.querySelector('.nav-section') as HTMLElement
+    expect(navSection.getAttribute('data-has-toc')).toBe('true')
+    expect(navSection.textContent).toContain(messages['nav.main'])
+    // 目录里的锚点不能混进站点导航的列表
+    expect(navSection.querySelector('.nav-toc')).toBeNull()
+  })
+
+  it('只有一节时不展示目录：菜单不该为一行标题腾出一整块', () => {
+    renderHeader()
+    act(() => tocStore.setItems([toc[0]!]))
+
+    const node = openMenu()
+    expect(node.querySelector('.nav-toc')).toBeNull()
+    expect(node.querySelector('.nav-section')?.getAttribute('data-has-toc')).toBeNull()
+  })
+
+  it('离开阅读页后目录被清空：菜单不会残留上一篇的章节', () => {
+    renderHeader()
+    act(() => tocStore.setItems(toc))
+    expect(openMenu().querySelector('.nav-toc')).toBeTruthy()
+
+    act(() => tocStore.clear())
+    expect(panel()!.querySelector('.nav-toc')).toBeNull()
+  })
+
+  it('点目录项后收起菜单：锚点跳转与「关掉遮挡」是同一次点击', () => {
+    renderHeader()
+    act(() => tocStore.setItems(toc))
+
+    const node = openMenu()
+    fireEvent.click(node.querySelector('.nav-toc a') as HTMLElement)
+
+    return waitFor(() => expect(panel()).toBeNull())
   })
 })
 

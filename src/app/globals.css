@@ -453,7 +453,7 @@
   color: var(--nav-ink-strong);
 }
 
-/* 右侧动作区：分隔线 + 菜单按钮。桌面靠 space-between 贴到卡片另一端 */
+/* 右侧动作区：分隔线 + 菜单按钮。桌面（≥48rem）整块收起，见下方断点规则 */
 .nav-actions {
   position: relative;
   z-index: 1;
@@ -569,6 +569,20 @@
   opacity: 1;
   visibility: visible;
   transform: translate3d(0, 0, 0);
+}
+
+/*
+ * 栏内最后一个入口（「更多」）的下拉右对齐。
+ *
+ * 面板默认 `left: 0`，贴着触发器的左边缘向右展开。这在栏中段的入口上没问题，
+ * 但最后一个入口本身就贴着内容区右缘，再向右展开就会跑出视口——实测 768px
+ * 溢出 106px、1280px 仍是 42px，一言与项目被裁掉一半。
+ *
+ * 只改对齐方向，不改宽度：`right: 0` 让它从触发器的右边缘向左展开。
+ */
+.nav-quick__list > li.nav-flyout:last-child > .nav-flyout__panel {
+  left: auto;
+  right: 0;
 }
 
 .nav-flyout__card {
@@ -714,7 +728,7 @@
   }
 
   .nav-actions {
-    gap: 0.25rem;
+    display: none;
   }
 
   .nav-rule {
@@ -725,6 +739,20 @@
   .nav-menu-trigger {
     width: 2.5rem;
     height: 2.5rem;
+  }
+}
+
+/*
+ * 没有 hover 的大屏（iPad、触屏一体机）保留菜单键。
+ *
+ * 桌面取消菜单托盘的前提是「所有入口都能在顶栏直接拿到，或有悬停下拉」。
+ * 而「更多」正是悬停下拉：纯触屏既没有 hover，点它也不会展开，
+ * 一言与项目就会没有任何入口。这类设备把菜单键放回去，抽屉承担同一批
+ * 入口——菜单本来就是同一棵树的另一种呈现，不是第二份清单。
+ */
+@media (min-width: 48rem) and (hover: none) {
+  .nav-actions {
+    display: flex;
   }
 }
 
@@ -756,15 +784,7 @@
 
 @media (min-width: 48rem) {
   .nav-panel {
-    position: absolute;
-    top: calc(100% + var(--nav-gap));
-    /* 右边缘跟着卡片的内边距走，两种状态下都对齐菜单按钮 */
-    right: var(--nav-pad);
-    bottom: auto;
-    left: auto;
-    width: 21rem;
-    max-width: calc(100vw - 2rem);
-    max-height: min(32rem, calc(100dvh - 7rem));
+    display: none;
   }
 }
 
@@ -909,11 +929,41 @@
   color: var(--nav-ink);
 }
 
+.nav-panel__label {
+  padding: 0.25rem 0.6rem 0.35rem;
+  font-size: var(--text-meta);
+  font-weight: 500;
+  line-height: var(--text-meta--line-height);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.nav-toc {
+  margin-top: 0.375rem;
+  padding-top: 0.625rem;
+  padding-inline: 0.25rem;
+  border-top: var(--border-hairline) dashed var(--edge-strong);
+}
+
+.nav-toc__list {
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-inline: 0.35rem;
+  scrollbar-width: thin;
+}
+
 .nav-section {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
   padding-top: 0.25rem;
+}
+
+.nav-section[data-has-toc='true'] {
+  margin-top: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: var(--border-hairline) dashed var(--edge-strong);
 }
 
 .nav-list {

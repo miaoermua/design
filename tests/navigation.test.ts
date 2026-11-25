@@ -143,7 +143,7 @@ describe('buildNav', () => {
     expect(articles?.branch?.items.some((entry) => entry.href === '/articles')).toBe(false)
   })
 
-  it('顶栏 = 首页 + 主导航那一段，都是同一批对象', () => {
+  it('顶栏 = 首页 + 主导航那一段 + 更多，前三段都是同一批对象', () => {
     const nav = buildNav()
     expect(getQuickNav(nav).map((entry) => entry.href)).toEqual([
       '/',
@@ -151,15 +151,30 @@ describe('buildNav', () => {
       '/notes',
       '/explore',
       '/friends',
+      '/more',
     ])
-    // 除了首页（固定路由、单独一条），其余都是 nav 里的同一个对象
+    // 除了首页（固定路由）与「更多」（容器），其余都是 nav 里的同一个对象
     expect(getQuickNav(nav)[1]).toBe(nav[0])
-    // 「更多」那一段不在顶栏
-    expect(
-      getQuickNav(nav).some((entry) =>
-        nav.some((node) => node === entry && node.section === 'more'),
-      ),
-    ).toBe(false)
+    // 主导航那一段整体进顶栏，不做二次筛选
+    expect(getQuickNav(nav).slice(1, 5)).toEqual(
+      nav.filter((entry) => (entry.section ?? 'main') === 'main' && hasLanding(entry)),
+    )
+  })
+
+  it('「更多」是顶栏里的容器：自己没有落地页，子项就是 section: more 的入口', () => {
+    const more = getQuickNav(buildNav()).find((entry) => entry.href === '/more')
+
+    expect(more).toBeDefined()
+    // 没有 /more 这个路由，渲染处不能把它画成链接
+    expect(hasLanding(more!)).toBe(false)
+    expect(more!.inBar).toBe('desktop')
+    // 子项来自同一棵树，且带的是字典键（渲染处才翻译）
+    expect(more!.branch?.items).toEqual([
+      { href: '/says', label: 'nav.says', labelKey: 'nav.says' },
+      { href: '/projects', label: 'nav.projects', labelKey: 'nav.projects' },
+    ])
+    // 高亮沿用子项的前缀：停在 /says 时「更多」也是当前分区
+    expect(more!.matchPrefixes).toEqual(['/says', '/projects'])
   })
 
   it('「页面」不进顶栏：它没有列表页，顶栏只收点了能到达的入口', () => {
