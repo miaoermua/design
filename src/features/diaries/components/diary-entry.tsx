@@ -5,11 +5,22 @@ import { firstImageSource } from '@/lib/content/inline-media'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { notePath } from '@/lib/routes'
-import { formatTime } from '@/lib/utils/date'
+import { formatCompact, formatTime, formatWeekday } from '@/lib/utils/date'
 import { excerpt } from '@/lib/utils/text'
 
 /** 摘要字数：中文在 `--text-small` 下约 3.5 行，配合下面的 line-clamp 兜底 */
 const EXCERPT_LENGTH = 140
+
+/**
+ * 代表图宽度上限（320 / 340px）。
+ *
+ * 参考稿给的范围是 300–340px：小于手机端正文栏，大于缩略图。再宽就会把
+ * 「标题 + 摘要 + 图」读成一张卡片，而这里的图只是正文预览。
+ */
+const COVER_BOX = 'max-w-[20rem] sm:max-w-[21.25rem]'
+
+/** 竖图与长截图的高度上限：宽高都受限时图片仍按原比例缩放，只是不再无边界拉长 */
+const COVER_SIZING = 'h-auto max-h-[22rem] w-auto max-w-full'
 
 interface DiaryEntryProps {
   diary: Diary
@@ -57,6 +68,10 @@ function pickCover(diary: Diary): Cover | null {
  *
  * 摘要用 `excerpt()`（与首页 `DiaryCard` 同一个工具），不在组件里另写一套截断
  * 逻辑：两处对同一份数据给出不同文本，才是真正难维护的状态。
+ *
+ * 排版上不再给时刻留独立左栏（那要吃掉 52px 横向空间，而 `HH:mm` 只有 32px）：
+ * 时刻、当日状态、专栏合成标题上方一条 12px 元信息行，日期刻度由上层的
+ * 日期分组提供。层级因此是「日期 → 标题 → 摘要」，与参考稿一致。
  */
 export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const locale = await getLocale()
@@ -68,79 +83,90 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const readable = !diary.hasPassword
   const preview = readable ? excerpt(diary.content, EXCERPT_LENGTH) : ''
   const cover = readable ? pickCover(diary) : null
+  // 附件带真实宽高时按原比例铺开；取不到尺寸才退回 4:3 比例盒占位
+  const coverHasSize = Boolean(cover?.width && cover?.height)
 
   return (
-    /* 时间栏只放 `HH:mm`（12px 下实测 32px 宽），3.25rem 已含 20px 余量；
-       原来是 3.75rem + 1.25rem 间距，比内容本身多占 28px 横向空间。 */
-    <article className="grid gap-2 sm:grid-cols-[3.25rem_1fr] sm:gap-4">
-      <time className="meta leading-[1.9]" dateTime={diary.publishedAt}>
-        {formatTime(diary.publishedAt, timeZone)}
-      </time>
+    <article>
+      {/*
+        元信息行：日期 → 星期 → 时刻 → 心情/天气/地点/专栏 → 书签。
+        日期在行首并用标题色 + 600 字重，是参考稿里「June 11, 2026  Strategy」
+        那一档；其余项保持 meta 的次级灰度。全部 12px，一行放不下才换行，
+        不为了整齐去拆成两行小字——两行同灰度的 meta 堆在一起会读成噪声。
+      */}
+      <div className="meta flex flex-wrap items-baseline gap-x-1 gap-y-1">
+        <time dateTime={diary.publishedAt} className="font-semibold text-[var(--text-heading)]">
+          {formatCompact(diary.publishedAt, timeZone)}
+        </time>
+        <span className="meta-sep">{formatWeekday(diary.publishedAt, timeZone)}</span>
+        <span className="meta-sep">{formatTime(diary.publishedAt, timeZone)}</span>
+        {chips.length > 0 ? <span className="meta-sep">{chips.join(' · ')}</span> : null}
+        {diary.bookmark ? <span className="meta-sep">{t(locale, 'diary.bookmark')}</span> : null}
+      </div>
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="font-serif text-h3 text-[var(--text-heading)]">
-            <Link href={notePath(diary.nid)} className="link-quiet">
-              {diary.title}
-            </Link>
-          </h3>
-          {chips.length > 0 ? <p className="meta">{chips.join(' · ')}</p> : null}
-          {diary.bookmark ? <p className="meta">{t(locale, 'diary.bookmark')}</p> : null}
-        </div>
+      {/* 标题与摘要同吃一个 measure：宽栏下长标题不会拉成一整行，
+          标题 / 摘要 / 图共用同一条左基线 */}
+      <h3 className="text-rowtitle mt-2 max-w-[var(--measure-note)] font-serif text-[var(--text-heading)]">
+        <Link href={notePath(diary.nid)} className="link-quiet">
+          {diary.title}
+        </Link>
+      </h3>
 
-        {diary.hasPassword ? (
-          <p className="mt-2 text-small text-[var(--text-secondary)]">
-            {t(locale, 'diary.protected')}
-            <Link
-              href={notePath(diary.nid)}
-              className="link-quiet underline decoration-[var(--accent-soft)] decoration-1 underline-offset-[0.25em]"
-            >
-              {t(locale, 'diary.unlock')}
-            </Link>
-          </p>
-        ) : preview ? (
-          /*
-           * 纯文本，不是渲染后的 HTML：`line-clamp` 只负责「不同字号下都收在
-           * 3–4 行」，真正的长度上限由 `EXCERPT_LENGTH` 决定。只靠 CSS 裁切
-           * 会让完整正文仍然进 DOM——那正是要避免的。
-           */
-          <p
-            data-diary-excerpt="true"
-            className="mt-2 line-clamp-3 text-small text-[var(--text-secondary)] sm:line-clamp-4"
+      {diary.hasPassword ? (
+        <p className="text-small mt-2.5 text-[var(--text-secondary)]">
+          {t(locale, 'diary.protected')}
+          <Link
+            href={notePath(diary.nid)}
+            className="link-quiet underline decoration-[var(--accent-soft)] decoration-1 underline-offset-[0.25em]"
           >
-            {preview}
-          </p>
-        ) : null}
-
-        {cover ? (
-          /*
-           * 容器自带 `aspect-[4/3]`：图片加载前尺寸就已经确定，不会在滚动中
-           * 把后面的日记往下推。`CoverImage` 只在附件带真实宽高时传 `width` /
-           * `height`；正文图取不到尺寸就交给比例盒，不伪造原图比例。
-           */
-          <div className="mt-3 w-full max-w-[26rem] overflow-hidden border border-[var(--edge)] bg-[var(--surface-sunk)]">
-            <CoverImage
-              src={cover.src}
-              alt={tf(locale, 'diary.coverAlt', { title: diary.title })}
-              width={cover.width}
-              height={cover.height}
-              className="aspect-[4/3] h-full w-full object-cover"
-            />
-          </div>
-        ) : null}
-
-        {/* 元信息行只放「继续阅读 + 阅读次数」。赞赏属于详情页 ActionRail：
-            列表摘要时节点还没读内容，重复出现会让每条日记都变成一次募捐入口。 */}
-        <div className="meta mt-3 flex flex-wrap items-center gap-x-1">
-          <Link href={notePath(diary.nid)} className="link-quiet">
-            {t(locale, 'diary.continueReading')}
+            {t(locale, 'diary.unlock')}
           </Link>
-          {diary.readCount !== null ? (
-            <span className="meta-sep">
-              {tf(locale, 'meta.readCount', { count: diary.readCount.toLocaleString(locale) })}
-            </span>
-          ) : null}
-        </div>
+        </p>
+      ) : preview ? (
+        /*
+         * 纯文本，不是渲染后的 HTML：`line-clamp` 只负责「不同字号下都收在
+         * 3 行」，真正的长度上限由 `EXCERPT_LENGTH` 决定。只靠 CSS 裁切
+         * 会让完整正文仍然进 DOM——那正是要避免的。
+         */
+        <p
+          data-diary-excerpt="true"
+          className="text-small mt-2.5 line-clamp-3 max-w-[var(--measure-note)] text-[var(--text-secondary)]"
+        >
+          {preview}
+        </p>
+      ) : null}
+
+      {cover ? (
+        /*
+         * 图在摘要之后，宽度只到 320/340px，不加边框、不加卡片底：
+         * 它是「这段文字配了什么图」的预览，不是条目的封面头图。
+         *
+         * 有原始尺寸时吃 `width`/`height` 属性走原比例（浏览器据此预留高度，
+         * 截图与风景图都按各自比例显示，不做 4:3 裁切）；只有取不到尺寸时
+         * 才退回比例盒 + 裁切填充，用一点裁切换掉加载后的布局跳动。
+         */
+        <figure className={`mt-4 ${COVER_BOX}`}>
+          <CoverImage
+            src={cover.src}
+            alt={tf(locale, 'diary.coverAlt', { title: diary.title })}
+            width={cover.width}
+            height={cover.height}
+            className={coverHasSize ? COVER_SIZING : 'aspect-[4/3] w-full'}
+          />
+        </figure>
+      ) : null}
+
+      {/* 元信息行只放「继续阅读 + 阅读次数」。赞赏属于详情页 ActionRail：
+          列表摘要时节点还没读内容，重复出现会让每条日记都变成一次募捐入口。 */}
+      <div className="meta mt-3 flex flex-wrap items-center gap-x-1">
+        <Link href={notePath(diary.nid)} className="link-quiet">
+          {t(locale, 'diary.continueReading')}
+        </Link>
+        {diary.readCount !== null ? (
+          <span className="meta-sep">
+            {tf(locale, 'meta.readCount', { count: diary.readCount.toLocaleString(locale) })}
+          </span>
+        ) : null}
       </div>
     </article>
   )

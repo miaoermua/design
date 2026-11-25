@@ -138,7 +138,16 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
           description={t(locale, 'diaries.topicMissingDescription')}
         />
       ) : groups.length > 0 ? (
-        <div>
+        /*
+         * 左轨道（1px 竖线）画在这一层，不画在每组里：每组各画一段会在组间距
+         * 处断开，时间线就退化成一排短横线。轨道只圈住列表本身——页头、筛选条
+         * 与分页留在轨道外，它们是页面的工具，不是时间线的一部分。
+         *
+         * `gap-14`（56px）是「跨天」的间距，天内的条间距由分组组件给 40px。
+         * 目标站点的日记基本一天一条，所以跨天间距就是读者实际看到的条目间距：
+         * 参考稿的条目间隔也在 56px 一档，再大就散了。
+         */
+        <div className="flex flex-col gap-14 border-l border-[var(--edge)] pl-5 sm:pl-7">
           {groups.map((group) => (
             <DiaryDayGroupView key={group.date} group={group} timeZone={timeZone} />
           ))}

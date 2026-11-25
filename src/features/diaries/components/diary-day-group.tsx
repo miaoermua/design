@@ -1,5 +1,5 @@
 import type { DiaryDayGroup } from '@/lib/api'
-import { formatWeekday } from '@/lib/utils/date'
+import { formatDate } from '@/lib/utils/date'
 import { DiaryEntry } from './diary-entry'
 
 interface DiaryDayGroupViewProps {
@@ -8,41 +8,27 @@ interface DiaryDayGroupViewProps {
 }
 
 /**
- * 一天 = 一节：左侧为大号日期，右侧为该天的所有片段。
+ * 一天 = 一节。
  *
- * 日期栏宽度按内容定：日号最大两位（40px 字号下约 44px）、`2026.10` 约 56px，
- * 6rem 已经留足余量；原来是 7rem，再加上 2.5rem 栏间距，光左轨就吃掉 152px。
- * 栏间距收到 2rem 后，这一节的正文区比原来宽 24px，而日号与条目时间的视觉
- * 关系没变——日号仍贴着页面左缘，时间仍在同一列上逐条对齐。
+ * 这一节在视觉上不再有自己的标题：日期已经下放到每条的元信息行（参考稿就是
+ * 「日期 · 分类 → 标题 → 摘要」的单行结构）。这里保留 `<section>` 与 `sr-only`
+ * 的 h2，是为了不让分组在无障碍树里消失——读屏用户仍然能按天跳读，
+ * 而视觉上得到一条连续的纵向时间流。
+ *
+ * 竖线由列表容器统一画（见 `/notes/list`），这里不自己画：每组各画一段会在
+ * 组间距处断开，时间线就退化成一排短横线。
  */
 export function DiaryDayGroupView({ group, timeZone }: DiaryDayGroupViewProps) {
-  const [year = '', month = '', day = ''] = group.date.split('-')
   const first = group.items[0]
   const headingId = `diary-day-${group.date}`
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="grid gap-5 border-t border-dashed border-[var(--edge-strong)] py-10 sm:grid-cols-[6rem_1fr] sm:gap-8"
-    >
-      <header className="sm:sticky sm:top-24 sm:self-start">
-        <h2
-          id={headingId}
-          className="font-serif text-[2.5rem] leading-none tabular-nums text-[var(--text-heading)]"
-        >
-          {Number(day)}
-        </h2>
-        <p className="meta mt-2 tabular-nums">
-          {year}.{month}
-        </p>
-        {first ? (
-          <p className="meta text-[var(--text-secondary)]">
-            {formatWeekday(first.publishedAt, timeZone)}
-          </p>
-        ) : null}
-      </header>
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        {first ? formatDate(first.publishedAt, timeZone) : group.date}
+      </h2>
 
-      <div className="flex flex-col gap-9">
+      <div className="flex flex-col gap-10">
         {group.items.map((diary) => (
           <DiaryEntry key={diary.id} diary={diary} timeZone={timeZone} />
         ))}
