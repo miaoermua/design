@@ -40,8 +40,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Toaster, toast } from 'sonner'
-import { ToastCard } from '@/components/ui/toast-card'
 import { notificationStore } from '@/lib/notifications/store'
 import { useNotifications } from '@/lib/notifications/use-notifications'
 import { useStatusSnapshot } from '@/lib/status/use-status'
@@ -65,6 +65,7 @@ export interface SonnerToasterProps {
 }
 
 export function SonnerToaster({ locale = DEFAULT_LOCALE }: SonnerToasterProps) {
+  const router = useRouter()
   const items = useNotifications()
   const status = useStatusSnapshot()
   const shown = useRef(new Set<string>())
@@ -104,24 +105,27 @@ export function SonnerToaster({ locale = DEFAULT_LOCALE }: SonnerToasterProps) {
     for (const item of items) {
       if (shown.current.has(item.id)) continue
       shown.current.add(item.id)
-      toast.custom(
-        () => (
-          <ToastCard
-            item={item}
-            locale={locale}
-            onClose={() => notificationStore.dismiss(item.id)}
-          />
-        ),
-        {
-          id: item.id,
-          // 关闭由 store 的计时器负责，Sonner 不参与，避免两套计时器打架
-          duration: Infinity,
-          // 滑动/点击关闭时回流到 store，保证队列与画面一致
-          onDismiss: () => notificationStore.dismiss(item.id),
-        },
-      )
+      const options = {
+        id: item.id,
+        // 关闭由 store 的计时器负责，Sonner 不参与，避免两套计时器打架
+        duration: Infinity,
+        // 滑动/点击关闭时回流到 store，保证队列与画面一致
+        onDismiss: () => notificationStore.dismiss(item.id),
+        ...(item.action
+          ? {
+              action: {
+                label: item.action.label,
+                onClick: () => router.push(item.action!.href),
+              },
+            }
+          : {}),
+      }
+      if (item.level === 'success') toast.success(item.title, options)
+      else if (item.level === 'warning') toast.warning(item.title, options)
+      else if (item.level === 'error') toast.error(item.title, options)
+      else toast.info(item.title, options)
     }
-  }, [items, locale])
+  }, [items, router])
 
   /*
    * 把 Sonner 外层 <section> 的 aria-live 关掉。
@@ -146,21 +150,10 @@ export function SonnerToaster({ locale = DEFAULT_LOCALE }: SonnerToasterProps) {
       <Toaster
         className="folio-toaster"
         position="bottom-right"
-        gap={8}
         // store 已把队列限制在 3 条，这里保持一致；超出时 Sonner 负责堆叠动画
         visibleToasts={3}
-        // 平铺展开，保持迁移前「3 条都完整可见」的观感
-        expand
-        // 卡片自带关闭按钮，Sonner 的不再叠加
-        closeButton={false}
-        // 所有颜色走 Folio Token，不启用 Sonner 的彩底
-        richColors={false}
-        toastOptions={{ unstyled: true }}
+        closeButton
         containerAriaLabel={t(locale, 'notify.region')}
-        /*
-         * 不用 `containerAriaLabel` 单独命名：Sonner 会把它和快捷键提示拼成
-         * 「通知 alt+T」。这里直接给最终文案，读屏念到的就是干净的「通知」。
-         */
         customAriaLabel={t(locale, 'notify.region')}
         offset={{
           right: 24,
