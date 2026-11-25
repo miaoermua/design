@@ -70,11 +70,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
 
   return (
     <Container>
-      <PageHeader
-        kicker={t(locale, 'explore.kicker')}
-        title={t(locale, 'explore.heading')}
-        description={t(locale, 'explore.description')}
-      />
+      <PageHeader title={t(locale, 'explore.heading')} />
 
       <ExploreTabs
         active={active}

@@ -81,11 +81,6 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
       <PageHeader
         kicker={topic ? t(locale, 'diaries.kickerTopic') : t(locale, 'diaries.kicker')}
         title={topic ? topic.name : t(locale, 'diaries.heading')}
-        description={
-          topic
-            ? tf(locale, 'diaries.topicIntro', { name: topic.name })
-            : t(locale, 'diaries.intro')
-        }
         meta={
           result ? (
             <p className="meta">
@@ -117,7 +112,11 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
           aria-label={t(locale, 'diaries.filterLabel')}
           className="mb-8 flex gap-2 overflow-x-auto pb-1"
         >
-          <FilterChip href={NOTE_LIST_PATH} active={!topic} label={t(locale, 'diaries.filterAll')} />
+          <FilterChip
+            href={NOTE_LIST_PATH}
+            active={!topic}
+            label={t(locale, 'diaries.filterAll')}
+          />
           {topics.map((item) => (
             <FilterChip
               key={item.id}
@@ -172,15 +171,7 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
  * 选中态用 `--accent-wash`（与探索页同一 Token），未选中只给一点底色，
  * 不加边框——一排描边胶囊会把筛选条读成一次表单。
  */
-function FilterChip({
-  href,
-  active,
-  label,
-}: {
-  href: string
-  active: boolean
-  label: string
-}) {
+function FilterChip({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
     <Link
       href={href}

@@ -41,9 +41,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   return (
     <Container>
       <PageHeader
-        kicker={t(locale, 'articles.kicker')}
-        title={t(locale, 'articles.heading')}
-        description={t(locale, 'articles.description')}
+        title={t(locale, 'articles.title')}
         meta={
           <p className="meta">
             {tf(locale, 'meta.listSummary', {
