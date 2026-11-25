@@ -4,11 +4,8 @@ import { redirect } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { EmptyState } from '@/components/ui/empty-state'
 import { requireFeature } from '@/core/registry/guard'
-import {
-  getLatestDiary,
-  NOTE_LATEST_SCAN_MAX_PAGES,
-  NOTE_LATEST_SCAN_PAGE_SIZE,
-} from '@/lib/api'
+import { getLatestDiary, NOTE_LATEST_SCAN_MAX_PAGES, NOTE_LATEST_SCAN_PAGE_SIZE } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { notePath } from '@/lib/routes'
@@ -41,7 +38,9 @@ export default async function NotesEntryPage() {
   requireFeature('diaries')
 
   const locale = await getLocale()
-  const { diary, truncated } = await getLatestDiary()
+  // 「最新一篇」只用来算 nid，但扫描请求仍按当前语言取：
+  // 与详情页共用同一份 `?lang=` 缓存，也避免以后在入口展示标题时漏传。
+  const { diary, truncated } = await getLatestDiary({ lang: toContentLang(locale) })
 
   /*
    * 扫描触顶时必须留下信号。

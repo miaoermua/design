@@ -2,6 +2,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { requireFeature } from '@/core/registry/guard'
 import { PasswordGate } from '@/features/diaries/components/password-gate'
 import { getDiary, isNotFound, isPasswordRequired } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { getLocale } from '@/lib/i18n/server'
 import { notePath } from '@/lib/routes'
 
@@ -41,6 +42,8 @@ export default async function LegacyDiaryPage({ params, searchParams }: LegacyDi
   // 雪花 id 是纯数字；其余形态直接 404，别把后端 422 变成 500
   if (!/^\d+$/.test(id)) notFound()
 
+  const locale = await getLocale()
+
   /*
    * 密码与上游同形：读 `?password=` 后透传给 core。
    *
@@ -50,14 +53,16 @@ export default async function LegacyDiaryPage({ params, searchParams }: LegacyDi
    */
   let diary
   try {
-    diary = await getDiary(id, password)
+    /*
+     * 这里只用 `nid` 做 308，标题与正文都不参与渲染，但仍然按当前语言取：
+     * 同一实体在详情页与兼容层使用同一个 `?lang=`，缓存键与行为才不会分叉。
+     * `password` 与 `lang` 是两个独立参数，密码校验路径不变。
+     */
+    diary = await getDiary(id, password, { lang: toContentLang(locale) })
   } catch (error) {
     if (isNotFound(error)) notFound()
     if (isPasswordRequired(error)) {
-      const locale = await getLocale()
-      return (
-        <PasswordGate wrong={Boolean(wrong) || Boolean(password)} locale={locale} />
-      )
+      return <PasswordGate wrong={Boolean(wrong) || Boolean(password)} locale={locale} />
     }
     throw error
   }

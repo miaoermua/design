@@ -15,6 +15,7 @@ import {
   listDiariesByTopic,
   listTopics,
 } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { NOTE_LIST_PATH, noteListPath, pageHref } from '@/lib/routes'
@@ -66,12 +67,15 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
               size: LIST_PAGE_SIZE,
               sortBy: 'createdAt',
               sortOrder: -1,
+              // 专栏筛选与全量列表是两条端点，语言参数在两边都要传
+              lang: toContentLang(locale),
             })
           : listDiaries({
               page,
               size: LIST_PAGE_SIZE,
               sortBy: 'createdAt',
               sortOrder: -1,
+              lang: toContentLang(locale),
             }))
 
   const groups = result ? groupDiariesByDay(result.items, timeZone) : []

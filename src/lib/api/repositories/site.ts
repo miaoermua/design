@@ -12,14 +12,26 @@ export async function getSiteIdentity(): Promise<SiteIdentity> {
   return toSiteIdentity(expectObject<V2Aggregate>(body, '/aggregate'))
 }
 
-/** GET /aggregate/timeline?type=&year= */
-export async function getTimeline(options: {
-  type?: V2TimelineType
-  year?: number
-  sort?: 1 | -1
-} = {}): Promise<{ articles: ReturnType<typeof toTimeline>['articles']; diaries: ReturnType<typeof toTimeline>['diaries'] }> {
+/**
+ * GET /aggregate/timeline?type=&year=&lang=
+ *
+ * 时间线只回标题，但它同样是**内容**：core 的 `AggregateController.getTimeline`
+ * （v12.10.0）接收 `@Lang()`，命中译文时用 `translateTitleWithMeta` 逐条替换
+ * posts / notes 的标题。不传 `lang` 就会在英文界面里列出一整屏中文标题。
+ */
+export async function getTimeline(
+  options: {
+    type?: V2TimelineType
+    year?: number
+    sort?: 1 | -1
+    lang?: string
+  } = {},
+): Promise<{
+  articles: ReturnType<typeof toTimeline>['articles']
+  diaries: ReturnType<typeof toTimeline>['diaries']
+}> {
   const body = await requestV2<unknown>('/aggregate/timeline', {
-    query: { type: options.type, year: options.year, sort: options.sort ?? -1 },
+    query: { type: options.type, year: options.year, sort: options.sort ?? -1, lang: options.lang },
     revalidate: 300,
     tags: ['timeline'],
   })

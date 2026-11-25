@@ -42,6 +42,11 @@ export async function GET(): Promise<Response> {
 
   let items: Awaited<ReturnType<typeof listArticles>>['items']
   try {
+    /*
+     * RSS 无「读者当前界面语言」可言：订阅器与抓取器不带 `folio-lang`，
+     * 也不该让同一份 feed 按 cookie 变化（缓存会分裂）。这里固定取站点原文
+     * 语言，是 `src/lib/i18n/server.ts` 里记录的同一项取舍，不是漏传。
+     */
     const result = await listArticles({ page: 1, size: 20, sortBy: 'createdAt', sortOrder: -1 })
     items = result.items
   } catch (error) {
@@ -71,7 +76,9 @@ export async function GET(): Promise<Response> {
     })
     .filter((entry): entry is string => Boolean(entry))
 
-  const lastBuild = items[0]?.createdAt ? new Date(items[0].createdAt).toUTCString() : new Date().toUTCString()
+  const lastBuild = items[0]?.createdAt
+    ? new Date(items[0].createdAt).toUTCString()
+    : new Date().toUTCString()
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
