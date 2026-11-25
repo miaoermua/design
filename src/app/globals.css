@@ -1086,26 +1086,30 @@ details[open] > .nav-group__summary .nav-group__chevron {
 }
 
 /*
-  主题切换过渡
+  主题切换过渡（View Transition）
 
-  `.theme-transition` 由 ThemeToggle 在用户点击后临时加到 <html>，约 300ms 后移除：
+  切换时 `useThemePreference` 调 `document.startViewTransition()`，浏览器对
+  新旧两帧各拍一张快照做交叉淡入。这里只调时长与曲线，不参与补间。
 
-    - 只覆盖颜色类属性（背景 / 文字 / 边框 / 阴影 / 描边），
-      不动 transform、width、height、padding、font-size，因此不会引起位移或重排；
-    - 首帧没有这个类，所以加载时不播放；系统配色变化也不播放（只有点击才加）；
-    - 不常驻在 `*` 上：常驻的全局 transition 会把 hover 以外的所有变化都拖慢。
+  上一版是 `html.theme-transition *` 给全站元素挂 240ms 颜色过渡：文章页
+  664 个节点一次切换 52ms 同步样式计算 + 55ms 长任务，随后整屏重绘十几遍。
+  换成快照淡入后主线程只剩一次真实的样式重算（约 4ms），与节点数无关。
+
+  `prefers-reduced-motion: reduce` 时不进这条路径（JS 已直接瞬切），
+  这里的规则只是兜底：即使某些环境仍触发了视图过渡，也让时长归零。
 */
 @media (prefers-reduced-motion: no-preference) {
-  html.theme-transition,
-  html.theme-transition *,
-  html.theme-transition *::before,
-  html.theme-transition *::after {
-    transition-property:
-      color, background-color, border-color, outline-color, box-shadow, fill, stroke,
-      text-decoration-color;
-    transition-duration: 240ms;
-    transition-timing-function: var(--ease-out-soft);
-    transition-delay: 0s;
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 240ms;
+    animation-timing-function: var(--ease-out-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0s;
   }
 }
 

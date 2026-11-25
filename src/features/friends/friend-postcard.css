@@ -501,13 +501,8 @@
   }
 }
 
-/* 主题切换过渡豁免：全局 `.theme-transition *` 让所有元素的颜色属性播放 240ms 过渡，
-   但友链页 65 张卡片 × ~10 个子元素/伪元素 = 650+ 个颜色动画同时跑，
-   叠上 blur、mask、box-shadow 一起补间，帧率直接掉到个位数。
-   这里把卡片内部全部改为瞬切：视觉上友链区域闪一下比卡成幻灯片好得多。 */
-html.theme-transition .friend-postcard,
-html.theme-transition .friend-postcard *,
-html.theme-transition .friend-postcard *::before,
-html.theme-transition .friend-postcard *::after {
-  transition-duration: 0s !important;
-}
+/* 主题切换不再需要这里的豁免：旧的 `html.theme-transition *` 会给全站每个
+   元素挂 240ms 颜色过渡，友链页 65 张卡片 × ~10 个子元素 = 650+ 个颜色动画
+   同时跑，帧率掉到个位数，当时只能给这一页单独打「瞬切」补丁。
+   现在主题切换走 View Transition（整屏快照交叉淡入），补间在合成器上跑，
+   与节点数无关，这条豁免连同它的 !important 一起删掉。 */

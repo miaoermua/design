@@ -22,11 +22,24 @@ export const THEME_STORAGE_KEY = 'folio-theme'
 /** 切换后由本组件派发，用来让 `useSyncExternalStore` 重新读取偏好 */
 const THEME_EVENT = 'folio:themechange'
 
-/** 过渡类由 CSS 限定在颜色属性上；这里只负责在切换结束后摘掉它 */
-const TRANSITION_CLASS = 'theme-transition'
-const TRANSITION_MS = 300
-
-let transitionTimer: number | undefined
+/**
+ * 主题切换的过渡交给**浏览器原生的 View Transition**。
+ *
+ * 上一版是「给 `<html>` 临时加 `.theme-transition`，再用
+ * `html.theme-transition *` 给全站每个元素挂 240ms 颜色过渡」。代价实测：
+ * 文章页（664 个节点）一次切换触发 **52ms** 同步样式计算 + 一个 55ms 长任务，
+ * 而接下来 240ms 里上千个元素各自补间 background/color/box-shadow/fill/stroke——
+ * 颜色属性走的是重绘，等于把整屏重绘十几遍。友链页 65 张卡片直接掉到个位数帧率，
+ * 当时只能在 `friend-postcard.css` 里给那一页单独打「瞬切」补丁。
+ *
+ * View Transition 只对**新旧两帧快照**做一次合成层交叉淡入：主线程只做一次
+ * 真实的样式重算（约 4ms），补间在合成器上跑，与节点数量无关。
+ * 不支持该 API 或用户要求减弱动效时直接瞬切——那才是这条路径的默认形态，
+ * 淡入只是增强。时长（240ms）写在 `globals.css` 的 `::view-transition-*` 规则里。
+ */
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (callback: () => void) => { finished: Promise<void> }
+}
 
 function prefersDark(): boolean {
   // jsdom 没有 matchMedia；真实浏览器与预渲染环境都要能安全调用
@@ -101,7 +114,7 @@ function subscribePreference(onChange: () => void): () => void {
 /**
  * 主题三态的唯一读写入口。
  *
- * 页脚的三段单选消费这个 hook：「跟随系统 = 删除键」「切换时加 300ms 颜色过渡」
+ * 页脚的三段单选消费这个 hook：「跟随系统 = 删除键」「切换走一次 View Transition」
  * 「派发事件通知同页其它订阅者」这三条规则只在这里实现一次，
  * 新增入口不可能绕开它们写出第四种行为。
  */
@@ -113,6 +126,14 @@ export function useThemePreference() {
   )
 
   const setPreference = useCallback((next: ThemePreference) => {
+    /**
+     * 三件事必须成对发生在这个闭包里：写存储 → 写 `data-theme` → 通知订阅者。
+     *
+     * **通知不能放到 `startViewTransition()` 之后**：浏览器的更新回调是
+     * **异步**执行的（要先拍下旧帧快照，实测约 16ms 后才跑）。放在外面派发时，
+     * React 被叫醒去读 `localStorage`，读到的还是旧值，于是页面变暗了、
+     * 页脚三段单选的勾却停在上一态，而且之后再没有任何事件让它重新读。
+     */
     const commit = () => {
       try {
         if (next === 'system') window.localStorage.removeItem(THEME_STORAGE_KEY)
@@ -121,23 +142,20 @@ export function useThemePreference() {
         // 隐私模式下写入失败：本次会话仍然生效，只是刷新后不保留
       }
       applyPreference(next)
+      window.dispatchEvent(new Event(THEME_EVENT))
     }
 
-    if (prefersReducedMotion()) {
+    const doc = document as ViewTransitionDocument
+    if (prefersReducedMotion() || typeof doc.startViewTransition !== 'function') {
       commit()
     } else {
-      // 过渡类只在这 300ms 内存在，且只覆盖颜色属性
-      const root = document.documentElement
-      root.classList.add(TRANSITION_CLASS)
-      commit()
-      window.clearTimeout(transitionTimer)
-      transitionTimer = window.setTimeout(
-        () => root.classList.remove(TRANSITION_CLASS),
-        TRANSITION_MS,
-      )
+      try {
+        doc.startViewTransition(commit)
+      } catch {
+        // 连续点击时可能已有一次过渡在跑：退回瞬切，不能把这次切换丢掉
+        commit()
+      }
     }
-
-    window.dispatchEvent(new Event(THEME_EVENT))
   }, [])
 
   return { preference, setPreference }
