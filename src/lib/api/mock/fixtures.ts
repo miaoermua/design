@@ -554,12 +554,30 @@ export const mockPages: V2PageRow[] = [
 export const mockThemeSnippet: Record<string, unknown> = {
   footer: {
     since: 2021,
-    links: [
-      { title: '关于', url: '/about' },
-      { title: '留言', url: '/message' },
-      { title: '友链', url: '/friends' },
-      { title: 'RSS', url: '/feed' },
-      { title: 'GitHub', url: 'https://github.com/miaoermua/design' },
+    linkSections: [
+      {
+        name: '关于',
+        links: [
+          { name: '关于本站', href: '/about', external: false },
+          { name: '关于项目', href: '/projects', external: false },
+        ],
+      },
+      {
+        name: '更多',
+        links: [
+          { name: '探索', href: '/explore', external: false },
+          { name: '友链', href: '/friends', external: false },
+          { name: 'RSS', href: '/feed', external: false },
+        ],
+      },
+      {
+        name: '联系',
+        links: [
+          { name: '留言', href: '/message', external: false },
+          { name: 'GitHub', href: 'https://github.com/miaoermua/design', external: true },
+          { name: '邮件', href: 'mailto:i@miaoer.net', external: true },
+        ],
+      },
     ],
     icp: {
       enabled: true,

@@ -80,6 +80,8 @@ const PROBE = `(() => {
   const nav = q('.site-nav')
   const navCard = q('.site-nav .nav-card')
   const footer = q('footer')
+  const footerNav = q('.site-footer__nav')
+  const navList = q('.site-footer__nav-list')
 
   // 第二行占了几条视觉行：按 unit 的 top 归并（±6px 容差）
   const units = Array.from(document.querySelectorAll('.site-footer__meta-unit'))
@@ -128,6 +130,10 @@ const PROBE = `(() => {
     scrollHeight: document.documentElement.scrollHeight,
     overflowX: document.documentElement.scrollWidth - window.innerWidth,
     footer: rectOf(footer),
+    footerNav: rectOf(footerNav),
+    footerNavBeforeInfo: !footerNav || !info || footerNav.getBoundingClientRect().bottom <= info.getBoundingClientRect().top + 1,
+    footerNavOverflow: footerNav ? footerNav.scrollWidth - footerNav.clientWidth : 0,
+    footerNavDirection: navList ? getComputedStyle(navList).flexDirection : null,
     inner: rectOf(inner),
     info: rectOf(info),
     settings: rectOf(settings),
@@ -192,6 +198,10 @@ try {
         overflowX: m.overflowX,
         dock: m.dock,
         nav: m.nav,
+        footerNav: m.footerNav,
+        footerNavBeforeInfo: m.footerNavBeforeInfo,
+        footerNavOverflow: m.footerNavOverflow,
+        footerNavDirection: m.footerNavDirection,
         dockOverlaps: m.dockOverlaps,
         coveredByDock: m.coveredByDock,
         coveredByNav: m.coveredByNav,
@@ -201,7 +211,13 @@ try {
       // ── 断言 ─────────────────────────────────────────────
       if (!m.info || !m.settings) fail(`${key}: 缺少信息区或设置区`)
       if (m.overflowX > 0) fail(`${key}: 横向溢出 ${m.overflowX}px`)
+      if (m.footerNav && !m.footerNavBeforeInfo) fail(`${key}: 分类导航没有位于信息区上方`)
+      if (m.footerNavOverflow > 0) fail(`${key}: 分类导航内部横向溢出 ${m.footerNavOverflow}px`)
+      if (m.footerNav && m.footerNavDirection !== (desktop ? 'row' : 'column')) {
+        fail(`${key}: 分类导航方向=${m.footerNavDirection}，期望 ${desktop ? 'row' : 'column'}`)
+      }
 
+      const normalizedJustify = m.settingsDisplay?.replace(/^flow-/, 'flex-')
       if (desktop) {
         if (!sideBySide) {
           fail(`${key}: 应左右并排（settings.y=${m.settings?.y}, info.bottom=${m.info?.bottom}）`)
@@ -216,7 +232,7 @@ try {
         }
 
         // 设置区贴右；为浮标让位时，让出的宽度必须是「刚好够、不多给」
-        if (m.settingsDisplay !== 'flex-end')
+        if (normalizedJustify !== 'flex-end')
           fail(`${key}: 设置区 justify-content=${m.settingsDisplay}`)
         const inset = +(m.inner.right - m.controlRight).toFixed(1)
         const clearOfDock = !m.dock || m.controlRight <= m.dock.x - 4
@@ -227,7 +243,7 @@ try {
         if (inset > 0 && !clearOfDock) fail(`${key}: 有缩进但仍在浮标下方`)
       } else {
         if (!stacked) fail(`${key}: 手机端应上下排列`)
-        if (m.settingsDisplay !== 'flex-start')
+        if (normalizedJustify !== 'flex-start')
           fail(`${key}: 手机端设置区应靠左（${m.settingsDisplay}）`)
       }
 

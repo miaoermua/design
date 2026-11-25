@@ -1,13 +1,21 @@
 import { normalizeCustomCssList } from './css-url'
-import { parseIconStylesheets, parseSocialIcon, parseSocialItems, safeSocialColor } from './social'
+import {
+  parseIconStylesheets,
+  parseSocialIcon,
+  parseSocialItems,
+  safeSocialColor,
+  safeSocialUrl,
+} from './social'
 import {
   DONATE_LABEL_MAX,
   DONATE_NAME_MAX,
   DONATE_QRCODE_MAX,
   DONATE_URL_MAX_LENGTH,
-  FOOTER_LINK_MAX,
   FOOTER_LINK_TITLE_MAX,
   FOOTER_LINK_URL_MAX_LENGTH,
+  FOOTER_SECTION_LINK_MAX,
+  FOOTER_SECTION_MAX,
+  FOOTER_SECTION_NAME_MAX,
   HERO_DESCRIPTION_MAX,
   HERO_TEMPLATE_CLASS_MAX,
   HERO_TEMPLATE_MAX,
@@ -26,6 +34,7 @@ import type {
   ThemeDonateQrcode,
   ThemeFooter,
   ThemeFooterLink,
+  ThemeFooterLinkSection,
   ThemeHero,
   ThemeHeroTitleElement,
   ThemeHomepage,
@@ -151,27 +160,56 @@ export function safeNavHref(value: unknown): string | null {
   return safeHttpUrl(trimmed)
 }
 
-function parseFooterLinks(value: unknown): ThemeFooterLink[] {
-  if (!Array.isArray(value)) return []
+function safeFooterHref(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > FOOTER_LINK_URL_MAX_LENGTH) return null
+  return trimmed.startsWith('/') ? safeNavHref(trimmed) : safeSocialUrl(trimmed)
+}
+
+function parseFooterLink(value: unknown): ThemeFooterLink | null {
+  if (!isRecord(value)) return null
+
+  const name = readString(value.name, FOOTER_LINK_TITLE_MAX)
+  const href = safeFooterHref(value.href)
+  if (!name || !href) return null
+
+  const internal = href.startsWith('/')
+  const external = typeof value.external === 'boolean' ? value.external : !internal
+  // external 是渲染语义，不允许与地址类型矛盾：/about 不能伪装成外链，
+  // https://… 也不能伪装成站内路径。
+  if (external === internal) return null
+
+  return { name, href, external }
+}
+
+function parseFooterLinkSection(value: unknown): ThemeFooterLinkSection | null {
+  if (!isRecord(value)) return null
+  const name = readString(value.name, FOOTER_SECTION_NAME_MAX)
+  if (!name || !Array.isArray(value.links)) return null
+
   const links: ThemeFooterLink[] = []
   const seen = new Set<string>()
-
-  for (const item of value) {
-    if (links.length >= FOOTER_LINK_MAX) break
-    if (!isRecord(item)) continue
-
-    const title = readString(item.title, FOOTER_LINK_TITLE_MAX)
-    if (!title) continue
-
-    if (typeof item.url !== 'string' || item.url.length > FOOTER_LINK_URL_MAX_LENGTH) continue
-    const url = safeNavHref(item.url)
-    if (!url || seen.has(url)) continue
-    seen.add(url)
-
-    links.push({ title, url })
+  for (const raw of value.links) {
+    if (links.length >= FOOTER_SECTION_LINK_MAX) break
+    const link = parseFooterLink(raw)
+    if (!link || seen.has(link.href)) continue
+    seen.add(link.href)
+    links.push(link)
   }
 
-  return links
+  return links.length > 0 ? { name, links } : null
+}
+
+function parseFooterLinkSections(value: unknown): ThemeFooterLinkSection[] {
+  if (!Array.isArray(value)) return []
+  const sections: ThemeFooterLinkSection[] = []
+  for (const raw of value) {
+    if (sections.length >= FOOTER_SECTION_MAX) break
+    const section = parseFooterLinkSection(raw)
+    if (section) sections.push(section)
+  }
+  return sections
 }
 
 export function parseFooter(value: unknown, currentYear: number): ThemeFooter {
@@ -179,7 +217,7 @@ export function parseFooter(value: unknown, currentYear: number): ThemeFooter {
   return {
     since: parseSince(source.since, currentYear),
     icp: parseFooterIcp(source.icp),
-    links: parseFooterLinks(source.links),
+    linkSections: parseFooterLinkSections(source.linkSections),
   }
 }
 

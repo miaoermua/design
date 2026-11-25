@@ -185,8 +185,8 @@
 
   /* ── 4a. 正文测量宽度（Measure）──────────────────────────────── */
   /* measure 只管文字行宽，与外部装饰轨道分离。                       */
-  --measure-post: 44rem; /* 704px · 文章正文 · ≈41 汉字/行 @17px  */
-  --measure-note: 40rem; /* 640px · 日记正文 · ≈37 汉字/行 @17px  */
+  --measure-post: 52rem; /* 832px · 文章正文 · ≈49 汉字/行 @17px  */
+  --measure-note: 44rem; /* 704px · 日记正文 · ≈41 汉字/行 @17px  */
   --measure-page: 44rem; /* 704px · 普通页面正文                  */
   --measure-copy: 48rem; /* 768px · 副标题/摘要/搜索/错误页文案    */
 

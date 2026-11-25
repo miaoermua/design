@@ -1255,18 +1255,81 @@ details[open] > .toc-summary .toc-chevron {
   font-weight: 300;
 }
 
-/* ── Footer 布局：信息区在左、设置区在右 ────────────────────────
-   两个**平级区域**，不是一列堆叠：
-     - `.site-footer__info`     两行文字（版权行 / 出处与备案行）
-     - `.site-footer__settings` 语言 + 三态主题，全站唯一设置入口
+/* ── Footer 布局：分类导航在上，信息区在左、设置区在右 ────────────
+   `.site-footer__nav` 使用 Shiro 的「分类名 › 链接组」结构；
+   `.site-footer__inner` 仍是两个平级区域：信息 / 语言与主题。 */
 
-   桌面端 1fr + auto：信息区吃掉剩余宽度，设置区按内容收窄并贴右，
-   所以右侧不会出现「内容全挤在左半边」的失衡；
-   手机端退化成单列，信息在上、设置在下——两者都靠左，
-   避免窄屏里把 250px 宽的控件组硬推到右边。
+.site-footer__nav {
+  padding-block: var(--spacing-stack) calc(var(--spacing-stack) * 0.75);
+}
 
-   断点取 48rem：768px 时内容宽 704px，信息区约 320px、设置区约 254px
-   加上列间距仍然宽松；再窄（640px）就只剩 576px，必须上下排列。 */
+.site-footer__nav-list,
+.site-footer__nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer__nav-list {
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.site-footer__nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.site-footer__nav-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-heading);
+  font-size: var(--text-small);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.site-footer__nav-chevron {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.site-footer__nav-links {
+  gap: 0.1rem 0.85rem;
+}
+
+.site-footer__nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: 0.1rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.site-footer__nav-link:hover {
+  color: var(--text-heading);
+}
+
+.site-footer__nav-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.site-footer--has-nav .site-footer__inner {
+  padding-top: 0;
+}
 
 .site-footer__inner {
   display: grid;
@@ -1285,7 +1348,7 @@ details[open] > .toc-summary .toc-chevron {
 
 /*
  * 第二行是一条**可换行的流**，不是若干段落：
- * 「Powered by … Design.」「｜ 备案」「｜ footer.links」都是流里的
+ * 「Powered by … Design.」「｜ 备案」都是流里的
  * `.site-footer__meta-unit`——不可拆的整体。正常情况排在同一视觉行；
  * 宽度不足时整个单元换行，分隔符跟着后面的链接一起走，
  * 所以不会出现行尾悬着一个孤立「｜」的情况。
@@ -1319,6 +1382,19 @@ details[open] > .toc-summary .toc-chevron {
 }
 
 @media (min-width: 48rem) {
+  .site-footer__nav {
+    padding-bottom: var(--spacing-stack);
+  }
+
+  .site-footer__nav-list {
+    flex-direction: row;
+    gap: 1rem 2.25rem;
+  }
+
+  .site-footer__nav-group {
+    gap: 0.3rem 0.7rem;
+  }
+
   .site-footer__inner {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;

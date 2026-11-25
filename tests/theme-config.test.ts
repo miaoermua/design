@@ -55,25 +55,74 @@ describe('Theme：Footer', () => {
     })
   })
 
-  it('footer.links：追加的站内 / 外部链接都保留，非法地址丢弃', () => {
+  it('footer.linkSections：Shiro 分类导航完整保留，顺序与字段名不变', () => {
     const footer = parseFooter(
       {
-        links: [
-          { title: '关于', url: '/about' },
-          { title: '友链', url: 'https://example.com/friends' },
-          { title: '坏链接', url: 'javascript:alert(1)' },
-          { title: '协议相对', url: '//evil.example/x' },
-          { title: '', url: '/no-title' },
+        linkSections: [
+          {
+            name: '关于',
+            links: [
+              { name: '关于本站', href: '/about-site', external: false },
+              { name: '关于我', href: '/about' },
+              { name: '关于此项目', href: 'https://github.com/innei/Shiro', external: true },
+            ],
+          },
+          {
+            name: '联系',
+            links: [{ name: '发邮件', href: 'mailto:i@example.com', external: true }],
+          },
         ],
       },
       YEAR,
     )
-    // 站内根相对路径是页脚链接的主要形态：线上实例配的就是 /about 这类地址
-    expect(footer.links).toEqual([
-      { title: '关于', url: '/about' },
-      { title: '友链', url: 'https://example.com/friends' },
+    expect(footer.linkSections).toEqual([
+      {
+        name: '关于',
+        links: [
+          { name: '关于本站', href: '/about-site', external: false },
+          { name: '关于我', href: '/about', external: false },
+          { name: '关于此项目', href: 'https://github.com/innei/Shiro', external: true },
+        ],
+      },
+      {
+        name: '联系',
+        links: [{ name: '发邮件', href: 'mailto:i@example.com', external: true }],
+      },
     ])
     expect(footer.since).toBeNull()
+  })
+
+  it('旧 footer.links 不再兼容，也不会拼成隐式分组', () => {
+    const footer = parseFooter({ links: [{ title: '关于', url: '/about' }] }, YEAR)
+    expect(footer.linkSections).toEqual([])
+    expect('links' in footer).toBe(false)
+  })
+
+  it('分类内去重、非法地址与矛盾的 external 声明逐条丢弃', () => {
+    const footer = parseFooter(
+      {
+        linkSections: [
+          {
+            name: '关于',
+            links: [
+              { name: '关于', href: '/about', external: false },
+              { name: '重复', href: '/about', external: false },
+              { name: '伪协议', href: 'javascript:alert(1)', external: true },
+              { name: '协议相对', href: '//evil.example/x', external: true },
+              { name: '内链伪装外链', href: '/about', external: true },
+              { name: '外链伪装内链', href: 'https://example.com', external: false },
+              { name: '', href: '/no-name' },
+            ],
+          },
+          { name: '空组', links: [{ name: '坏', href: 'data:text/html,x' }] },
+          { name: '', links: [{ name: '无组名', href: '/about' }] },
+        ],
+      },
+      YEAR,
+    )
+    expect(footer.linkSections).toEqual([
+      { name: '关于', links: [{ name: '关于', href: '/about', external: false }] },
+    ])
   })
 
   it('since 超出合理区间时降级为 null', () => {
@@ -603,13 +652,16 @@ describe('Theme：整体解析', () => {
 
   it('单个字段非法不影响其它字段', () => {
     const config = parseThemeConfig({
-      footer: { since: 'bad', links: [{ title: '坏', url: 'javascript:x' }] },
+      footer: {
+        since: 'bad',
+        linkSections: [{ name: '坏组', links: [{ name: '坏', href: 'javascript:x' }] }],
+      },
       homepage: { articles: { enabled: false } },
       donate: { enabled: true, qrcode: [{ name: '好', url: 'https://ok.example/qr.webp' }] },
     })
     expect(config.footer.since).toBeNull()
     // 非法链接被丢弃，但不是整块失效
-    expect(config.footer.links).toEqual([])
+    expect(config.footer.linkSections).toEqual([])
     expect(config.homepage.articles.enabled).toBe(false)
     expect(config.donate.enabled).toBe(true)
     expect(config.donate.qrcode).toHaveLength(1)

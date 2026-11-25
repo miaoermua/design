@@ -25,19 +25,20 @@ export interface ThemeFooter {
   /** 起始年份，用于页脚 `Since 2021`；null 表示不配置，退回当前年 */
   since: number | null
   icp: ThemeIcp
-  /**
-   * 自定义链接列表，追加在页脚现有内容之后（不覆盖原有内容）。
-   *
-   * 典型用途：友情链接、关于页面、隐私政策等自定义 URL。
-   * 非法条目在解析阶段丢弃，顺序即展示顺序。
-   */
+  /** Shiro 式分类导航；分组与链接顺序即展示顺序 */
+  linkSections: ThemeFooterLinkSection[]
+}
+
+export interface ThemeFooterLinkSection {
+  name: string
   links: ThemeFooterLink[]
 }
 
-/** 页脚自定义链接：标题 + 安全 URL */
+/** Shiro 式页脚链接：站内路径或外部地址，external 必须与地址类型一致 */
 export interface ThemeFooterLink {
-  title: string
-  url: string
+  name: string
+  href: string
+  external: boolean
 }
 
 /**

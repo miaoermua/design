@@ -75,6 +75,9 @@ const zhCN = {
     '在 .env.local 中设置 MX_SERVER_URL，或设置 MX_MOCK=1 用内置数据离线预览。',
   'state.skipToContent': '跳到正文',
 
+  // ── 页脚 ───────────────────────────────────────────────────────
+  'footer.navigation': '页脚导航',
+
   // ── 分页与元信息 ───────────────────────────────────────────────
   'pagination.label': '分页',
   'pagination.previous': '上一页',
@@ -565,6 +568,8 @@ const en: Record<MessageKey, string> = {
   'state.backendMissingHint':
     'Set MX_SERVER_URL in .env.local, or MX_MOCK=1 to preview with built-in data.',
   'state.skipToContent': 'Skip to content',
+
+  'footer.navigation': 'Footer navigation',
 
   'pagination.label': 'Pagination',
   'pagination.previous': 'Previous',

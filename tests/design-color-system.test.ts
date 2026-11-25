@@ -418,6 +418,11 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
     },
     { file: 'src/app/globals.css', match: '.footer-sep', reason: '页脚分隔符，纯装饰' },
     {
+      file: 'src/app/globals.css',
+      match: '.site-footer__nav-chevron',
+      reason: '页脚分类导航右向箭头，SVG aria-hidden，纯装饰',
+    },
+    {
       file: 'src/app/about/page.tsx',
       match: 'group-hover:translate-x-0.5',
       reason: '链接尾部箭头图标',
