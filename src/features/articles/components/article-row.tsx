@@ -33,8 +33,13 @@ function collapse(value: string): string {
 }
 
 /**
- * 列表行：左侧日期、右侧标题、官方摘要；开启 withExcerpt 时多一行正文概览。
+ * 列表行：标题在上，摘要在下，日期与分类 / 标签 / 阅读数同处一条元信息行。
  * 只显示后端真实提供的计数；readCount 为 null 时整项不渲染。
+ *
+ * 桌面端**不再给日期留独立栏位**：日期文本实测只有 65px，却要占掉 152px 的
+ * 横向空间（`sm:grid-cols-[7.5rem_1fr]` 的 120px 栏 + `sm:gap-8` 的 32px），
+ * 标题与摘要因此被挤窄。日期并入元信息行后，文本直接用满整行宽度；
+ * 首页 `minimal` 索引行（日期贴右、与标题同基线）是另一套设计，不受影响。
  */
 export function ArticleRow({
   article,
@@ -72,18 +77,7 @@ export function ArticleRow({
   const showExcerpt = excerpt.length > 0 && collapse(excerpt) !== collapse(summary)
 
   return (
-    <article
-      className={cn(
-        'group grid gap-2',
-        compact ? 'py-5 first:pt-0 last:pb-0' : 'py-6 sm:grid-cols-[7.5rem_1fr] sm:gap-8',
-      )}
-    >
-      {compact ? null : (
-        <p className="meta pt-1 leading-[1.7] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--text-secondary)]">
-          <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
-        </p>
-      )}
-
+    <article className={cn('group', compact ? 'py-5 first:pt-0 last:pb-0' : 'py-6')}>
       <div className="min-w-0">
         <h3
           className={cn(
@@ -123,34 +117,39 @@ export function ArticleRow({
           </p>
         ) : null}
 
-        <div className="meta mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          {compact ? (
-            <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
-          ) : null}
+        {/* 元信息行：日期 → 分类 → 标签 → 阅读数。
+            桌面用 `·` 把四类信息分开（点打在分类、首个标签、阅读数上）；
+            窄屏由 `article-row.css` 撤掉点、改用更宽的栏距，避免换行后
+            `·` 落在行首像列表符号。 */}
+        <div className="meta article-row-meta mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 md:gap-x-2.5">
+          <time dateTime={article.createdAt}>{formatCompact(article.createdAt, timeZone)}</time>
           {article.category ? (
             <Link
               href={categoryPath(article.category.slug)}
-              className={cn(
-                'text-[var(--accent-strong)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]',
-                compact && 'meta-sep',
-              )}
+              className="meta-sep text-[var(--accent-strong)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]"
             >
               {article.category.name}
             </Link>
           ) : null}
           {!compact
-            ? article.tags.map((tag) => (
+            ? article.tags.map((tag, index) => (
+                /* 标签平铺成一个个独立的 flex 项，不套一层会内部换行的容器：
+                   窄屏时容器一旦自成一行，第二行会从容器左缘重新排，
+                   `#跨平台` 那种段落式断口就是这么来的。平铺后只在标签之间换行。 */
                 <Link
                   key={tag}
                   href={tagPath(tag)}
-                  className="text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]"
+                  className={cn(
+                    'text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--text-heading)]',
+                    index === 0 && 'meta-sep',
+                  )}
                 >
                   {`#${tag}`}
                 </Link>
               ))
             : null}
           {article.readCount !== null ? (
-            <span className="text-[var(--text-secondary)]">
+            <span className="meta-sep text-[var(--text-secondary)]">
               {tf(locale, 'meta.readCount', {
                 count: article.readCount.toLocaleString(locale),
               })}

@@ -70,7 +70,9 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const cover = readable ? pickCover(diary) : null
 
   return (
-    <article className="grid gap-2 sm:grid-cols-[3.75rem_1fr] sm:gap-5">
+    /* 时间栏只放 `HH:mm`（12px 下实测 32px 宽），3.25rem 已含 20px 余量；
+       原来是 3.75rem + 1.25rem 间距，比内容本身多占 28px 横向空间。 */
+    <article className="grid gap-2 sm:grid-cols-[3.25rem_1fr] sm:gap-4">
       <time className="meta leading-[1.9]" dateTime={diary.publishedAt}>
         {formatTime(diary.publishedAt, timeZone)}
       </time>
