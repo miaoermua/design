@@ -128,35 +128,34 @@
   /* display 只有首页身份名一个消费者（page.tsx 的 h1），而身份名是中文、
      可能折成两行。1.1 是给「永远单行的英文短标题」准备的，实测中文折两行时
      行间只剩 3.4px，字形几乎贴住；1.2 的间隙 6.8px 才是可读的。
-     这里采用 1.2 而不是把 1.1 硬套上去 —— 少一处任意值，不等于少一处设计判断。 */
-  --text-display: clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem);
+     这里采用 1.2 而不是把 1.1 硬套上去 —— 少一处任意值，不等于少一处设计判断。
+     调整后区间 34–40px（2.125rem–2.5rem），收紧大屏过大视觉重量。 */
+  --text-display: clamp(2.125rem, 1.9rem + 0.8vw, 2.5rem);
   --text-display--line-height: 1.2;
   --text-display--letter-spacing: -0.024em;
 
-  /* 内页页头标题。上限 2.99rem 来自原 `display × 0.92` 的桌面终值，
-     下限 1.625rem 与原 `--text-title` 起点一致；中段改成单一斜率，
-     消掉原实现在 640px 从 title(26.4px) 直接跳到 display×0.92(38.1px) 的 11.7px 台阶。 */
-  --text-pageheading: clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem);
+  /* 内页页头标题。调整后区间 26–36px（1.625rem–2.25rem），
+     消掉大屏下与 display 几乎等同的过大观感，拉开内页主标与文章标题的清晰层级。 */
+  --text-pageheading: clamp(1.625rem, 1.25rem + 1.4vw, 2.25rem);
   --text-pageheading--line-height: 1.26;
   --text-pageheading--letter-spacing: -0.02em;
 
-  /* 文章标题。上下限就是原 `display × 0.78`（移动）与 `display × 0.82`（桌面）
-     的实测终值 26.52 / 42.64px，因此首屏观感不变；行高统一到 1.22
-     —— 原来移动 1.25、桌面 1.2，是同一标题的两套数值，折行时两种密度。 */
-  --text-headline: clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem);
+  /* 文章标题。调整后区间 24–34px（1.5rem–2.125rem），
+     兼顾长句折行与阅读舒适度，行高统一到 1.22。 */
+  --text-headline: clamp(1.5rem, 1.125rem + 1.4vw, 2.125rem);
   --text-headline--line-height: 1.22;
   --text-headline--letter-spacing: -0.022em;
 
-  --text-title: clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem);
+  /* 卡片与日记标题。调整后区间 24–30px（1.5rem–1.875rem）。 */
+  --text-title: clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem);
   --text-title--line-height: 1.26;
   --text-title--letter-spacing: -0.014em;
 
   /* 列表行标题（文章列表每一条的 h3）。
-     它**不能**用 `--text-title`：那个是 clamp，桌面端会爬到 32–34px，而行标题
-     需要固定在 26px 才不把一屏行数压掉。区间恰好等于 title 的下限 1.625rem，
-     所以过去一直被写成 `text-[1.625rem]` 任意值——那不是"特殊排版"，是缺一档。
+     它**不能**用 `--text-title`：那个是 clamp，而行标题
+     需要固定在 22px（1.375rem）才不把一屏行数压掉。
      行高 1.3、字距 −0.01em 比 title 略紧：行标题常与摘要两行并置，需要更紧凑。 */
-  --text-rowtitle: 1.625rem;
+  --text-rowtitle: 1.375rem;
   --text-rowtitle--line-height: 1.3;
   --text-rowtitle--letter-spacing: -0.01em;
 
@@ -186,17 +185,17 @@
 
   /* ── 4a. 正文测量宽度（Measure）──────────────────────────────── */
   /* measure 只管文字行宽，与外部装饰轨道分离。                       */
-  --measure-post: 44rem;  /* 704px · 文章正文 · ≈41 汉字/行 @17px  */
-  --measure-note: 40rem;  /* 640px · 日记正文 · ≈37 汉字/行 @17px  */
-  --measure-page: 44rem;  /* 704px · 普通页面正文                  */
-  --measure-copy: 48rem;  /* 768px · 副标题/摘要/搜索/错误页文案    */
+  --measure-post: 44rem; /* 704px · 文章正文 · ≈41 汉字/行 @17px  */
+  --measure-note: 40rem; /* 640px · 日记正文 · ≈37 汉字/行 @17px  */
+  --measure-page: 44rem; /* 704px · 普通页面正文                  */
+  --measure-copy: 48rem; /* 768px · 副标题/摘要/搜索/错误页文案    */
 
   /* ── 4b. 装饰与辅助轨道 ──────────────────────────────────────── */
-  --rail-toc: 13rem;      /* 208px · 文章/日记右侧目录              */
-  --rail-side: 17rem;     /* 272px · 普通页左侧栏（身份卡）         */
-  --rail-home: 11rem;     /* 176px · 首页左轨（区块标题 / 头像）    */
-  --gap-rail: 2.25rem;    /* 36px  · 正文与目录之间                 */
-  --gap-side: 4rem;       /* 64px  · 侧栏与正文之间                 */
+  --rail-toc: 13rem; /* 208px · 文章/日记右侧目录              */
+  --rail-side: 17rem; /* 272px · 普通页左侧栏（身份卡）         */
+  --rail-home: 11rem; /* 176px · 首页左轨（区块标题 / 头像）    */
+  --gap-rail: 2.25rem; /* 36px  · 正文与目录之间                 */
+  --gap-side: 4rem; /* 64px  · 侧栏与正文之间                 */
 
   /* ── 4c. 纸张内边距（连续响应式）─────────────────────────────── */
   /* 640px 时从 ~0 起步，避免纸张出现瞬间大幅挤压正文              */
@@ -209,7 +208,10 @@
   /* 文章 shell = measure-post + gap-rail + rail-toc                 */
   --shell-post: calc(var(--measure-post) + var(--gap-rail) + var(--rail-toc));
   /* 日记 shell = measure-note + 2×pad-paper + 2×hairline + gap-rail + rail-toc */
-  --shell-note: calc(var(--measure-note) + var(--pad-paper-inline) + var(--pad-paper-inline) + var(--gap-rail) + var(--rail-toc));
+  --shell-note: calc(
+    var(--measure-note) + var(--pad-paper-inline) + var(--pad-paper-inline) + var(--gap-rail) +
+      var(--rail-toc)
+  );
   /* 普通页 shell = rail-side + gap-side + measure-page = 65rem = 1040px
      侧栏的显示阈值就是「这个宽度 + 双侧 gutter」= 1040 + 64 = 1104px（69rem）。
      换算写在 about/page.tsx 的注释里；改这三个值必须同时看那个断点。 */

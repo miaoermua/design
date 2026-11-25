@@ -281,21 +281,21 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 5. 排版
 
-| 角色        | Token                | 值                                                                         | 用途                                                                                           |
-| ----------- | -------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Display     | `--text-display`     | `clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem)`，lh **1.2**，ls **−0.024em**   | 首页身份名                                                                                     |
-| PageHeading | `--text-pageheading` | `clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem)`，lh 1.26，ls **−0.02em**   | `PageHeader` 内页页头                                                                          |
-| Headline    | `--text-headline`    | `clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem)`，lh 1.22，ls **−0.022em** | 文章详情 h1、Markdown 样张 h1                                                                  |
-| Title       | `--text-title`       | `clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem)`，lh 1.26，ls **−0.014em**    | 日记详情 h1、卡片标题、错误页                                                                  |
-| RowTitle    | `--text-rowtitle`    | 1.625rem（固定值，不随视口变化）/ lh 1.3 / ls **−0.01em**                  | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，桌面会爬到 32–34px，一屏行数会被压掉 |
-| H2          | `--text-h2`          | 1.375rem / lh 1.4（无字距覆盖）                                            | 正文二级标题、区块标题                                                                         |
-| H3          | `--text-h3`          | 1.125rem / lh 1.5（无字距覆盖）                                            | 卡片标题、正文三级标题                                                                         |
-| Body        | `--text-body`        | 1.0625rem（= 17px @16px 根字号）/ lh **1.82**                              | `.prose` 阅读正文                                                                              |
-| Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                          | 导语、摘要                                                                                     |
-| Small       | `--text-small`       | 0.9375rem / lh 1.7                                                         | 说明文                                                                                         |
-| Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                         | 图注、注释、表头                                                                               |
-| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                           | 日期、阅读数、kicker                                                                           |
-| Code        | `--text-code`        | 0.875rem / lh 1.7                                                          | 行内与代码块                                                                                   |
+| 角色        | Token                | 值                                                                     | 用途                                                                                             |
+| ----------- | -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Display     | `--text-display`     | `clamp(2.125rem, 1.9rem + 0.8vw, 2.5rem)`，lh **1.2**，ls **−0.024em** | 首页身份名（34–40px）                                                                            |
+| PageHeading | `--text-pageheading` | `clamp(1.625rem, 1.25rem + 1.4vw, 2.25rem)`，lh 1.26，ls **−0.02em**   | `PageHeader` 内页页头（26–36px）                                                                 |
+| Headline    | `--text-headline`    | `clamp(1.5rem, 1.125rem + 1.4vw, 2.125rem)`，lh 1.22，ls **−0.022em**  | 文章详情 h1、Markdown 样张 h1（24–34px）                                                         |
+| Title       | `--text-title`       | `clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem)`，lh 1.26，ls **−0.014em**   | 日记详情 h1、卡片标题、错误页（24–30px）                                                         |
+| RowTitle    | `--text-rowtitle`    | 1.375rem（固定值 22px，不随视口变化）/ lh 1.3 / ls **−0.01em**         | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，行标题需固定在 22px 才不把一屏行数压掉 |
+| H2          | `--text-h2`          | 1.375rem / lh 1.4（无字距覆盖）                                        | 正文二级标题、区块标题                                                                           |
+| H3          | `--text-h3`          | 1.125rem / lh 1.5（无字距覆盖）                                        | 卡片标题、正文三级标题                                                                           |
+| Body        | `--text-body`        | 1.0625rem（= 17px @16px 根字号）/ lh **1.82**                          | `.prose` 阅读正文                                                                                |
+| Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                      | 导语、摘要                                                                                       |
+| Small       | `--text-small`       | 0.9375rem / lh 1.7                                                     | 说明文                                                                                           |
+| Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                     | 图注、注释、表头                                                                                 |
+| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                       | 日期、阅读数、kicker                                                                             |
+| Code        | `--text-code`        | 0.875rem / lh 1.7                                                      | 行内与代码块                                                                                     |
 
 `lh` = 同族 `--text-*--line-height`；`ls` = `--text-*--letter-spacing`。display / pageheading / headline / title 四个标题档位都定义了字距，h2/h3 及更小层级没有字距变量 —— 组件若自行写 `tracking-*` 属于局部调整，不是 Token 缺失。
 
@@ -535,7 +535,7 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 | `SiteFooter`                                 | `layout/site-footer.tsx`                    | 左右两区（`.site-footer__info` / `.site-footer__settings`）：左侧两行——年份 + 衬线名字 + 签名 / Powered by + ICP + `footer.links`（可换行的流）；右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                                  |
 | `Container`                                  | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                                                                                                                                                                                                |
 | `PageHeader`                                 | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                                                                                                                                                                                         |
-| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（26px 固定档），hover 变 `--accent-strong`；完整变体日期左轨 + 分类/标签/阅读数，标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                                                            |
+| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（22px 固定档），hover 变 `--accent-strong`；完整变体日期左轨 + 分类/标签/阅读数，标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                                                            |
 | `ReadingProgressRing` / `ReadingProgressBar` | `ui/reading-progress.tsx`                   | 环形（26px，移动端折叠目录行右侧）与竖向线性（2rem×1px，桌面端侧栏）两种阅读进度指示，共用 scroll 监听。环形百分比在环外右侧，竖向条百分比在条右侧。填充色 `--accent`，底色 `--edge`                                                                                                        |
 | `AISummaryCard`                              | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性                                                                                                                                                                         |
 | `Dialog` / `InsightsDialog`                  | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                                                                                                                                                                                             |
