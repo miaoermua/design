@@ -1,3 +1,19 @@
+/* 标题链接铺满整条文章行，提供卡片式命中区域；元信息里的分类 / 标签锚点单独置顶 */
+.article-row {
+  position: relative;
+}
+
+.article-row__title-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.article-row-meta a {
+  position: relative;
+  z-index: 1;
+}
+
 /*
  * 文章列表行：窄屏把元信息行的间隔点关掉
  *

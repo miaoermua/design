@@ -87,7 +87,7 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
   const coverHasSize = Boolean(cover?.width && cover?.height)
 
   return (
-    <article>
+    <article className="diary-entry">
       {/*
         元信息行：日期 → 星期 → 时刻 → 心情/天气/地点/专栏 → 书签。
         日期在行首并用标题色 + 600 字重，是参考稿里「June 11, 2026  Strategy」
@@ -107,7 +107,7 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
       {/* 标题与摘要同吃一个 measure：宽栏下长标题不会拉成一整行，
           标题 / 摘要 / 图共用同一条左基线 */}
       <h3 className="text-rowtitle mt-2 max-w-[var(--measure-note)] font-serif text-[var(--text-heading)]">
-        <Link href={notePath(diary.nid)} className="link-quiet">
+        <Link href={notePath(diary.nid)} className="diary-entry__title-link link-quiet">
           {diary.title}
         </Link>
       </h3>
@@ -156,18 +156,14 @@ export async function DiaryEntry({ diary, timeZone }: DiaryEntryProps) {
         </figure>
       ) : null}
 
-      {/* 元信息行只放「继续阅读 + 阅读次数」。赞赏属于详情页 ActionRail：
-          列表摘要时节点还没读内容，重复出现会让每条日记都变成一次募捐入口。 */}
-      <div className="meta mt-3 flex flex-wrap items-center gap-x-1">
-        <Link href={notePath(diary.nid)} className="link-quiet">
-          {t(locale, 'diary.continueReading')}
-        </Link>
-        {diary.readCount !== null ? (
-          <span className="meta-sep">
+      {/* 阅读次数保留为信息；整条日记条目已由标题链接扩展为详情入口。 */}
+      {diary.readCount !== null ? (
+        <div className="meta mt-3">
+          <span>
             {tf(locale, 'meta.readCount', { count: diary.readCount.toLocaleString(locale) })}
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   )
 }

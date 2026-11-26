@@ -54,10 +54,10 @@ export function ArticleRow({
   /* ── minimal 模式：首页单列索引行，只有标题 + 日期 ────────────── */
   if (minimal) {
     return (
-      <article className="group flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+      <article className="article-row group flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
         <h3 className="text-rowtitle min-w-0 font-serif text-[var(--text-heading)]">
           {href ? (
-            <Link href={href} className="link-quiet">
+            <Link href={href} className="article-row__title-link link-quiet">
               {article.title}
             </Link>
           ) : (
@@ -77,7 +77,7 @@ export function ArticleRow({
   const showExcerpt = excerpt.length > 0 && collapse(excerpt) !== collapse(summary)
 
   return (
-    <article className={cn('group', compact ? 'py-5 first:pt-0 last:pb-0' : 'py-6')}>
+    <article className={cn('article-row group', compact ? 'py-5 first:pt-0 last:pb-0' : 'py-6')}>
       <div className="min-w-0">
         <h3
           className={cn(
@@ -86,7 +86,7 @@ export function ArticleRow({
           )}
         >
           {href ? (
-            <Link href={href} className="link-quiet">
+            <Link href={href} className="article-row__title-link link-quiet">
               {article.title}
             </Link>
           ) : (

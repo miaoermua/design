@@ -157,6 +157,8 @@
 | 日记   | 评论 / AI 摘要 / AI 精读  | 已实现   | 同文章（复用同一套 repository 与组件）             | `src/app/diaries/[id]/page.tsx`、`src/features/{comments,ai-summary,ai-insights}`       | 协议        | `tests/content-integration.test.ts`（接入契约）、`tests/comments-ui.test.tsx`        | 与文章完全同构：三块能力都用 `diary.id` 作 refId / 文章 id。差别只有一处——日记的非 Markdown 内容不渲染正文，因此 `rendered` 为空时**不请求**摘要与精读（避免为一个看不到正文的页面白跑两次接口）                         |
 | 日记   | 文章信息 / AI 参与声明    | 已实现   | `title`、`publishedAt`、`modifiedAt`、`meta.aiGen` | 同上（与文章共用 `article-info.tsx` / `ai-disclosure.tsx`）                             | 协议        | `tests/ai-disclosure.test.ts`                                                        | 与文章同一套组件，差别是**不传 `showLicense`**（日记没有 `copyright` 字段，硬塞许可声明等于替作者表态）；位置在正文（含图片组）之后、阅读量与点赞行之前                                                                  |
 
+文章与日记列表条目都以标题链接扩展为整条触摸/点击区域；分类、标签和密码解锁等独立链接保留自己的点击目标。日记列表移除重复的「继续阅读」入口，阅读数仍作为信息展示。
+
 ### 4.3 独立页面与关于
 
 | 功能区 | 功能项            | 实现状态 | 配置/API                                        | 核心代码                                                   | 技术来源    | 验证情况                                                                                                               | 备注                                                                                                                                                                                       |

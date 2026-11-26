@@ -187,8 +187,12 @@ describe('列表组件契约：不渲染正文', () => {
     expect(source).toMatch(/readable = !diary\.hasPassword/)
   })
 
-  it('详情入口存在（标题 + 继续阅读）', () => {
-    expect(source).toContain("t(locale, 'diary.continueReading')")
+  it('标题链接扩展为整条日记入口，不再重复显示继续阅读', () => {
+    expect(source).toContain('className="diary-entry"')
+    expect(source).toContain('diary-entry__title-link')
+    expect(source).not.toContain("t(locale, 'diary.continueReading')")
     expect(source).toContain('notePath(diary.nid)')
+    expect(source).toContain('diary.readCount')
+    expect(source).toContain("t(locale, 'diary.unlock')")
   })
 })

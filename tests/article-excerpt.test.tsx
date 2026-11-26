@@ -273,6 +273,18 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
     expect(kids[4]?.className).toContain('meta-sep') // 阅读数
   })
 
+  it('标题链接扩展为整条文章行，分类与标签链接仍是独立入口', () => {
+    const { container } = renderRow(makeArticle({ tags: ['纸张', '排版'] }))
+    const row = container.querySelector('article.article-row')
+    const titleLink = row?.querySelector('.article-row__title-link')
+    const metadataLinks = [...(row?.querySelectorAll('.article-row-meta a') ?? [])]
+
+    expect(titleLink?.textContent).toBe('纸张、留白与呼吸')
+    expect(metadataLinks).toHaveLength(3)
+    expect(metadataLinks.every((link) => !titleLink?.contains(link))).toBe(true)
+    expect(metadataLinks.map((link) => link.textContent)).toEqual(['随笔', '#纸张', '#排版'])
+  })
+
   it('未开启 withExcerpt（首页等调用点）→ 不渲染正文概览，标题与日期栏仍在', () => {
     const { container } = renderRow(
       makeArticle({ summary: null, text: '这是列表返回的正文内容。' }),

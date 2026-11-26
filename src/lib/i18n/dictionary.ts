@@ -255,7 +255,6 @@ const zhCN = {
   'diary.backAll': '← 全部日记',
   'diary.bookmark': '收藏',
   'diary.permalink': '永久链接',
-  'diary.continueReading': '继续阅读',
   'diary.unsupportedFormat': '这篇日记的正文格式是「{format}」。',
   'diary.unsupportedFormatHint': 'Folio 目前只渲染 Markdown，因此不展示结构化 JSON 原文。',
   'diary.coverAlt': '{title} 配图',
@@ -748,7 +747,6 @@ const en: Record<MessageKey, string> = {
   'diary.backAll': '← All notes',
   'diary.bookmark': 'Bookmarked',
   'diary.permalink': 'Permalink',
-  'diary.continueReading': 'Continue reading',
   'diary.unsupportedFormat': 'This note uses contentFormat “{format}”.',
   'diary.unsupportedFormatHint':
     'Folio currently renders Markdown only, so the structured JSON source is not shown.',
