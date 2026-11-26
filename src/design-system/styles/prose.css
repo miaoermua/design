@@ -37,7 +37,7 @@
 
 .prose h2 {
   font-size: var(--text-h2);
-  margin-top: 2.4em;
+  margin-top: 1.82em;
 }
 
 /* h2 上方用一道极细虚线分隔，形成编辑式分节 */
@@ -46,12 +46,17 @@
   display: block;
   width: 3.5rem;
   border-top: 1px dashed var(--edge-strong);
-  margin-bottom: 1.1em;
+  margin-bottom: 0.73em;
+}
+
+/* 标题后的首个内容块收紧至约 19px；后续块仍按通用节奏留白 */
+.prose > h2 + :not(h1, h2, h3, h4) {
+  margin-top: 1.12em;
 }
 
 .prose h3 {
   font-size: var(--text-h3);
-  margin-top: 2em;
+  margin-top: 1.78em;
 }
 
 .prose h4 {
@@ -62,6 +67,11 @@
 /* ── 段落与行内元素 ─────────────────────────────────────────── */
 .prose p {
   margin-block: 0;
+}
+
+/* 段落显式重建通用块间距；上面的 margin-block: 0 会覆盖低特异性的兄弟规则 */
+.prose > * + p {
+  margin-top: 1.35em;
 }
 
 .prose strong {
@@ -354,7 +364,7 @@
    窄屏真正需要收紧的只是标题上方的留白。 */
 @media (max-width: 640px) {
   .prose h2 {
-    margin-top: 2em;
+    margin-top: 1.45em;
   }
 }
 

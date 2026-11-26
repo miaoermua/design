@@ -6,6 +6,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { LIST_PAGE_SIZE } from '@/core/config/site'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { getSiteTimezone, listArticles } from '@/lib/api'
@@ -36,14 +37,14 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
     size: LIST_PAGE_SIZE,
     sortBy: 'createdAt',
     sortOrder: -1,
+    // 列表里的标题与摘要同样是后端内容，跟随界面语言
+    lang: toContentLang(locale),
   })
 
   return (
     <Container>
       <PageHeader
-        kicker={t(locale, 'articles.kicker')}
-        title={t(locale, 'articles.heading')}
-        description={t(locale, 'articles.description')}
+        title={t(locale, 'articles.title')}
         meta={
           <p className="meta">
             {tf(locale, 'meta.listSummary', {

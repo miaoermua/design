@@ -44,6 +44,15 @@ export interface FriendLink {
   hidden: boolean
 }
 
+export interface FriendLinkApplicationInput {
+  author: string
+  name: string
+  url: string
+  avatar: string
+  description: string
+  email: string
+}
+
 export interface SearchHit {
   id: string
   /** 搜索结果混排文章与日记，用类型决定跳转目标 */

@@ -1,0 +1,36 @@
+/* 标题链接铺满整条文章行，提供卡片式命中区域；元信息里的分类 / 标签锚点单独置顶 */
+.article-row {
+  position: relative;
+}
+
+.article-row__title-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.article-row-meta a {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * 文章列表行：窄屏把元信息行的间隔点关掉
+ *
+ * 桌面端这一行是不换行的「账目行」（日期 · 分类 · 标签 · 阅读数），`·` 负责
+ * 把四类信息分开。窄屏放不下，标签会把阅读数挤到下一行，`·` 落在行首时看起来
+ * 像列表符号而不是分隔符；标签多的时候尤其明显。
+ *
+ * 所以只在**这个列表行**里按断点撤掉点，改由 12px 栏距（组件层
+ * `gap-x-3 md:gap-x-2.5`）把每一项隔开。`.meta-sep` 本身的行为不变：
+ * 详情页那几行短元信息（日期 · 时长 · 阅读数）仍是同一套写法。
+ *
+ * 断点取 48rem 而不是 40rem：640–767px 这一档，日期 + 分类 + 一组标签仍会
+ * 把阅读数挤到第二行（实测 640px 下正好在阅读数前断行），点照样会落到行首。
+ * 768px 起这一行才稳定容纳。
+ */
+@media (max-width: 47.99rem) {
+  .article-row-meta .meta-sep::before {
+    content: none;
+  }
+}

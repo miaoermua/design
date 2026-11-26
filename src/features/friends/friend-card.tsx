@@ -96,3 +96,20 @@ export function FriendCard({ link }: { link: FriendLink }) {
     <div className={className}>{body}</div>
   )
 }
+
+/**
+ * 已过期友链条目（`<li>` 的内容）
+ *
+ * 不做明信片：`/friends` 把已过期的友链当作信封之外的单开一类，每条只有
+ * 「站名 + 描述」两行文字。站名**不可点击**（不渲染 `<a>`、不带 href），但保留
+ * 正文超链接式的下划线并整体转灰，读成「一条已经失效的链接」而不是普通链接；
+ * 样式见 `friend-postcard.css` 的 `.friend-expired__name` / `__desc`。
+ */
+export function ExpiredFriendItem({ link }: { link: FriendLink }) {
+  return (
+    <>
+      <span className="friend-expired__name">{link.name}</span>
+      {link.description ? <p className="friend-expired__desc">{link.description}</p> : null}
+    </>
+  )
+}

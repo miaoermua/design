@@ -113,3 +113,18 @@ export interface V2LinkRow {
   hide?: boolean
   created_at?: IsoDateString
 }
+
+/** GET /links/audit */
+export interface V2LinkAuditCapability {
+  can: boolean
+}
+
+/** POST /links/audit — guest friend-link submission */
+export interface V2LinkApplicationInput {
+  author: string
+  name: string
+  url: string
+  avatar?: string | null
+  description?: string | null
+  email?: string | null
+}

@@ -47,7 +47,7 @@ export interface LatestDiaryResult {
  *
  * 分页而不是依赖数组顺序：`hasNext` 说还有就继续，直到扫完或用尽上限。
  */
-export async function getLatestDiary(): Promise<LatestDiaryResult> {
+export async function getLatestDiary(options: { lang?: string } = {}): Promise<LatestDiaryResult> {
   const collected: Diary[] = []
   let page = 1
   let truncated = false
@@ -58,6 +58,12 @@ export async function getLatestDiary(): Promise<LatestDiaryResult> {
       size: NOTE_LATEST_SCAN_PAGE_SIZE,
       sortBy: 'createdAt',
       sortOrder: -1,
+      /*
+       * 语言要跟着每一页走，不能只在选中之后补一次：扫描是多页请求，
+       * 只有每页都带 `?lang=` 才能保证挑出来的那条标题与列表其余条目同语。
+       * 它不参与「谁更新」的比较（比较只看时间与 nid），所以不影响结果。
+       */
+      lang: options.lang,
     })
     collected.push(...result.items)
 
@@ -126,10 +132,17 @@ export async function getDiary(
  * 保护的日记，因此这条路径**未经真实样本验证**；若上游 `/notes/nid/:nid`
  * 忽略该参数，解锁会一直失败（表现为「密码错误」），届时需要退回到
  * 「先按 nid 查 id，再走 /notes/:id」的两步路径。
+ *
+ * `lang` 与 `getDiary` 同义：core 的 NoteQueryDto 带 `lang`，命中译文时返回
+ * 已翻译的标题与正文。它与 `password` 是两个正交参数，互不覆盖。
  */
-export async function getDiaryByNid(nid: number, password?: string): Promise<Diary> {
+export async function getDiaryByNid(
+  nid: number,
+  password?: string,
+  options: { lang?: string } = {},
+): Promise<Diary> {
   const body = await requestV2<unknown>(`/notes/nid/${nid}`, {
-    query: { password },
+    query: { password, lang: options.lang },
     revalidate: password ? 0 : 120,
     tags: TAG,
   })
@@ -145,9 +158,7 @@ export async function getDiaryByNid(nid: number, password?: string): Promise<Dia
    * 完成渲染」）。所以这里必须显式取 `.data`，并兼容未来某版改回裸对象的情形。
    */
   const row =
-    body && typeof body === 'object' && 'data' in body
-      ? (body as { data: unknown }).data
-      : body
+    body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body
 
   return toDiary(expectObject<V2NoteDetail>(row, `/notes/nid/${nid}`))
 }

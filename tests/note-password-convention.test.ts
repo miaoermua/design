@@ -65,9 +65,11 @@ describe('密码参数与上游同形', () => {
 
   it('密码透传到上游，由 repository 组进查询参数', () => {
     const repo = read('src/lib/api/repositories/notes.ts')
-    // 两个入口都支持 password，且都走 query
+    // 两个入口都支持 password，且都走 query。语言参数是后来加的，
+    // 只能追加在密码之后，不能把 `password` 从查询串里挤掉。
     expect(repo).toMatch(/getDiary\([\s\S]*?password\?: string/)
-    expect(repo).toMatch(/getDiaryByNid\(nid: number, password\?: string\)/)
+    expect(repo).toMatch(/getDiaryByNid\(\s*nid: number,\s*password\?: string/)
+    expect(repo.match(/query: \{ password, lang: options\.lang \}/g)).toHaveLength(2)
     expect(repo).toContain('query: { password')
   })
 

@@ -56,11 +56,6 @@ function cssRules(text: string): CssRule[] {
  */
 const ALLOWED_LITERAL_SIZES: Array<{ file: string; value: string; reason: string }> = [
   {
-    file: 'src/features/diaries/components/diary-day-group.tsx',
-    value: 'text-[2.5rem]',
-    reason: '日记日号（40px）：与 --text-display 的 clamp 上限无关，是时间流里的独立数字档位',
-  },
-  {
     file: 'src/features/explore/components/archive-section.tsx',
     value: 'text-[1.75rem]',
     reason:

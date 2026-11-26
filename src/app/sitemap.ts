@@ -41,6 +41,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   try {
+    /*
+     * sitemap 只产出 URL 与修改时间，与界面语言无关；这里不传 `lang`，
+     * 固定按站点原文语言取数。标题不进入 sitemap，翻译与否不影响结果。
+     */
     const [articles, diaries, categories, tags] = await Promise.all([
       featureFlags.articles
         ? listArticles({ page: 1, size: 50, sortBy: 'createdAt', sortOrder: -1 })

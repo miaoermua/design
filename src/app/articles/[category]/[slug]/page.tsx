@@ -35,9 +35,16 @@ interface ArticlePageProps {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { category, slug } = await params
+  /*
+   * 标题与摘要来自正文实体，必须和页面同一个语言取：
+   * metadata 与页面各自发一次 `getArticle`，同 URL 同参数才会命中同一份缓存，
+   * 否则英文页面的 `<title>` 会是中文，而正文是英文。
+   */
+  const locale = await getLocale()
+  const contentLang = toContentLang(locale)
 
   try {
-    const article = await getArticle(category, slug)
+    const article = await getArticle(category, slug, { lang: contentLang })
     const { identity } = await loadSiteContext()
     const canonical = absoluteUrl(
       identity,
@@ -62,7 +69,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // 在 metadata 阶段就抛 404：根布局是流式的（app/loading.tsx），
     // 等页面正文再 notFound() 时状态码已经以 200 发出去了（软 404）。
     if (isNotFound(error)) notFound()
-    const locale = await getLocale()
     return { title: t(locale, 'article.breadcrumb') }
   }
 }
@@ -71,10 +77,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   requireFeature('articles')
 
   const { category, slug } = await params
+  const locale = await getLocale()
+  // 详情标题、正文、分类名与相邻文章的标题都由后端按 `?lang=` 返回
+  const contentLang = toContentLang(locale)
 
   let article: ArticleDetail
   try {
-    article = await getArticle(category, slug)
+    article = await getArticle(category, slug, { lang: contentLang })
   } catch (error) {
     if (isNotFound(error)) notFound()
     throw error
@@ -91,7 +100,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     ? { label: donateConfig.label, qrcodes: donateConfig.qrcodes }
     : null
 
-  const locale = await getLocale()
   const isMarkdown = article.contentFormat === 'markdown'
   // 正文图尺寸来自 core 的附件元数据；命中才写 width/height，拿不到就不猜
   const rendered =
@@ -103,7 +111,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const estimate = isMarkdown && article.content.trim() ? readingMinutes(article.content) : null
 
   // AI 资源是附加信息：并行取，任一失败都只影响自己那一块
-  const contentLang = toContentLang(locale)
   const [summary, insights] = await Promise.all([
     readArticleSummary(article.id, contentLang),
     rendered
@@ -284,8 +291,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
             {article.related.length > 0 ? (
               <aside data-hide-print className="mt-10 sm:mt-12">
-                <h3 className="text-small font-medium text-[var(--text-heading)] flex items-center gap-2">
-                  <span aria-hidden="true" className="inline-block h-px w-5 bg-[var(--accent-line)]" />
+                <h3 className="text-small flex items-center gap-2 font-medium text-[var(--text-heading)]">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-px w-5 bg-[var(--accent-line)]"
+                  />
                   <span>{t(locale, 'article.related')}</span>
                 </h3>
                 <ul className="mt-3 list-none space-y-2 pl-0">
@@ -294,7 +304,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     return (
                       <li key={item.id} className="text-body leading-relaxed">
                         {href ? (
-                          <Link href={href} className="link-quiet text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]">
+                          <Link
+                            href={href}
+                            className="link-quiet text-[var(--text-secondary)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--accent-strong)]"
+                          >
                             {item.title}
                           </Link>
                         ) : (
@@ -366,7 +379,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <CommentsSection refId={article.id} timeZone={timeZone} />
         </div>
       </div>
-
     </Container>
   )
 }

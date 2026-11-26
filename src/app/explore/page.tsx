@@ -7,6 +7,7 @@ import { ArchiveSection, ExploreTabs, buildYears, type ExploreTab } from '@/feat
 import { ArchiveFilter, type ArchiveFilterType } from '@/features/explore/components/archive-filter'
 import { TagNoteList } from '@/features/taxonomy'
 import { getSiteTimezone, getTimeline, listCategories, listTags } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { categoryPath } from '@/lib/routes'
@@ -47,8 +48,9 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const timeZone = getSiteTimezone()
 
   // 两个分区的数据都在服务端取：切换 Tab 不再是「再请求一次」
+  // 时间线只回标题，但标题也是内容，`?lang=` 必须跟着走
   const [timeline, tags, categories] = await Promise.all([
-    getTimeline(),
+    getTimeline({ lang: toContentLang(locale) }),
     listTags(),
     listCategories(),
   ])
@@ -70,11 +72,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
 
   return (
     <Container>
-      <PageHeader
-        kicker={t(locale, 'explore.kicker')}
-        title={t(locale, 'explore.heading')}
-        description={t(locale, 'explore.description')}
-      />
+      <PageHeader title={t(locale, 'explore.heading')} />
 
       <ExploreTabs
         active={active}

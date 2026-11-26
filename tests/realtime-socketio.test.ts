@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { ioMock, socketMock, managerMock } = vi.hoisted(() => {
@@ -53,8 +54,11 @@ describe('默认 Socket.IO transport', () => {
       autoConnect: false,
       reconnection: true,
       forceNew: true,
-      query: { lang: 'en' },
     })
+    // 握手 query：语言 + 稳定的会话 id（core 用后者给多标签页去重）
+    const query = options.query as Record<string, unknown>
+    expect(query.lang).toBe('en')
+    expect(typeof query.socket_session_id).toBe('string')
     expect(options.transports).not.toContain('polling')
   })
 
@@ -108,10 +112,11 @@ describe('默认 Socket.IO transport', () => {
   it('改语言更新握手 query，不新建 Socket 实例', () => {
     const client = create()
     client.start()
-    // 模拟客户端写入初始 query
-    managerMock.opts.query = { lang: 'en' }
+    // 模拟客户端写入初始 query（会话 id 与语言是两个正交参数）
+    managerMock.opts.query = { lang: 'en', socket_session_id: 'session-1' }
     client.setLang('zh-CN')
-    expect(managerMock.opts.query).toEqual({ lang: 'zh-CN' })
+    // 只换 lang，会话 id 必须原样保留，否则重连时会被 core 当成另一个访客
+    expect(managerMock.opts.query).toEqual({ lang: 'zh-CN', socket_session_id: 'session-1' })
     expect(ioMock).toHaveBeenCalledTimes(1)
     expect(socketMock.disconnect).toHaveBeenCalled()
     expect(socketMock.connect).toHaveBeenCalledTimes(2)

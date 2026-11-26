@@ -139,10 +139,8 @@ describe('Feature Manifest：endpoints 必须对应真实请求', () => {
    * 这条守的是 `search` 那种错：manifest 写 `GET /search/post`，实际
    * `requestV2('/search')`。页面照常工作，清单却一直在骗人。
    *
-   * 判据：把 `GET /xxx/:id` 归一成 `/xxx`，然后在 `src/lib/api` 里找
-   * `requestV2('/xxx'` 或 `requestV2<...>('/xxx'` 的字面量。查不到就报。
-   * 这不是完整解析 —— 但只要 endpoint 是硬编码字符串（本项目都是），
-   * 就能抓住"写错路径"这一整类问题。
+   * 判据：把 `GET /xxx/:id` 归一成 `/xxx`，再分别检查 requestV2 / postV2
+   * 中对应的 GET / POST 路径。只查路径会让 GET 冒充 POST，因此同时锁住方法。
    */
   const apiSource = walk(join(SRC, 'lib/api'))
     .filter((file) => /\.ts$/.test(file))
@@ -162,13 +160,14 @@ describe('Feature Manifest：endpoints 必须对应真实请求', () => {
       .join('/')
   }
 
-  /** API 层所有 `requestV2(...)` 里的路径字面量（去掉 query 与模板变量） */
+  /** API 层所有 GET / POST 请求里的路径字面量（去掉 query 与模板变量） */
   function requestedPaths(): Set<string> {
     const set = new Set<string>()
     // 单引号或反引号开头的路径；模板串里的 ${x} 会被后续归一掉
-    for (const m of apiSource.matchAll(/requestV2(?:<[^>]*>)?\(\s*[`'"](\/[^`'"]*)/g)) {
-      const path = m[1].replace(/\$\{[^}]*\}/g, ':param').split('?')[0]
-      set.add(path)
+    for (const m of apiSource.matchAll(/\b(requestV2|postV2)(?:<[^>]*>)?\(\s*[`'"](\/[^`'"]*)/g)) {
+      const method = m[1] === 'requestV2' ? 'GET' : 'POST'
+      const path = m[2].replace(/\$\{[^}]*\}/g, ':param').split('?')[0]
+      set.add(`${method} ${path}`)
     }
     return set
   }
@@ -181,10 +180,16 @@ describe('Feature Manifest：endpoints 必须对应真实请求', () => {
    * 前缀匹配会让"写错路径"这种错静默通过 —— 我第一版就是这么写的，
    * 注入 `/search/post` 后测试照样绿。教训：守护测试的注入验证不能省。
    */
-  function isRequested(base: string): boolean {
-    if (requested.has(base)) return true
+  function isRequested(endpoint: string): boolean {
+    const method = endpoint.slice(0, endpoint.indexOf(' '))
+    const base = basePath(endpoint)
     // 逐段比较：`/pages/slug/:param` 应对上 API 层的 `` `/pages/slug/${x}` ``（同样归一为 :param）
-    for (const path of requested) if (path === base) return true
+    for (const request of requested) {
+      const separator = request.indexOf(' ')
+      if (request.slice(0, separator) === method && request.slice(separator + 1) === base) {
+        return true
+      }
+    }
     return false
   }
 
@@ -193,7 +198,7 @@ describe('Feature Manifest：endpoints 必须对应真实请求', () => {
     for (const manifest of featureManifests) {
       for (const endpoint of manifest.endpoints) {
         const base = basePath(endpoint)
-        if (!isRequested(base)) missing.push(`${manifest.key} → ${endpoint}（归一为 ${base}）`)
+        if (!isRequested(endpoint)) missing.push(`${manifest.key} → ${endpoint}（归一为 ${base}）`)
       }
     }
     expect(missing, `以下 endpoint 在 API 层找不到对应请求:\n${missing.join('\n')}`).toEqual([])

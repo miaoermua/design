@@ -18,13 +18,13 @@ export async function DiaryCard({ diary, timeZone }: DiaryCardProps) {
   const chips = [diary.mood, diary.weather].filter((chip): chip is string => Boolean(chip))
 
   return (
-    <article className="flex h-full flex-col">
+    <article className="diary-card flex h-full flex-col">
       <p className="meta">
         <time dateTime={diary.publishedAt}>{formatCompact(diary.publishedAt, timeZone)}</time>
         {chips.length > 0 ? <span className="meta-sep">{chips.join(' · ')}</span> : null}
       </p>
       <h3 className="mt-2 font-serif text-h3 leading-[1.4] text-[var(--text-heading)]">
-        <Link href={notePath(diary.nid)} className="link-quiet">
+        <Link href={notePath(diary.nid)} className="diary-card__title-link link-quiet">
           {diary.title}
         </Link>
       </h3>

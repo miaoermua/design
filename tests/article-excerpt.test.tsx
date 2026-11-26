@@ -239,17 +239,50 @@ describe('ArticleRow：正文概览与 summary 的关系', () => {
     expect(container.querySelector('article')?.className).toContain('py-5')
   })
 
-  it('原有标题、日期栏、间距与次级色保持不变', () => {
+  it('桌面不再有独立日期栏：日期并入元信息行，标题与摘要用整行宽度', () => {
     const { container } = renderRow(makeArticle({ text: '正文概览一行' }))
-    expect(container.querySelector('article')?.className).toContain('sm:grid-cols-[7.5rem_1fr]')
+    const article = container.querySelector('article') as HTMLElement
+    // 列表行不再分栏：没有日期列，也没有两列 grid
+    expect(article.className).not.toContain('sm:grid-cols')
     // 列表行间距是 py-6（compact 变体是 py-5，见上一条断言）；断言写成 py-8 是
     // 测试诞生时就写错的值——引入该测试的提交里源码已经是 py-6
-    expect(container.querySelector('article')?.className).toContain('py-6')
-    expect(container.querySelector('.meta')?.className).toContain('pt-1')
-    expect(container.querySelector('[data-excerpt="text"]')?.className).toContain('mt-2.5')
-    expect(container.querySelector('[data-excerpt="text"]')?.className).toContain(
+    expect(article.className).toContain('py-6')
+    // 日期只在元信息行里出现一次，不再有第二个日期节点
+    expect(container.querySelectorAll('time')).toHaveLength(1)
+    expect(article.querySelector('[data-excerpt="text"]')?.className).toContain('mt-2.5')
+    expect(article.querySelector('[data-excerpt="text"]')?.className).toContain(
       'text-[var(--text-secondary)]',
     )
+  })
+
+  it('元信息行按「日期 · 分类 · 标签 · 阅读数」排列，间隔点只打在三处', () => {
+    const { container } = renderRow(
+      makeArticle({ text: '正文概览一行', tags: ['纸张', '排版'], readCount: 1280 }),
+    )
+    const meta = container.querySelector('.article-row-meta') as HTMLElement
+    expect(meta).not.toBeNull()
+
+    const kids = [...meta.children]
+    expect(kids.map((el) => el.tagName)).toEqual(['TIME', 'A', 'A', 'A', 'SPAN'])
+    expect(kids[0]?.textContent?.trim()).toBe('2026.11.02')
+    expect(kids[0]?.className).not.toContain('meta-sep') // 行首不加点
+    expect(kids[1]?.className).toContain('meta-sep') // 分类
+    expect(kids[1]?.className).toContain('text-[var(--accent-strong)]')
+    expect(kids[2]?.className).toContain('meta-sep') // 标签整组的第一个
+    expect(kids[3]?.className).not.toContain('meta-sep') // 组内其余标签不再打点
+    expect(kids[4]?.className).toContain('meta-sep') // 阅读数
+  })
+
+  it('标题链接扩展为整条文章行，分类与标签链接仍是独立入口', () => {
+    const { container } = renderRow(makeArticle({ tags: ['纸张', '排版'] }))
+    const row = container.querySelector('article.article-row')
+    const titleLink = row?.querySelector('.article-row__title-link')
+    const metadataLinks = [...(row?.querySelectorAll('.article-row-meta a') ?? [])]
+
+    expect(titleLink?.textContent).toBe('纸张、留白与呼吸')
+    expect(metadataLinks).toHaveLength(3)
+    expect(metadataLinks.every((link) => !titleLink?.contains(link))).toBe(true)
+    expect(metadataLinks.map((link) => link.textContent)).toEqual(['随笔', '#纸张', '#排版'])
   })
 
   it('未开启 withExcerpt（首页等调用点）→ 不渲染正文概览，标题与日期栏仍在', () => {

@@ -1,6 +1,6 @@
-# Folio Design System · Warm Paper × Lavender Blue
+# Folio Design System · Modern Reading × Warm Paper × Lavender Blue
 
-> 暖纸与薰衣草蓝：**Warm Paper 70% · Vintage Editorial 20% · Frosted Glass 10%**
+> **Modern Reading first · Less is more.** Warm Paper 与 Lavender Blue 是克制的视觉气质，编辑排版与玻璃材质都只为阅读和操作服务。
 > 这份文档是「改之前先读、改之后要同步」的唯一设计口径。任何视觉决定若与本文冲突，以本文为准；本文没写的，先补文档再写代码。
 >
 > **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
@@ -34,22 +34,35 @@
 > **2026-11-16 文档与源码对齐（v0.2 合并前审计 T3）**：本轮只改文档与测试，**不动任何 Token 值、颜色、字号**。修掉六处会让"以本文为准"失效的错误：① §2 的「三层结构」改为**四层**（`@theme` / 语义别名 / 组件专属 `--nav-*`·`--note-*` / 材质 `--material-*`），并写清每层的消费权限——旧文把 `--material-*` 归进别名层、又规定"组件只消费第 2 层"，与 `--nav-*` 的实际消费自相矛盾；② §6 删掉三个**源码里已不存在**的 Token（`--container-prose` / `--container-diary` / `--spacing-gutter-lg`，它们被 `--measure-post` / `--measure-note` 与 `clamp()` 版 gutter 取代），补记 9 个从未进文档的布局 Token（`--measure-post|note|page|copy`、`--rail-toc|side`、`--shell-post|note|page`）与 `--gap-rail|side`、`--pad-paper-*`，并诚实标注 `--shell-page` **当前无消费者**；③ `--nav-blur` 的 §4.1 值 22/20 改为源码的 **14/12**（§7 本来就写 14/12，两处打架）；④ `--shadow-color` 的 34 40 38 改为 **43 40 48**；⑤ §5 仍把 `.nav-label` / `.nav-panel-link` 当现行类，实际早已由 `.nav-link` / `.nav-row` 取代，且 `.meta` 的行号引用已漂移 → 改为符号引用、不写行号；⑥ 断点表删掉不存在的 `--spacing-gutter-lg`、补上真实存在的 `md`（48rem，友链两列 + 导航双态起点）与 `69rem`（1104px 侧栏阈值），并把"没有 `md:` 使用"改成事实。另修：`--text-tertiary` 白名单 10 → **11 处**；「i18n 三语」→ **中英双语**（`LOCALES` 只有两种）；§9 的 `DiaryEntry` 描述从"多图 3 列缩略"改为**摘要 + 单张代表图**，`ArticleRow` 标题从"16→20px"改为实际的 `text-[1.625rem]`（26px，待 Token 化）；两条 2026-11-15 记录的先后按提交历史（`5856d6c` blur 14/alpha 85 → `291bfdd` alpha 82）**对调并注明这是一次往返**。§14.9 补 `nav-dual-state.test.tsx` 一行。配套修复：`tests/helpers/design-tokens.ts` 的路径分隔符与行尾归一（见 `.gitattributes`），此前 `design-color-system` 与 `markdown-css-contract` 的守卫在 Windows 上**恒不命中**。
 > **2026-11-16 第二/三组：体验与兼容性收敛**：① **正文图补宽高**（T4）：`renderMarkdown` 新增 `RenderOptions.imageSizes`，`imageSizeIndex()` 从 core 的附件元数据建 `src → 宽高` 索引，命中才输出 `width`/`height`（未命中一个属性都不加，不猜比例）；相册静态轨道与**客户端增强后的 `<img>`** 共用同一份索引（`media-enhancer` 从 DOM 属性回读，否则重建节点会丢掉尺寸）。实测最长日记 CLS 从 **0.9244 → 0**，尺寸覆盖 471/475。② **打印样式**（T5，新增 `print.css`）与 **系统高对比度**（T13，新增 `forced-colors.css`），见 §7.2。③ **`--text-rowtitle` 新档位**（T7）：文章列表行标题过去写成 `text-[1.625rem]`，实为缺一档；固定 26px（不能用 clamp 的 `--text-title`，桌面会爬到 32–34px）。④ `--shell-page` 从「零消费者」改为真实使用（`/about` 的 `max-w`），并写明 **1104px = 65rem + 双侧 gutter**。⑤ `--text-tertiary` 白名单唯一承载可读文字的那条（分页禁用项）补上了真正的判定依据。
 > **2026-11-18 首页编辑栅格（单列索引）**：上一轮 minimal 目录把文章区拉成通栏单列「表格」——每行右侧大片空白、行间虚线，与日记三列、More 居中各说各话。本轮全页统一到一套编辑栅格：≥lg 为 `--rail-home`（11rem，新增 Token）左轨 + 自适应内容列，轨距复用 `--gap-rail`；Hero 头像与区块标题（含 action 链接，竖排贴顶——`justify-between` 在拉伸高度下会把 action 推到轨底）落左轨，身份名、统计行、文章索引、日记栅格、More 按钮行落内容列，一条对齐线贯穿全页；<lg 退化单列（标题行在上、内容在下）。**文章区保持单列**：一行一篇，标题左、日期贴右缘同基线（≥sm；<sm 日期落标题下方），不做双列卡片阵（用户明确否决双列），行距 `gap-y-8` 与日记同族；日记区 <xl 单列（预览行宽收 `--measure-note`）、≥xl 三列，同样不经过双列阶段。`.home-more` 居中改左对齐。区块分隔统一「`--spacing-section` 留白 + 虚线 + `--spacing-stack` 内边距」，消掉旧版 pt-10 与 mt-5rem 叠加的双间距；Hero 经典布局去掉 pb，留白交给区块分隔。顺带删除上一轮相关阅读改版后零消费者的 `ArticleCard`（无消费者、无测试、§13 清单无引用），并修正 §5.1 / §9 对它和 `ArticleRow` 的过时描述。实测 390 / 768 / 1024 / 1280 亮色 + 1280 暗色：`scrollWidth - innerWidth` 均 0、无破图。真后端（`api.miaoer.net`，PORT=3000）复验又暴露两处并同批修掉：① 真站配置走**模板化 Hero**，它原先不进编辑栅格、上下各 160px 内边距与区块外距叠出约 240px 死留白——≥lg 整体缩进内容列（`lg:pl` = rail+gap）、头像贴版心右缘，竖向改顶 1.5×section、底部交给区块分隔，对齐线与留白节奏与经典布局一致；② GitHub 品牌黑作前景在暗色纸面上整枚不可见——`toSocialItems` 按 WCAG 相对亮度归一：L<0.05 或 L>0.95 的 hex 品牌色落回 null（语义次级色），中间亮度与 CSS var 色保留原值，新增 4 例单元测试覆盖拒绝与允许路径。真数据（6 篇长标题文章、3 日记、2 More 入口）五视口溢出 0、无破图；截图等待加长到 3s 以覆盖 Hero 逐字动画完成态。同步 §5.1、§6、§9。
+> **2026-11-25 页脚改为 Shiro 分类导航**：按用户要求不保留兼容层，删除旧 `footer.links`，只接受官方 `footer.linkSections[]`（`name` + `links[{name, href, external}]`）。页脚顺序改为「分类导航 → 版权/签名 → Powered by/ICP → 右下语言与主题」；<48rem 分类竖排，≥48rem 横排且可折行。链接地址允许根相对路径、http(s) 与 mailto；`external` 省略时按地址推导，显式声明与地址类型矛盾时丢弃该条。分类最多 6 组、每组最多 8 条，组内按 href 去重。同步 §5.2、§9。
+>
+> **2026-11-26 友链明信片：列数改容器查询 + 字号下调一档**：克制的排版微调。卡片仍是 312 × 144（窄屏 312 × 140），邮票、邮戳、纸面装饰、背景 / 边框 / 阴影 / 圆角全部不动。① **列数不再看视口**：`friends/page.tsx` 的 `Container` 加 `@container`，网格改用 Tailwind 容器变体 —— `@min-[41.5rem]:`（664px = 2 × 312 + 40）转两列、`@min-[63.5rem]:`（1016px = 3 × 312 + 2 × 40）转三列，阈值取「刚好放得下、不压缩卡片」的最小可用宽度；原 `md:`（768px 视口）两列规则删除。因为 `--container-wide` 72rem 封顶，视口 ≥1080px 时容器可用宽度就 ≥1016px，笔记本与宽桌面得到同样的三列。② **名称 18px → 16px**（`--text-h3` → `1rem`；衬线、字重 500、行高 1.5 不变），**简介 13px → 12px**（`--text-caption` → `--text-meta`；颜色不变，行高仍取 1.6）。16px 在 Token 里没有对应角色，按用户明确要求写绝对值，不新增 Token。实测 44 条真实友链（三列）：两行标题 6 → 2 张，被两行截断的简介 2 → 0 条。同步 §5 / §5.1 / §6。
+>
+> **2026-11-26 友链：已过期的单开一类**：`/friends` 在信封网格下方新增「已过期的友链」一段（间距 3rem），每条只有站名 + 描述两行文字，不做卡片。数据取 `state === 2`（`LinkState.Expired`）且未隐藏，与已通过的一类分开取（`listExpiredFriendLinks`）；审核中、已屏蔽、已拒绝仍然不展示。站名**不可点击**，但保留下划线：粗细 1px、抬升 0.22em 与 `.prose a` 一致，颜色转灰 —— 文字取 `--text-secondary`、下划线取 `--text-tertiary`（相对页面底色实测：文字 亮 5.14:1 / 暗 7.22:1，下划线 亮 3.56:1 / 暗 4.85:1），读成「失效的链接」而不是普通链接。**`--text-tertiary` 只用于这条装饰线，不用于文字**（浅色 3.56:1 不到 4.5:1）。字号沿用上一条的 16px / 12px；轨道与信封网格相同（`19.5rem` 定宽列、`2.5rem` 列距、同一组容器断点），两块逐列对齐。同步 §9 字重表。
+>
+> **2026-11-25 阅读正文加宽（对照 Shiro）**：`--measure-post` 44 → **52rem**（704 → 832px，≈49 汉字/行 @17px），`--measure-note` 40 → **44rem**（640 → 704px，≈41 汉字/行），博文∶日记 = 1.18。依据是对 hoshiroko.com（Shiro，根字号 14px）的实测：博文正文 920px / 15.4px ≈ 60 字/行，日记纸面 840px（左右 padding 45）正文 748px ≈ 49 字/行，比例 1.23 —— 本主题取中间档，不追 60 字/行。派生 shell 需同时放得进 1280 视口的容器内容宽（1088）：`--shell-post` = 832 + 36 + 208 = **1076**，`--shell-note` = 704 + 2×56 + 36 + 208 = **1060**，都留有余量，因此 `--container-wide` 与 xl 断点不动。同步 §6。
 
 ---
 
 ## 1. 设计语言
 
-| 层次                       | 占比 | 承担什么                         | 材质                          |
-| -------------------------- | ---- | -------------------------------- | ----------------------------- |
-| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光      |
-| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）                  |
-| 冰面 Frosted Glass         | 10%  | 导航条、工具浮标、浮层           | 半透明纸色玻璃 + 14–24px 模糊 |
+| 角色     | 原则           | 承担什么                             | 视觉表达                               |
+| -------- | -------------- | ------------------------------------ | -------------------------------------- |
+| 阅读核心 | Modern Reading | 清晰层级、舒适行宽、自然留白、低干扰 | 让内容先于界面被看见                   |
+| 气质底色 | Warm Paper     | 页面底色与阅读表面的温度             | 中性微暖纸色，不模拟旧纸或做强烈纹理   |
+| 编辑编排 | Editorial      | 标题层级、节奏、少量衬线与发丝线     | 用排版建立秩序，不靠装饰堆叠           |
+| 交互识别 | Lavender Blue  | 链接、焦点、选中态与必要的操作反馈   | 小面积使用，正文保持墨色               |
+| 工具材质 | Frosted Glass  | 导航、工具浮标与确有需要的浮层       | 局部半透明纸色玻璃；不进入阅读内容区域 |
 
-三条不可越界：
+设计以**少即是多，现代阅读优先**为核心：先保证内容层级、可读性与浏览节奏，再决定是否需要视觉装饰。能用留白表达分组时，不再叠加边框或卡片；重复出现的卡片、分隔线和强调色必须提供实际辨识或操作价值，否则删除。暖纸只是克制的页面气质，不是复古主题；衬线、细线与纸纹都作为辅助，不得与正文争夺注意力。
 
-1. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。友链明信片卡是这条规则的验证案例：它曾经用 `.glass-control` 做邮票纸面，改成「明信片 + 独立邮票」后**已完全退出冰面**，纸面改由暖纸底色 + 纸纤维 + 发丝边构成。内容卡片不得再以任何理由引入玻璃。
-2. 主题色（Lavender Blue）承担交互识别，**不做大面积填充**；正文永远是墨色。
-3. 装饰必须有理由：无统计卡片、无渐变按钮、无位移悬浮、无霓虹。
+具体约束：
+
+1. 版面服务阅读：标题、正文与元信息有明确层级；列表优先以一致间距组织内容，不为每一项增加容器外框。
+2. 材质退后：正文不铺明显颗粒，不使用旧化、泛黄或仿扫描纸效果；阅读表面保持安静。
+3. 主题色（Lavender Blue）承担交互识别，**不做大面积填充**；正文永远是墨色。
+4. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。友链明信片卡是这条规则的验证案例：它曾经用 `.glass-control` 做邮票纸面，改成「明信片 + 独立邮票」后**已完全退出冰面**，纸面改由暖纸底色 + 纸纤维 + 发丝边构成。内容卡片不得再以任何理由引入玻璃。
+5. 装饰必须有理由：无统计卡片、无渐变按钮、无位移悬浮、无霓虹。
 
 ---
 
@@ -281,21 +294,21 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 ## 5. 排版
 
-| 角色        | Token                | 值                                                                         | 用途                                                                                           |
-| ----------- | -------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Display     | `--text-display`     | `clamp(2.125rem, 1.35rem + 3.1vw, 3.25rem)`，lh **1.2**，ls **−0.024em**   | 首页身份名                                                                                     |
-| PageHeading | `--text-pageheading` | `clamp(1.625rem, 0.6075rem + 4.175vw, 2.99rem)`，lh 1.26，ls **−0.02em**   | `PageHeader` 内页页头                                                                          |
-| Headline    | `--text-headline`    | `clamp(1.6575rem, 0.967rem + 2.833vw, 2.665rem)`，lh 1.22，ls **−0.022em** | 文章详情 h1、Markdown 样张 h1                                                                  |
-| Title       | `--text-title`       | `clamp(1.625rem, 1.35rem + 0.75vw, 2.125rem)`，lh 1.26，ls **−0.014em**    | 日记详情 h1、卡片标题、错误页                                                                  |
-| RowTitle    | `--text-rowtitle`    | 1.625rem（固定值，不随视口变化）/ lh 1.3 / ls **−0.01em**                  | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，桌面会爬到 32–34px，一屏行数会被压掉 |
-| H2          | `--text-h2`          | 1.375rem / lh 1.4（无字距覆盖）                                            | 正文二级标题、区块标题                                                                         |
-| H3          | `--text-h3`          | 1.125rem / lh 1.5（无字距覆盖）                                            | 卡片标题、正文三级标题                                                                         |
-| Body        | `--text-body`        | 1.0625rem（= 17px @16px 根字号）/ lh **1.82**                              | `.prose` 阅读正文                                                                              |
-| Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                          | 导语、摘要                                                                                     |
-| Small       | `--text-small`       | 0.9375rem / lh 1.7                                                         | 说明文                                                                                         |
-| Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                         | 图注、注释、表头                                                                               |
-| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                           | 日期、阅读数、kicker                                                                           |
-| Code        | `--text-code`        | 0.875rem / lh 1.7                                                          | 行内与代码块                                                                                   |
+| 角色        | Token                | 值                                                                     | 用途                                                                                             |
+| ----------- | -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Display     | `--text-display`     | `clamp(2.125rem, 1.9rem + 0.8vw, 2.5rem)`，lh **1.2**，ls **−0.024em** | 首页身份名（34–40px）                                                                            |
+| PageHeading | `--text-pageheading` | `clamp(1.625rem, 1.25rem + 1.4vw, 2.25rem)`，lh 1.26，ls **−0.02em**   | `PageHeader` 内页页头（26–36px）                                                                 |
+| Headline    | `--text-headline`    | `clamp(1.5rem, 1.125rem + 1.4vw, 2.125rem)`，lh 1.22，ls **−0.022em**  | 文章详情 h1、Markdown 样张 h1（24–34px）                                                         |
+| Title       | `--text-title`       | `clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem)`，lh 1.26，ls **−0.014em**   | 日记详情 h1、卡片标题、错误页（24–30px）                                                         |
+| RowTitle    | `--text-rowtitle`    | 1.375rem（固定值 22px，不随视口变化）/ lh 1.3 / ls **−0.01em**         | 文章列表每一条的 h3。**不能用 `text-title`**：那是 clamp，行标题需固定在 22px 才不把一屏行数压掉 |
+| H2          | `--text-h2`          | 1.375rem / lh 1.4（无字距覆盖）                                        | 正文二级标题、区块标题                                                                           |
+| H3          | `--text-h3`          | 1.125rem / lh 1.5（无字距覆盖）                                        | 卡片标题、正文三级标题                                                                           |
+| Body        | `--text-body`        | 1.0625rem（= 17px @16px 根字号）/ lh **1.82**                          | `.prose` 阅读正文                                                                                |
+| Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                      | 导语、摘要                                                                                       |
+| Small       | `--text-small`       | 0.9375rem / lh 1.7                                                     | 说明文                                                                                           |
+| Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                     | 图注、注释、表头                                                                                 |
+| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                       | 日期、阅读数、kicker、友链简介（行高另取 1.6）                                                   |
+| Code        | `--text-code`        | 0.875rem / lh 1.7                                                      | 行内与代码块                                                                                     |
 
 `lh` = 同族 `--text-*--line-height`；`ls` = `--text-*--letter-spacing`。display / pageheading / headline / title 四个标题档位都定义了字距，h2/h3 及更小层级没有字距变量 —— 组件若自行写 `tracking-*` 属于局部调整，不是 Token 缺失。
 
@@ -303,7 +316,9 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 > 行高有两个基准，不要混淆：`.prose` 用 `--text-body--line-height` = 1.82（`prose.css:11`），而 `body` 元素默认是硬编码的 1.75（`globals.css:48-49`）。页面骨架（导航、页脚、空状态）落在 1.75 上，正文落在 1.82 上，是有意分工。
 >
-> 移动端不再单独压正文：`prose.css` 的 `@media (max-width: 640px)` 曾把 `.prose` 降成 `1rem / 1.8`，使文章正文（16px）比全局 `body`（17px）更小，形成全站唯一的「正文比 UI 小」倒挂。现已在所有断点统一吃 `--text-body` + 伴生行高，窄屏只收紧 `h2` 的上边距。
+> 移动端不再单独压正文：`prose.css` 的 `@media (max-width: 640px)` 曾把 `.prose` 降成 `1rem / 1.8`，使文章正文（16px）比全局 `body`（17px）更小，形成全站唯一的「正文比 UI 小」倒挂。现已在所有断点统一吃 `--text-body` + 伴生行高，窄屏只收紧标题间距。
+
+`.prose` 的垂直节奏（博文与日记共用）：普通段落间距 `1.35em` ≈ 23px；H2 上方桌面 `1.82em` ≈ 40px、≤640px `1.45em` ≈ 32px；H2 虚线到标题文字 `0.73em` ≈ 16px；H2 后首个非标题内容块 `1.12em` ≈ 19px；H3 上方 `1.78em` ≈ 32px。H2 的 `::before` 只在非首个子节点生成，首个子节点仍不显示分隔线。块间距按 CSS 相邻 margin 折叠取较大值，不相加；段落的 `margin-block: 0` 会覆盖通用兄弟间距，因此用 `.prose > * + p` 显式恢复段落间距，再由 H2 邻接规则覆盖为较紧的标题后间距。
 
 ### 5.1 字号角色 → 实际消费者
 
@@ -316,11 +331,11 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | `--text-headline`                                 | 文章详情 h1（`articles/[category]/[slug]/page.tsx`）、Markdown 视觉样张 h1     |
 | `--text-title`                                    | 日记详情 h1（`diaries/[id]/page.tsx`）、`error.tsx` / `not-found.tsx` / 分类页 |
 | `--text-rowtitle`                                 | 文章列表每一条的 h3（`ArticleRow` 完整与 minimal 变体）                        |
-| `--text-h2` / `--text-h3`                         | `.prose` 标题、卡片标题、`friends` 等页                                        |
+| `--text-h2` / `--text-h3`                         | `.prose` 标题、卡片标题（日记卡、紧凑文章行、搜索结果）                        |
 | `--text-body`                                     | `body`、`.prose`（含移动端）、归档条目                                         |
 | `--text-lead`                                     | 首页导语（无衬线）、文章导语（衬线）                                           |
-| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta`                                                          |
-| `--text-code`                                     | `.prose :code`（`prose.css:206`）                                              |
+| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta`、友链简介                                                |
+| `--text-code`                                     | `.prose :code`                                                                 |
 
 同一 px 数值不代表同一语义。以下是**特殊排版用法**，尚未 Token 化，改动前请先确认是否值得升为 Token：
 
@@ -358,9 +373,10 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 - **标题字号与行高必须成对消费**：正确写法是 `text-pageheading` / `text-headline`（一个类同时给出 font-size、line-height、letter-spacing），**禁止**再写 `text-[calc(var(--text-display)*0.78)] leading-[1.25]` 这种「自己算字号 + 手写行高」的组合 —— 前者的行高无处可查，后者在断点换系数时会跳变（原实现 640px 处跳 11.7px）。
 - `.meta` = `--text-meta` + `--text-secondary` + `letter-spacing: 0.04em` + `tabular-nums`（`globals.css` 的 `.meta`）；分隔点用 `.meta-sep`（`·` 前后 0.5em，颜色 `--text-tertiary`）。**不要在这里写行号**：这两个类在 `globals.css` 里的位置随导航段落一起漂移过。
 - **导航层级靠字重，不靠新字号**：`.nav-link`（顶栏与移动快捷栏的一级入口）用 `--text-small` + 字重 500 + lh 1.4 + 0.01em 字距；`.nav-row`（下拉与菜单子项）同字号、继承常规字重、lh 1.5。两者共用 `--text-small`，不新增平行字号 Token（见 §5.1）。旧的 `.nav-label` / `.nav-panel-link` 已随下拉选择器一起移除，不要再引用。
-- **页脚是左右两个平级区域，不是一列堆叠**：`.site-footer__inner` 在 ≥48rem 用 `grid-template-columns: minmax(0, 1fr) auto`（信息区吃剩余宽度、设置区按内容收窄并贴右），<48rem 退化成单列（信息在上、设置在下，两者都靠左）。设置区**不再**横在信息区上方。
+- **页脚导航在上、信息在下**：`.site-footer__nav` 使用 Shiro 的 `linkSections` 分类结构（分类名 + 右向箭头 + 链接组），<48rem 分组竖排，≥48rem 横排并可折行；分类导航与版权/出处不共用一条流。
+- **信息与设置仍是左右两个平级区域**：`.site-footer__inner` 在 ≥48rem 用 `grid-template-columns: minmax(0, 1fr) auto`（信息区吃剩余宽度、设置区按内容收窄并贴右），<48rem 退化成单列（信息在上、设置在下，两者都靠左）。设置区**不再**横在信息区上方。
 - **信息区两行分工**：第一行 `© 年份区间`（`.meta`）+ 衬线名字（`--text-body`/500/`--text-heading`）+ 签名（`--text-small`/次级色）；第二行 `--text-meta`/次级色。分隔符统一用 `.footer-sep`（`｜`，前后 0.55em，`--text-tertiary`）。
-- **第二行是一条可换行的流**（`.site-footer__meta` = `flex-wrap`），不是若干段落：`Powered by … Design.`、备案、`footer.links` 都是流里的最小单元，链接自身 `nowrap`，宽度不足时整条单元换行而不是被劈开。分隔符是独立 flex item，所以只需 `row-gap`，不与 `.footer-sep` 的 `margin-inline` 叠加。
+- **第二行是一条可换行的流**（`.site-footer__meta` = `flex-wrap`），不是若干段落：`Powered by … Design.` 与备案是流里的最小单元，链接自身 `nowrap`，宽度不足时整条单元换行而不是被劈开。分隔符是独立 flex item，所以只需 `row-gap`，不与 `.footer-sep` 的 `margin-inline` 叠加。
 
 ---
 
@@ -368,8 +384,8 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 | 项            | Token                                               | 值                                                            | 说明                                                                                        |
 | ------------- | --------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 文章正文宽    | `--measure-post`                                    | 44rem                                                         | 704px，文章详情正文；≈41 汉字/行 @17px                                                      |
-| 日记正文宽    | `--measure-note`                                    | 40rem                                                         | 640px，日记详情正文；≈37 汉字/行，比文章窄 4rem                                             |
+| 文章正文宽    | `--measure-post`                                    | 52rem                                                         | 832px，文章详情正文；≈49 汉字/行 @17px                                                      |
+| 日记正文宽    | `--measure-note`                                    | 44rem                                                         | 704px，日记详情正文；≈41 汉字/行，比文章窄 8rem                                             |
 | 普通页正文宽  | `--measure-page`                                    | 44rem                                                         | 704px，普通页（`/about`、`/pages/:slug`）正文                                               |
 | 文案宽        | `--measure-copy`                                    | 48rem                                                         | 768px，导语、摘要、搜索与错误页文案                                                         |
 | 目录轨        | `--rail-toc`                                        | 13rem                                                         | 208px，文章 / 日记右侧目录，**独立占位、不挤正文**                                          |
@@ -397,17 +413,18 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 断点（实测口径）：
 
-| 断点    | 等宽            | 承担                                               | 实现方式                                                                                      |
-| ------- | --------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `sm`    | 40rem（640px）  | 纸面起铺、阅读纸面上色                             | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)`                                |
-| `md`    | 48rem（768px）  | 友链卡片转两列；**桌面导航双态的起点**             | Tailwind `md:`（仅 `friends/page.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
-| `lg`    | 64rem（1024px） | 阅读区加宽（纸张内边距 3.5rem）                    | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)`                                |
-| `xl`    | 80rem（1280px） | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起   | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处）                                     |
-| `69rem` | 1104px          | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列 | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处）                                        |
+| 断点     | 等宽                                | 承担                                                    | 实现方式                                                                                     |
+| -------- | ----------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `sm`     | 40rem（640px）                      | 纸面起铺、阅读纸面上色                                  | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)`                               |
+| `md`     | 48rem（768px）                      | **桌面导航双态的起点**；文章行 meta 的分隔间距          | Tailwind `md:`（仅 `article-row.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
+| 容器查询 | 41.5rem（664px）/ 63.5rem（1016px） | 友链卡片转两列 / 三列（按内容容器的可用宽度，不看视口） | Tailwind `@min-[…]`（仅 `friends/page.tsx`），查询容器是 `Container` 上的 `@container`       |
+| `lg`     | 64rem（1024px）                     | 阅读区加宽（纸张内边距 3.5rem）                         | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)`                               |
+| `xl`     | 80rem（1280px）                     | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起        | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处）                                    |
+| `69rem`  | 1104px                              | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列      | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处）                                       |
 
-- Tailwind v4 走 CSS-first 配置：仓库里没有 `tailwind.config.*`，`tokens.css` 也没有覆盖 `--breakpoint-*`，所以 `sm/md/lg/xl` 就是 Tailwind 默认值。**没有 `2xl:` 使用**；`md:` 只有 `friends/page.tsx` 一处（768px 两列），与导航双态的 48rem 断点是同一个值，改其中一个要同时看另一个。`69rem` 是唯一一个任意值断点（1104px），它不在 Tailwind 档位里，**修改前先想清楚为什么不复用 `xl`**。
+- Tailwind v4 走 CSS-first 配置：仓库里没有 `tailwind.config.*`，`tokens.css` 也没有覆盖 `--breakpoint-*`，所以 `sm/md/lg/xl` 就是 Tailwind 默认值。**没有 `2xl:` 使用**；Tailwind `md:` 只有 `article-row.tsx` 一处（meta 分隔间距），导航双态的 48rem 断点走 `globals.css` 的 `@media`，两者是同一个值，改其中一个要同时看另一个。容器查询只有友链一处的任意值 `@min-[…]`，没有使用 `@md:` 这类具名容器档位；它量的是 `Container` 的内容盒宽度，与视口断点无关。`69rem` 是唯一一个任意值断点（1104px），它不在 Tailwind 档位里，**修改前先想清楚为什么不复用 `xl`**。
 - 断点处数会随功能增减，本文不再写死"共 N 处"——写死的那一刻就开始过期。要看当前分布，直接在 `src` 下搜 `sm:` / `md:` / `lg:` / `xl:` / `min-[69rem]:` 这几个前缀。
-- 与断点区分开：**组件内部局部尺寸条件**不算断点。现存两处桌面优先的窄屏收紧 —— `prose.css:353` 与 `prose.css:394` 的 `@media (max-width: 640px)`，它们调整的是正文内部节奏，不要为了"统一"把它们改写成 `min-width`。
+- 与断点区分开：**组件内部局部尺寸条件**不算断点。`prose.css` 中现存两个 `@media (max-width: 640px)`，调整的是正文内部节奏，不要为了"统一"把它们改写成 `min-width`。
 - 材质/无障碍类查询（`prefers-reduced-motion` 6 处、`prefers-reduced-transparency` 1 处）与 `@supports not (backdrop-filter)` 属于能力探测，也不属于断点。
 
 ---
@@ -532,14 +549,15 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 | `SiteNavMenu`                                | `layout/site-nav-menu.tsx`                  | 桌面与移动共用同一份内容的菜单面板：站点身份 → 主导航 → 更多（原生 `<details>` 分组）；**不再挂设置**，`tocSlot` 为目录预留位                                                                                                                                                               |
 | `FooterSettings`                             | `layout/footer-settings.tsx`                | 全站唯一的设置区：左语言选择器（图标 + 名称 + 向上弹出的菜单）/ 右三态主题（Sun → Monitor → Moon）。语言走 `useLocaleSwitcher`，主题走 `useThemePreference`，不另存状态。挂在页脚**右侧**那一栏（`.site-footer__settings`），桌面端整体靠右、手机端落到信息区下方                           |
 | `ToolbarGroup` / `ToolbarButton`             | `layout/toolbar-button.tsx`                 | 40px 方格（`--radius-pill`），**自身无材质**：玻璃与光斑由 `.toolbar-dock` 的 `.glass-nav` + `.nav-spotlight` 提供；悬停/激活复用 `--nav-item-hover` / `--nav-item-active`，tooltip 仅 hover / focus-visible                                                                                |
-| `SiteFooter`                                 | `layout/site-footer.tsx`                    | 左右两区（`.site-footer__info` / `.site-footer__settings`）：左侧两行——年份 + 衬线名字 + 签名 / Powered by + ICP + `footer.links`（可换行的流）；右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                                  |
+| `SiteFooter`                                 | `layout/site-footer.tsx`                    | 上部 Shiro 分类导航（`footer.linkSections`：分类名 › 链接）；下部左右两区——年份 + 衬线名字 + 签名 / Powered by + ICP，右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                                                             |
 | `Container`                                  | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                                                                                                                                                                                                |
 | `PageHeader`                                 | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                                                                                                                                                                                         |
-| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（26px 固定档），hover 变 `--accent-strong`；完整变体日期左轨 + 分类/标签/阅读数，标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                                                            |
+| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（22px 固定档），hover 变 `--accent-strong`；`/articles` 与分类结果页共用无边框间距列表，完整变体展示日期、分类/标签/阅读数、官方摘要及可选的一行正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                       |
+| `ArchiveSection`                             | `features/explore/...`                      | 年份区块之间用虚线分隔；同一年内月份仅以留白分组，不重复画线                                                                                                                                                                                                                                |
 | `ReadingProgressRing` / `ReadingProgressBar` | `ui/reading-progress.tsx`                   | 环形（26px，移动端折叠目录行右侧）与竖向线性（2rem×1px，桌面端侧栏）两种阅读进度指示，共用 scroll 监听。环形百分比在环外右侧，竖向条百分比在条右侧。填充色 `--accent`，底色 `--edge`                                                                                                        |
 | `AISummaryCard`                              | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性                                                                                                                                                                         |
 | `Dialog` / `InsightsDialog`                  | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                                                                                                                                                                                             |
-| `Comments`                                   | `features/comments/...`                     | 编辑式版面：标题 → 匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；根评论与回复共用表单组件                                                                                                                                                                                      |
+| `Comments`                                   | `features/comments/...`                     | 编辑式版面：标题 → 无外框匿名表单 → 列表（缩进 + 细线，不套卡片）→ 回复 → 加载更多；正文非空后才显示发送与悄悄话选项，悄悄话说明通过问号提示查看；根评论与回复共用表单组件                                                                                                                                 |
 | `Toc` / `TocList`                            | `ui/toc.tsx` / `ui/toc-list.tsx`            | ≥1280 sticky 右栏；<1280 折叠 `<details>`，`aria-current="location"` 跟随滚动；活跃项 `w-[2px] rounded-full bg-accent` 竖线指示                                                                                                                                                             |
 | `DiaryDayGroup`                              | `features/diaries/...`                      | 40px 衬线日号 + `2026.11` + 星期                                                                                                                                                                                                                                                            |
 | `DiaryEntry`                                 | 同上                                        | **列表条目 = 摘要，不是正文**：左 60px 时间列 + 纯文本摘要（`excerpt()`，140 字，`line-clamp-3/4`）+ **最多一张**代表图（`firstImageSource()`，正文优先、再退附件；命中附件时带原始宽高占位）+ 「继续阅读」。不跑 Markdown 渲染、不输出全部附件；完整正文与 Shiki/KaTeX 只在 `/diaries/:id` |
@@ -553,7 +571,7 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 ## 10. Markdown 视觉
 
 - 正文 `.prose`：`--font-sans` + `--text-body`（17px）/ 1.82 + `letter-spacing: 0.004em`（`prose.css:8-16`）。
-- 标题：`.prose :is(h1,h2,h3,h4)` 用 `--font-serif` + 600 + `letter-spacing: -0.01em`（`prose.css:23-27`）；`h2` = `--text-h2` + 上方 2.4em，`h3` = `--text-h3`，`h1` = `--text-title` + 2.6em。
+- 标题：`.prose :is(h1,h2,h3,h4)` 用 `--font-serif` + 600 + `letter-spacing: -0.01em`；`h2` = `--text-h2` + 上方 1.82em（≤640px 为 1.45em）与虚线分隔，`h3` = `--text-h3` + 上方 1.78em，`h1` = `--text-title` + 2.6em。间距实值见 §5 的 `.prose` 垂直节奏。
 - 链接：**颜色继承正文**，靠下划线识别 —— `text-decoration-color: --accent-soft`、1px、offset 0.22em；hover 升到 `--accent` + 2px（`prose.css:74-88`）。`--accent-strong` 不是链接的默认色。
 - 引用：`border-left: 2px solid var(--color-accent-soft)` + `--text-secondary` + `--font-serif` + `font-style: normal`（中文斜体难读）+ `1.04em` / lh 1.85（`prose.css:158-167`）。
 - 列表：`ul` 用 4px 圆点 `::before`，色为 `--color-accent-soft`（`prose.css:124-133`）；`ol > li::marker` 用 `--text-tertiary` + mono + 0.85em。
@@ -707,6 +725,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 | `globals.css`（`.nav-identity__name`）              | 600  | `--font-sans`                   | 导航身份块名称       | 中：中文，但字号 15px 且有 `text-overflow: ellipsis`                                                                                                                |
 | `globals.css`（`.nav-link`）                        | 500  | `--font-sans`                   | 顶栏一级导航         | 低                                                                                                                                                                  |
 | `friend-postcard.css`（`.friend-postcard__title`）  | 500  | `--font-serif`                  | 友链卡片名称         | 中低：可能含中文                                                                                                                                                    |
+| `friend-postcard.css`（`.friend-expired__name`）    | 500  | `--font-serif`                  | 已过期友链站名       | 中低：可能含中文                                                                                                                                                    |
 | `friend-postcard.css`（`.friend-postmark text`）    | 500  | `--font-sans`（10px，SVG）      | 邮戳弧形字（装饰）   | 低：纯装饰图案                                                                                                                                                      |
 | `reading.css`（`.article-info__heading`）           | 500  | `--font-sans`                   | 文末信息区标题       | 低                                                                                                                                                                  |
 
@@ -908,7 +927,7 @@ hover 从 `--accent` 抬到 `--accent-strong` 并加粗到 2px，保持可感知
 ### 14.10 断点使用规范与人工验收
 
 - 断点事实与口径见 §6：**A**（只有 `sm/lg/xl` 三档，无 `md:`/`2xl:`，无 `--breakpoint-*` 覆盖）。
-- 组件内部局部尺寸条件（`prose.css:353`、`prose.css:394` 的 `max-width: 640px`）不算断点，**不要为了统一而改写它们**。
+- 组件内部局部尺寸条件（`prose.css` 中两个 `max-width: 640px` 媒体查询）不算断点，**不要为了统一而改写它们**。
 
 **已实测完成（2026-11-17，Chromium / Windows，Dev Server + CDP）**：
 

@@ -25,9 +25,7 @@ export default async function ProjectsPage() {
   return (
     <Container>
       <PageHeader
-        kicker={t(locale, 'projects.kicker')}
         title={t(locale, 'projects.heading')}
-        description={t(locale, 'projects.description')}
         meta={
           <p className="meta">{tf(locale, 'projects.count', { count: result.items.length })}</p>
         }

@@ -21,7 +21,10 @@
    新增时保持「一个组件一个文件」，不要在 globals.css 里续写组件规则。 */
 @import '../features/taxonomy/tag-note.css';
 @import '../features/articles/article-cover.css';
+@import '../features/articles/article-row.css';
+@import '../features/diaries/diary-card.css';
 @import '../features/friends/friend-postcard.css';
+@import '../features/friends/friend-application.css';
 
 /*
  * 基础层：纸面、环境光、焦点、选择色。
@@ -453,7 +456,7 @@
   color: var(--nav-ink-strong);
 }
 
-/* 右侧动作区：分隔线 + 菜单按钮。桌面靠 space-between 贴到卡片另一端 */
+/* 右侧动作区：分隔线 + 菜单按钮。桌面（≥48rem）整块收起，见下方断点规则 */
 .nav-actions {
   position: relative;
   z-index: 1;
@@ -569,6 +572,20 @@
   opacity: 1;
   visibility: visible;
   transform: translate3d(0, 0, 0);
+}
+
+/*
+ * 栏内最后一个入口（「更多」）的下拉右对齐。
+ *
+ * 面板默认 `left: 0`，贴着触发器的左边缘向右展开。这在栏中段的入口上没问题，
+ * 但最后一个入口本身就贴着内容区右缘，再向右展开就会跑出视口——实测 768px
+ * 溢出 106px、1280px 仍是 42px，一言与项目被裁掉一半。
+ *
+ * 只改对齐方向，不改宽度：`right: 0` 让它从触发器的右边缘向左展开。
+ */
+.nav-quick__list > li.nav-flyout:last-child > .nav-flyout__panel {
+  left: auto;
+  right: 0;
 }
 
 .nav-flyout__card {
@@ -714,7 +731,7 @@
   }
 
   .nav-actions {
-    gap: 0.25rem;
+    display: none;
   }
 
   .nav-rule {
@@ -725,6 +742,20 @@
   .nav-menu-trigger {
     width: 2.5rem;
     height: 2.5rem;
+  }
+}
+
+/*
+ * 没有 hover 的大屏（iPad、触屏一体机）保留菜单键。
+ *
+ * 桌面取消菜单托盘的前提是「所有入口都能在顶栏直接拿到，或有悬停下拉」。
+ * 而「更多」正是悬停下拉：纯触屏既没有 hover，点它也不会展开，
+ * 一言与项目就会没有任何入口。这类设备把菜单键放回去，抽屉承担同一批
+ * 入口——菜单本来就是同一棵树的另一种呈现，不是第二份清单。
+ */
+@media (min-width: 48rem) and (hover: none) {
+  .nav-actions {
+    display: flex;
   }
 }
 
@@ -756,15 +787,7 @@
 
 @media (min-width: 48rem) {
   .nav-panel {
-    position: absolute;
-    top: calc(100% + var(--nav-gap));
-    /* 右边缘跟着卡片的内边距走，两种状态下都对齐菜单按钮 */
-    right: var(--nav-pad);
-    bottom: auto;
-    left: auto;
-    width: 21rem;
-    max-width: calc(100vw - 2rem);
-    max-height: min(32rem, calc(100dvh - 7rem));
+    display: none;
   }
 }
 
@@ -909,11 +932,41 @@
   color: var(--nav-ink);
 }
 
+.nav-panel__label {
+  padding: 0.25rem 0.6rem 0.35rem;
+  font-size: var(--text-meta);
+  font-weight: 500;
+  line-height: var(--text-meta--line-height);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.nav-toc {
+  margin-top: 0.375rem;
+  padding-top: 0.625rem;
+  padding-inline: 0.25rem;
+  border-top: var(--border-hairline) dashed var(--edge-strong);
+}
+
+.nav-toc__list {
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-inline: 0.35rem;
+  scrollbar-width: thin;
+}
+
 .nav-section {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
   padding-top: 0.25rem;
+}
+
+.nav-section[data-has-toc='true'] {
+  margin-top: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: var(--border-hairline) dashed var(--edge-strong);
 }
 
 .nav-list {
@@ -950,6 +1003,10 @@
 .nav-row--child {
   padding-left: 1.35rem;
   font-size: var(--text-caption);
+}
+
+.nav-flyout__card .nav-row--child {
+  padding-block: 0.35rem;
 }
 
 /* 分组：原生 details —— 触屏没有 hover，折叠列表是唯一能让
@@ -1036,26 +1093,30 @@ details[open] > .nav-group__summary .nav-group__chevron {
 }
 
 /*
-  主题切换过渡
+  主题切换过渡（View Transition）
 
-  `.theme-transition` 由 ThemeToggle 在用户点击后临时加到 <html>，约 300ms 后移除：
+  切换时 `useThemePreference` 调 `document.startViewTransition()`，浏览器对
+  新旧两帧各拍一张快照做交叉淡入。这里只调时长与曲线，不参与补间。
 
-    - 只覆盖颜色类属性（背景 / 文字 / 边框 / 阴影 / 描边），
-      不动 transform、width、height、padding、font-size，因此不会引起位移或重排；
-    - 首帧没有这个类，所以加载时不播放；系统配色变化也不播放（只有点击才加）；
-    - 不常驻在 `*` 上：常驻的全局 transition 会把 hover 以外的所有变化都拖慢。
+  上一版是 `html.theme-transition *` 给全站元素挂 240ms 颜色过渡：文章页
+  664 个节点一次切换 52ms 同步样式计算 + 55ms 长任务，随后整屏重绘十几遍。
+  换成快照淡入后主线程只剩一次真实的样式重算（约 4ms），与节点数无关。
+
+  `prefers-reduced-motion: reduce` 时不进这条路径（JS 已直接瞬切），
+  这里的规则只是兜底：即使某些环境仍触发了视图过渡，也让时长归零。
 */
 @media (prefers-reduced-motion: no-preference) {
-  html.theme-transition,
-  html.theme-transition *,
-  html.theme-transition *::before,
-  html.theme-transition *::after {
-    transition-property:
-      color, background-color, border-color, outline-color, box-shadow, fill, stroke,
-      text-decoration-color;
-    transition-duration: 240ms;
-    transition-timing-function: var(--ease-out-soft);
-    transition-delay: 0s;
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 240ms;
+    animation-timing-function: var(--ease-out-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0s;
   }
 }
 
@@ -1200,18 +1261,81 @@ details[open] > .toc-summary .toc-chevron {
   font-weight: 300;
 }
 
-/* ── Footer 布局：信息区在左、设置区在右 ────────────────────────
-   两个**平级区域**，不是一列堆叠：
-     - `.site-footer__info`     两行文字（版权行 / 出处与备案行）
-     - `.site-footer__settings` 语言 + 三态主题，全站唯一设置入口
+/* ── Footer 布局：分类导航在上，信息区在左、设置区在右 ────────────
+   `.site-footer__nav` 使用 Shiro 的「分类名 › 链接组」结构；
+   `.site-footer__inner` 仍是两个平级区域：信息 / 语言与主题。 */
 
-   桌面端 1fr + auto：信息区吃掉剩余宽度，设置区按内容收窄并贴右，
-   所以右侧不会出现「内容全挤在左半边」的失衡；
-   手机端退化成单列，信息在上、设置在下——两者都靠左，
-   避免窄屏里把 250px 宽的控件组硬推到右边。
+.site-footer__nav {
+  padding-block: var(--spacing-stack) calc(var(--spacing-stack) * 0.75);
+}
 
-   断点取 48rem：768px 时内容宽 704px，信息区约 320px、设置区约 254px
-   加上列间距仍然宽松；再窄（640px）就只剩 576px，必须上下排列。 */
+.site-footer__nav-list,
+.site-footer__nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer__nav-list {
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.site-footer__nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.site-footer__nav-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-heading);
+  font-size: var(--text-small);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.site-footer__nav-chevron {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.site-footer__nav-links {
+  gap: 0.1rem 0.85rem;
+}
+
+.site-footer__nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: 0.1rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: 1.5;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.site-footer__nav-link:hover {
+  color: var(--text-heading);
+}
+
+.site-footer__nav-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.site-footer--has-nav .site-footer__inner {
+  padding-top: 0;
+}
 
 .site-footer__inner {
   display: grid;
@@ -1230,7 +1354,7 @@ details[open] > .toc-summary .toc-chevron {
 
 /*
  * 第二行是一条**可换行的流**，不是若干段落：
- * 「Powered by … Design.」「｜ 备案」「｜ footer.links」都是流里的
+ * 「Powered by … Design.」「｜ 备案」都是流里的
  * `.site-footer__meta-unit`——不可拆的整体。正常情况排在同一视觉行；
  * 宽度不足时整个单元换行，分隔符跟着后面的链接一起走，
  * 所以不会出现行尾悬着一个孤立「｜」的情况。
@@ -1263,7 +1387,131 @@ details[open] > .toc-summary .toc-chevron {
   justify-content: flex-start;
 }
 
+/* ── 页脚在线状态与访客预览 ───────────────────────────────────
+   状态点是页脚唯一的「运行中」信号；浮层只在悬停时出现、向上展开。
+   数据是惰性的（见 `components/layout/footer-presence.tsx`），这里只负责形态。 */
+
+.footer-presence {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.footer-presence__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  color: var(--text-secondary);
+  /* 人数从 9 变 10 时宽度不跳 */
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.footer-presence__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--state-success);
+}
+
+/*
+ * 浮层定位：`bottom: 100%` 让盒子的**底边**贴住触发器顶边，
+ * 再用 `padding-bottom` 造出 8px 的悬停桥。
+ *
+ * 这一段必须是 padding 而不是 margin：margin 产生的空隙不属于任何元素，
+ * 鼠标从状态点移向浮层时会穿过它，触发 pointerleave，浮层当场消失。
+ */
+.footer-presence__panel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 30;
+  padding-bottom: 0.5rem;
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 2.5rem));
+}
+
+.footer-presence__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* 「读取中…」只有几个字，没有下限的话浮层会先缩成一条再撑开 */
+  min-width: 11rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+}
+
+.footer-presence__heading,
+.footer-presence__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+}
+
+.footer-presence__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-presence__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.footer-presence__link {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-presence__link:hover {
+  color: var(--text-heading);
+}
+
+.footer-presence__viewers {
+  flex: none;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 触屏没有 hover：保留状态点，但不提供浮层（组件本身也不会因 tap 打开） */
+@media (hover: none) {
+  .footer-presence__panel {
+    display: none;
+  }
+}
+
 @media (min-width: 48rem) {
+  .site-footer__nav {
+    padding-bottom: var(--spacing-stack);
+  }
+
+  .site-footer__nav-list {
+    flex-direction: row;
+    gap: 1rem 2.25rem;
+  }
+
+  .site-footer__nav-group {
+    gap: 0.3rem 0.7rem;
+  }
+
   .site-footer__inner {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;

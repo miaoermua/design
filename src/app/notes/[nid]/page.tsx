@@ -8,6 +8,7 @@ import { ActionRail } from '@/components/reading/action-rail'
 import { AiDisclosure } from '@/components/reading/ai-disclosure'
 import { ArticleInfo } from '@/components/reading/article-info'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
+import { ArticleRoomJoin } from '@/components/realtime/article-room-join'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { readArticleInsights } from '@/features/ai-insights'
@@ -15,7 +16,13 @@ import { AISummaryCard, readArticleSummary } from '@/features/ai-summary'
 import { CommentsSection } from '@/features/comments'
 import { isDonateVisible, readDonateConfig } from '@/features/donate'
 import { isInteractionEnabled, readSubscribeOptions } from '@/features/interactions'
-import { getDiaryByNid, getSiteTimezone, isNotFound, isPasswordRequired, type Diary } from '@/lib/api'
+import {
+  getDiaryByNid,
+  getSiteTimezone,
+  isNotFound,
+  isPasswordRequired,
+  type Diary,
+} from '@/lib/api'
 import { absoluteUrl, loadSiteContext } from '@/lib/site'
 import { imageSizeIndex, inlineMediaSources } from '@/lib/content/inline-media'
 import { renderMarkdown } from '@/lib/content/markdown'
@@ -23,6 +30,7 @@ import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { NOTE_LIST_PATH, notePath } from '@/lib/routes'
+import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { PasswordGate } from '@/features/diaries/components/password-gate'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, formatTime, formatWeekday } from '@/lib/utils/date'
@@ -45,12 +53,22 @@ function isNoteNid(value: string): boolean {
   return /^[1-9]\d*$/.test(value)
 }
 
-export async function generateMetadata({ params, searchParams }: DiaryPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: DiaryPageProps): Promise<Metadata> {
   const { nid } = await params
   const { password } = await searchParams
   if (!isNoteNid(nid)) notFound()
+  /*
+   * 标题与摘要来自日记实体：metadata 与页面必须用同一个 `?lang=` 请求，
+   * 才既拿到对应语言的标题，也共享同一份 fetch 缓存。
+   * 语言与密码是两个正交参数，密码仍按上游形态走 `?password=`。
+   */
+  const locale = await getLocale()
+  const contentLang = toContentLang(locale)
   try {
-    const diary = await getDiaryByNid(Number(nid), password)
+    const diary = await getDiaryByNid(Number(nid), password, { lang: contentLang })
     /*
      * canonical 与文章详情页走同一套：`absoluteUrl(identity, path)`。
      * 公开地址的解析优先级（env → 后端 `aggregate.url.webUrl`）也完全一致，
@@ -79,7 +97,6 @@ export async function generateMetadata({ params, searchParams }: DiaryPageProps)
   } catch (error) {
     // 404 要在 metadata 阶段抛，否则流式布局会先发出 200（软 404）
     if (isNotFound(error)) notFound()
-    const locale = await getLocale()
     return {
       title: isPasswordRequired(error)
         ? t(locale, 'diary.protectedTitle')
@@ -96,11 +113,13 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   if (!isNoteNid(nid)) notFound()
 
   const locale = await getLocale()
+  // 标题、正文与 metadata 都由后端按 `?lang=` 返回；语言不影响密码校验
+  const contentLang = toContentLang(locale)
 
   // 密码照上游的形态走查询参数，直接透传给 core
   let diary: Diary
   try {
-    diary = await getDiaryByNid(Number(nid), password)
+    diary = await getDiaryByNid(Number(nid), password, { lang: contentLang })
   } catch (error) {
     if (isNotFound(error)) notFound()
     if (isPasswordRequired(error)) {
@@ -127,7 +146,6 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
   )
 
   // 笔记同样只有 post/note 支持 AI 资源；受密码保护时正文为空，不请求
-  const contentLang = toContentLang(locale)
   const [summary, insights] = await Promise.all([
     rendered ? readArticleSummary(diary.id, contentLang) : Promise.resolve(null),
     rendered
@@ -152,6 +170,8 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   return (
     <Container width="wide">
+      {/* 只加入房间、不订阅事件：日记也要能被页脚的「谁在读」统计到 */}
+      {isRealtimeEnabled() ? <ArticleRoomJoin articleId={diary.id} /> : null}
       <div className="mx-auto mt-10 grid max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] gap-10 sm:mt-14 xl:max-w-[var(--shell-note)] xl:grid-cols-[minmax(0,calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline)))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
         <article
           id="diary-content"

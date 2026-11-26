@@ -109,7 +109,7 @@ describe('CommentsSection（服务端块）', () => {
     expect(screen.getByText(/本站已关闭评论/)).toBeTruthy()
     expect(api.listCalls).toBe(0)
     // 关闭时不展示任何可提交入口
-    expect(screen.queryByRole('button', { name: '发表评论' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '发送' })).toBeNull()
   })
 
   it('取数失败只降级这一块，不抛到页面', async () => {
@@ -135,12 +135,14 @@ describe('CommentsSection（服务端块）', () => {
     expect(screen.getByText('喵二')).toBeTruthy()
   })
 
-  it('空评论区不显示排序控件，只留一句邀请，输入区仍然在', async () => {
+  it('空评论区不显示排序控件，只留一句邀请；输入区保留且未输入时隐藏提交选项', async () => {
     await renderSection()
 
     expect(screen.getByText('还没有评论，留下第一条。')).toBeTruthy()
     expect(screen.queryByRole('group', { name: '评论排序' })).toBeNull()
-    expect(screen.getByRole('button', { name: '发表评论' })).toBeTruthy()
+    expect(screen.getByLabelText('评论', { selector: 'textarea' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '发送' })).toBeNull()
+    expect(screen.queryByLabelText('悄悄话')).toBeNull()
   })
 
   it('站点不接受匿名时不给表单，只给一句说明', async () => {
@@ -149,7 +151,7 @@ describe('CommentsSection（服务端块）', () => {
     await renderSection()
 
     expect(screen.getByText(/本站当前不接受匿名评论/)).toBeTruthy()
-    expect(screen.queryByRole('button', { name: '发表评论' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '发送' })).toBeNull()
     expect(screen.queryByRole('button', { name: '回复' })).toBeNull()
   })
 })
@@ -293,10 +295,29 @@ describe('评论表单', () => {
     mount()
     fireEvent.change(screen.getByLabelText('昵称'), { target: { value: '喵二' } })
     fireEvent.change(screen.getByLabelText('邮箱（不公开）'), { target: { value: 'a@b.co' } })
-    fireEvent.submit(screen.getByRole('button', { name: '发表评论' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('form', { name: '发表评论' }))
 
     expect(screen.getByRole('status').textContent).toBe('请写点什么')
     expect(calls).toHaveLength(0)
+  })
+
+  it('输入评论后才显示发送和悄悄话选项，并用问号提供说明', () => {
+    mount()
+
+    expect(screen.queryByRole('button', { name: '发送' })).toBeNull()
+    expect(screen.queryByLabelText('悄悄话')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('评论', { selector: 'textarea' }), {
+      target: { value: '有内容了' },
+    })
+
+    expect(screen.getByRole('button', { name: '发送' })).toBeTruthy()
+    expect(screen.getByLabelText('悄悄话')).toBeTruthy()
+    const tooltip = screen.getByRole('tooltip', { hidden: true })
+    expect(
+      screen.getByRole('button', { name: '悄悄话说明' }).getAttribute('aria-describedby'),
+    ).toBe(tooltip.id)
+    expect(tooltip.textContent).toBe('仅站长可见；回复仅通过邮件送达，不会显示在评论区。')
   })
 
   it('提交成功统一提示「评论已提交」，不顺带推断审核状态', async () => {
@@ -306,7 +327,7 @@ describe('评论表单', () => {
 
     mount()
     fillForm()
-    fireEvent.click(screen.getByRole('button', { name: '发表评论' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
     await waitFor(() => expect(screen.getByText('评论已提交')).toBeTruthy())
     expect(document.body.textContent).not.toContain('审核')
@@ -315,6 +336,20 @@ describe('评论表单', () => {
     expect(post).toBeTruthy()
     const body = JSON.parse(String(post?.init?.body)) as Record<string, string>
     expect(body).toMatchObject({ refId: '42', author: '喵二', mail: 'a@b.co', text: '写得不错' })
+  })
+
+  it('选择悄悄话后仍通过原字段提交', async () => {
+    const calls = stubFetch((_url, init) => (init?.method === 'POST' ? { status: 'ok' } : page()))
+
+    mount()
+    fillForm()
+    fireEvent.click(screen.getByRole('checkbox', { name: '悄悄话' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+
+    await waitFor(() => expect(screen.getByText('评论已提交')).toBeTruthy())
+    const post = calls.find((call) => call.init?.method === 'POST')
+    const body = JSON.parse(String(post?.init?.body)) as Record<string, unknown>
+    expect(body.isWhispers).toBe(true)
   })
 
   it('提交中禁用按钮：连点两次也只发一条', async () => {
@@ -337,7 +372,7 @@ describe('评论表单', () => {
 
     mount()
     fillForm()
-    const submit = screen.getByRole('button', { name: /发表评论|提交中/ })
+    const submit = screen.getByRole('button', { name: /发送|发送中/ })
     fireEvent.click(submit)
     fireEvent.click(submit)
 
@@ -354,7 +389,7 @@ describe('评论表单', () => {
 
     mount()
     fillForm()
-    fireEvent.click(screen.getByRole('button', { name: '发表评论' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('不接受匿名评论'))
     expect(screen.queryByText(/upstream/)).toBeNull()
@@ -365,7 +400,7 @@ describe('评论表单', () => {
 
     mount()
     fillForm()
-    fireEvent.click(screen.getByRole('button', { name: '发表评论' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
     await waitFor(() => expect(screen.getByText('评论已提交')).toBeTruthy())
 
     const stored = window.localStorage.getItem('folio-comment-identity') ?? ''

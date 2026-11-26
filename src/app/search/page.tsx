@@ -8,6 +8,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { getSiteTimezone, searchArticles } from '@/lib/api'
 import { sanitizeSnippet } from '@/lib/content/snippet'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { articlePath, notePath, pageHref } from '@/lib/routes'
@@ -35,7 +36,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const page = Math.max(1, Number.parseInt(pageParam ?? '1', 10) || 1)
   const timeZone = getSiteTimezone()
 
-  const result = keyword ? await searchArticles(keyword, { page, size: 10 }) : null
+  /*
+   * 搜索结果同样是内容：标题与摘要由后端按 `?lang=` 翻译。
+   * 页面与 `/api/search` 面板走同一套参数，两处结果不能语言不一致。
+   */
+  const result = keyword
+    ? await searchArticles(keyword, { page, size: 10, lang: toContentLang(locale) })
+    : null
 
   return (
     <Container>
@@ -116,7 +123,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                         </span>
                       ) : null}
                     </p>
-                    <h2 className="mt-1.5 font-serif text-h3 leading-[1.4] text-[var(--text-heading)]">
+                    <h2 className="text-h3 mt-1.5 font-serif leading-[1.4] text-[var(--text-heading)]">
                       {href ? (
                         <Link href={href} className="link-quiet">
                           {hit.title}
@@ -127,7 +134,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     </h2>
                     {hit.snippet ? (
                       <p
-                        className="search-snippet mt-2 max-w-[var(--measure-copy)] text-small text-[var(--text-secondary)]"
+                        className="search-snippet text-small mt-2 max-w-[var(--measure-copy)] text-[var(--text-secondary)]"
                         // 只保留后端插入的 <mark>，其余标签在 sanitizeSnippet 中被剥离
                         dangerouslySetInnerHTML={{ __html: sanitizeSnippet(hit.snippet) }}
                       />

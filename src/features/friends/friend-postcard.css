@@ -1,8 +1,9 @@
 /**
  * Folio — 友链明信片卡（Postcard & Stamp）
  *
- * 只服务 `/friends` 列表里的 `.friend-postcard`：一张暖纸明信片 + 右上角一枚
- * 独立齿孔邮票 + 压在邮票左下角与纸面交界处的骑缝日戳。
+ * 只服务 `/friends` 列表：一张暖纸明信片 + 右上角一枚独立齿孔邮票 + 压在邮票左下角
+ * 与纸面交界处的骑缝日戳（`.friend-postcard`）；以及文件末尾「已过期的友链」那一段的
+ * 站名与描述（`.friend-expired__*`，不可点击、带灰色下划线）。
  *
  * 归属：这是单页组件样式，不属于站点级设计系统，所以放在 feature 目录、
  * 由 `src/app/globals.css` 顶部 `@import` 进来；不新增 Token，
@@ -321,34 +322,31 @@
   gap: 0.375rem;
 }
 
-/* 站点名称：`--text-h3`（18px / 1.5）。§5.1 把「卡片标题」直接映射到 H3，
-   这里原本写死 1.1875rem（19px / 1.35）—— 一个既不在 Token 里、也不在任何
-   段落体系里的孤立字号；换回 H3 后标题与简介的层级由「衬线↔无衬线 + 字号」共同承担。
-   行高随之从 1.35 变成 Token 的 1.5：两行标题 54px，仍装得进 132px 的内容区
-   （实测 44 张真实友链，18px 下 0 张标题被截断）。 */
+/* 站点名称：衬线 + 字重 500，字号 16px（1rem）、行高沿用 H3 的 1.5。
+   2026-11-26 从 `--text-h3`（18px）下调一档：148px 的文字列在 18px 下每行只放得下
+   8 个汉字，稍长的站名就要折成两行、和简介抢纵向空间；16px 每行 9 个汉字。
+   16px 在 Token 里没有对应的角色，按用户明确要求写绝对值，不新增 Token；
+   字体与字重不变，层级仍由「衬线↔无衬线 + 字号」共同承担。 */
 .friend-postcard__title {
   min-width: 0;
   margin: 0;
   font-family: var(--font-serif);
-  font-size: var(--text-h3);
+  font-size: 1rem;
   font-weight: 500;
   line-height: var(--text-h3--line-height);
   color: var(--text-heading);
 }
 
-/* 简介：跟在名称下方，最多两行。用 `--text-caption`（13px / 1.6）。
-   这里比较过三档：`--text-meta`（12px）是「日期、阅读数、kicker」的 meta 档，
-   一段要读的句子挂在这个档位上偏小，手机上尤其要凑近看；`--text-small`（15px）
-   在 148px 的文字列里只有约 9.4 个汉字/行，`From codes to clouds` 这种短句也要
-   折成两行、行高 1.7 让两行之间空出一整行，层级反而被抹平（实测 44 张卡横排时
-   与 18px 标题几乎同重）。Caption 的 13px 在保留可读性的同时守住了「标题 → 简介」
-   的落差，44 条真实简介里只有 2 条按既有规则两行截断。
-   行高吃 Token 的 1.6、不手写压缩值：卡片最紧时（两行标题 54px + 两行简介 41.6px
-   + 间距 6px）占 102px，内容区 132px，仍有余量。 */
+/* 简介：跟在名称下方，最多两行。字号 12px（`--text-meta`），颜色与行高不变
+   （行高仍取 Caption 的 1.6，不跟 Token 的 1.5 走）。
+   2026-11-26 从 `--text-caption`（13px）下调一档，与 16px 的名称同步收小；
+   12px 是全站信息文字的下限（见 tests/small-fonts.test.ts），到这里为止。
+   行高吃 Token 的 1.6、不手写压缩值：卡片最紧时（两行标题 48px + 两行简介 38.4px
+   + 间距 6px）占 92.4px，内容区 132px，整块仍垂直居中。 */
 .friend-postcard__desc {
   min-width: 0;
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-meta);
   line-height: var(--text-caption--line-height);
   color: var(--text-secondary);
 }
@@ -486,11 +484,44 @@
     gap: 0.25rem;
   }
 
-  /* 名称与简介不再跟桌面分档：两者都已是语义 Token（H3 / Caption），
+  /* 名称与简介不再跟桌面分档：两者沿用同一套字号（16px / 12px），
      窄屏只收一点区块间距。早先这里把标题压到 0.9375rem（15px）、把简介
      压回 --text-meta，等于在手机上另造一套「更小的字」；一列一张之后
-     横向空间够用，不需要靠缩字号换行数（实测 390px：18px 标题 0 张截断、
-     13px 简介 0 张截断）。 */
+     横向空间够用，不需要靠缩字号换行数。 */
+}
+
+/* ── 已过期的友链：信封之外的单开一类 ──
+   DOM 见 `friend-card.tsx` 的 `ExpiredFriendItem`：`<li>` 里只有站名 + 描述两行。
+   这一段刻意不做卡片、邮票与纸纹 —— 已过期的站点不该再占一枚信封。
+   站名不可点击，但划线方式照搬正文超链接（`.prose a`）的 1px 与 0.22em 抬升，
+   读成「一条还在、但已经失效的链接」；为了不像普通链接，文字与下划线都转灰：
+   文字取 --text-secondary（相对页面底色 亮 5.14:1 / 暗 7.22:1，小字可读），
+   下划线取更浅的 --text-tertiary（亮 3.56:1 / 暗 4.85:1，装饰线只要求 3:1）。
+   --text-tertiary **不能**用在文字上：浅色下 3.56:1 不到 4.5:1。
+   没有 hover 态、没有过渡 —— 它不是控件，指针样式保持默认。
+   字号、行高与明信片的名称 / 简介一一对应（16px 衬线 500 / 12px），
+   上下两块读起来是同一套版式，区别只在「有没有信封」和「灰不灰」。 */
+.friend-expired__name {
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: var(--text-h3--line-height);
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--text-tertiary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  overflow-wrap: anywhere;
+}
+
+.friend-expired__desc {
+  min-width: 0;
+  margin: 0.125rem 0 0;
+  font-size: var(--text-meta);
+  line-height: var(--text-caption--line-height);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
 }
 
 /* 减少动效：只剩纸面投影的补间，直接瞬切即可 —— 悬停反馈本身（阴影加深）
@@ -501,13 +532,8 @@
   }
 }
 
-/* 主题切换过渡豁免：全局 `.theme-transition *` 让所有元素的颜色属性播放 240ms 过渡，
-   但友链页 65 张卡片 × ~10 个子元素/伪元素 = 650+ 个颜色动画同时跑，
-   叠上 blur、mask、box-shadow 一起补间，帧率直接掉到个位数。
-   这里把卡片内部全部改为瞬切：视觉上友链区域闪一下比卡成幻灯片好得多。 */
-html.theme-transition .friend-postcard,
-html.theme-transition .friend-postcard *,
-html.theme-transition .friend-postcard *::before,
-html.theme-transition .friend-postcard *::after {
-  transition-duration: 0s !important;
-}
+/* 主题切换不再需要这里的豁免：旧的 `html.theme-transition *` 会给全站每个
+   元素挂 240ms 颜色过渡，友链页 65 张卡片 × ~10 个子元素 = 650+ 个颜色动画
+   同时跑，帧率掉到个位数，当时只能给这一页单独打「瞬切」补丁。
+   现在主题切换走 View Transition（整屏快照交叉淡入），补间在合成器上跑，
+   与节点数无关，这条豁免连同它的 !important 一起删掉。 */

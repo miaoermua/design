@@ -72,8 +72,12 @@ export const SOCIAL_ICON_CLASS_MAX = 48
 /** CSS 图标最多由几个 class 组成：`fa fa-at fa-lg` 已经是 3 个 */
 export const SOCIAL_ICON_CLASS_PARTS_MAX = 4
 
-/** 页脚自定义链接条数上限 */
-export const FOOTER_LINK_MAX = 8
+/** 页脚分类导航数量上限 */
+export const FOOTER_SECTION_MAX = 6
+/** 每个页脚分类的链接条数上限 */
+export const FOOTER_SECTION_LINK_MAX = 8
+/** 页脚分类名长度上限 */
+export const FOOTER_SECTION_NAME_MAX = 32
 /** 页脚链接标题长度上限 */
 export const FOOTER_LINK_TITLE_MAX = 32
 /** 页脚链接地址长度上限 */
@@ -97,7 +101,7 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   footer: {
     since: null,
     icp: { enabled: false, label: null, url: null },
-    links: [],
+    linkSections: [],
   },
   social: {
     enabled: true,

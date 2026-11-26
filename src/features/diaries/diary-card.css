@@ -1,0 +1,16 @@
+.diary-entry,
+.diary-card {
+  position: relative;
+}
+
+.diary-entry__title-link::after,
+.diary-card__title-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.diary-entry a:not(.diary-entry__title-link) {
+  position: relative;
+  z-index: 1;
+}

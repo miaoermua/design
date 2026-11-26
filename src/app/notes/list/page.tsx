@@ -15,6 +15,7 @@ import {
   listDiariesByTopic,
   listTopics,
 } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { NOTE_LIST_PATH, noteListPath, pageHref } from '@/lib/routes'
@@ -66,12 +67,15 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
               size: LIST_PAGE_SIZE,
               sortBy: 'createdAt',
               sortOrder: -1,
+              // 专栏筛选与全量列表是两条端点，语言参数在两边都要传
+              lang: toContentLang(locale),
             })
           : listDiaries({
               page,
               size: LIST_PAGE_SIZE,
               sortBy: 'createdAt',
               sortOrder: -1,
+              lang: toContentLang(locale),
             }))
 
   const groups = result ? groupDiariesByDay(result.items, timeZone) : []
@@ -81,11 +85,6 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
       <PageHeader
         kicker={topic ? t(locale, 'diaries.kickerTopic') : t(locale, 'diaries.kicker')}
         title={topic ? topic.name : t(locale, 'diaries.heading')}
-        description={
-          topic
-            ? tf(locale, 'diaries.topicIntro', { name: topic.name })
-            : t(locale, 'diaries.intro')
-        }
         meta={
           result ? (
             <p className="meta">
@@ -117,7 +116,11 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
           aria-label={t(locale, 'diaries.filterLabel')}
           className="mb-8 flex gap-2 overflow-x-auto pb-1"
         >
-          <FilterChip href={NOTE_LIST_PATH} active={!topic} label={t(locale, 'diaries.filterAll')} />
+          <FilterChip
+            href={NOTE_LIST_PATH}
+            active={!topic}
+            label={t(locale, 'diaries.filterAll')}
+          />
           {topics.map((item) => (
             <FilterChip
               key={item.id}
@@ -135,7 +138,16 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
           description={t(locale, 'diaries.topicMissingDescription')}
         />
       ) : groups.length > 0 ? (
-        <div>
+        /*
+         * 左轨道（1px 竖线）画在这一层，不画在每组里：每组各画一段会在组间距
+         * 处断开，时间线就退化成一排短横线。轨道只圈住列表本身——页头、筛选条
+         * 与分页留在轨道外，它们是页面的工具，不是时间线的一部分。
+         *
+         * `gap-14`（56px）是「跨天」的间距，天内的条间距由分组组件给 40px。
+         * 目标站点的日记基本一天一条，所以跨天间距就是读者实际看到的条目间距：
+         * 参考稿的条目间隔也在 56px 一档，再大就散了。
+         */
+        <div className="flex flex-col gap-14 border-l border-[var(--edge)] pl-5 sm:pl-7">
           {groups.map((group) => (
             <DiaryDayGroupView key={group.date} group={group} timeZone={timeZone} />
           ))}
@@ -172,15 +184,7 @@ export default async function NotesListPage({ searchParams }: NotesListPageProps
  * 选中态用 `--accent-wash`（与探索页同一 Token），未选中只给一点底色，
  * 不加边框——一排描边胶囊会把筛选条读成一次表单。
  */
-function FilterChip({
-  href,
-  active,
-  label,
-}: {
-  href: string
-  active: boolean
-  label: string
-}) {
+function FilterChip({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
     <Link
       href={href}

@@ -8,6 +8,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
 import { getCategoryBySlug, getSiteTimezone, listArticles } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { categoryPath, pageHref } from '@/lib/routes'
@@ -27,10 +28,7 @@ function decodeParam(value: string): string {
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params
-  const [category, locale] = await Promise.all([
-    getCategoryBySlug(decodeParam(slug)),
-    getLocale(),
-  ])
+  const [category, locale] = await Promise.all([getCategoryBySlug(decodeParam(slug)), getLocale()])
   // 404 要在 metadata 阶段抛：根布局是流式的，等正文再抛时状态码已是 200
   if (!category) notFound()
   return {
@@ -52,7 +50,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   // 用 /posts?categoryIds= 分页，而不是 /categories/:slug 的 children：
   // 后者会把整分类的文章一次性吐回来，无法分页。
-  const result = await listArticles({ categoryIds: [category.id], page, size: 10 })
+  const result = await listArticles({
+    categoryIds: [category.id],
+    page,
+    size: 10,
+    lang: toContentLang(locale),
+  })
   const { items, pagination } = result
 
   return (
@@ -78,9 +81,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       />
 
       {items.length > 0 ? (
-        <div className="divide-y divide-dashed divide-[var(--edge)] border-t border-dashed border-[var(--edge-strong)]">
+        <div className="flex flex-col gap-4">
           {items.map((article) => (
-            <ArticleRow key={article.id} article={article} timeZone={timeZone} locale={locale} />
+            <ArticleRow
+              key={article.id}
+              article={article}
+              timeZone={timeZone}
+              withExcerpt
+              locale={locale}
+            />
           ))}
         </div>
       ) : (

@@ -7,6 +7,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { requireFeature } from '@/core/registry/guard'
 import { ArticleRow } from '@/features/articles'
 import { getSiteTimezone, listArticlesByTag } from '@/lib/api'
+import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { pageHref, tagPath } from '@/lib/routes'
@@ -44,7 +45,11 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
 
   // 标签没有独立详情接口，v2 的 /posts 也不支持按 tag 过滤：
   // 仓库层会翻文章列表自己筛，未知标签得到空列表而不是 404
-  const { tagName, result } = await listArticlesByTag(tag, { page, size: 10 })
+  const { tagName, result } = await listArticlesByTag(tag, {
+    page,
+    size: 10,
+    lang: toContentLang(locale),
+  })
   const { items, pagination } = result
 
   return (
@@ -73,9 +78,7 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
       ) : (
         <EmptyState
           title={page > 1 ? t(locale, 'articles.emptyTitle') : t(locale, 'tag.empty')}
-          description={
-            page > 1 ? t(locale, 'category.emptyOutOfRange') : t(locale, 'tag.empty')
-          }
+          description={page > 1 ? t(locale, 'category.emptyOutOfRange') : t(locale, 'tag.empty')}
         />
       )}
 

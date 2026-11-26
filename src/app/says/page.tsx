@@ -25,10 +25,10 @@ export default async function SaysPage() {
   return (
     <Container>
       <PageHeader
-        kicker={t(locale, 'says.kicker')}
         title={t(locale, 'says.heading')}
-        description={t(locale, 'says.description')}
-        meta={<p className="meta">{tf(locale, 'says.count', { total: result.pagination.total })}</p>}
+        meta={
+          <p className="meta">{tf(locale, 'says.count', { total: result.pagination.total })}</p>
+        }
       />
 
       {result.items.length > 0 ? (

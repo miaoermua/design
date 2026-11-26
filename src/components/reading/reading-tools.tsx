@@ -5,6 +5,7 @@ import { BackToTop } from '@/components/ui/back-to-top'
 import { ReadingProgressBar } from '@/components/ui/reading-progress'
 import { ReadingProgressRing } from '@/components/ui/reading-progress'
 import { Toc } from '@/components/ui/toc'
+import { TocSync } from '@/lib/reading/use-toc'
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/config'
 import { t } from '@/lib/i18n/dictionary'
 
@@ -77,6 +78,7 @@ export function ReadingInline({ items, targetId, locale = DEFAULT_LOCALE }: Read
 
   return (
     <div className="reading-inline mt-10 xl:hidden">
+      <TocSync items={items} />
       {hasToc ? (
         <details className="border-t border-dashed border-[var(--edge)] pt-4">
           <summary className="toc-summary meta flex cursor-pointer items-center justify-between gap-3 select-none">

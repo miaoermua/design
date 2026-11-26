@@ -6,21 +6,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ThemeConfig } from '@/core/config/theme'
 import type { SiteIdentity } from '@/lib/api'
 
-const state = vi.hoisted(() => ({
-  footer: {
-    enabled: false,
-    since: null as number | null,
-    icp: { enabled: false, label: null as string | null, url: null as string | null },
-    /** `footer.links` 是追加的一排，默认空 */
-    links: [] as { title: string; url: string }[],
-  },
-}))
+const state = vi.hoisted(() => ({ footer: {} as ThemeConfig['footer'] }))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
   usePathname: () => '/',
 }))
-
+vi.mock('@/lib/i18n/server', () => ({ getLocale: async () => 'zh-CN' }))
 vi.mock('@/core/config/theme', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core/config/theme')>()
   return {
@@ -30,13 +22,6 @@ vi.mock('@/core/config/theme', async (importOriginal) => {
 })
 
 import { SiteFooter } from '@/components/layout/site-footer'
-
-/**
- * Footer
- *
- * 结构是任务书里最容易被「顺手加回去」的部分：旧版有导航、社交、RSS 和
- * 一串项目链接。这里把「已经没有这些」也写成断言，避免回退时无人察觉。
- */
 
 afterEach(cleanup)
 
@@ -52,159 +37,124 @@ const identity: SiteIdentity = {
 }
 
 async function renderFooter(
-  overrides: Partial<typeof state.footer> = {},
+  overrides: Partial<ThemeConfig['footer']> = {},
   id: SiteIdentity | null = identity,
 ) {
   state.footer = {
-    enabled: false,
     since: 2021,
     icp: { enabled: false, label: null, url: null },
-    links: [],
+    linkSections: [],
     ...overrides,
   }
-  const view = render(await SiteFooter({ identity: id }))
-  return view
+  return render(await SiteFooter({ identity: id }))
 }
 
-describe('Footer 第一栏', () => {
-  it('把年份区间、名字与个性签名放在同一段信息里', async () => {
-    await renderFooter()
+const sections: ThemeConfig['footer']['linkSections'] = [
+  {
+    name: '关于',
+    links: [
+      { name: '关于本站', href: '/about-site', external: false },
+      { name: '关于我', href: '/about', external: false },
+      { name: '项目地址', href: 'https://github.com/innei/Shiro', external: true },
+    ],
+  },
+  { name: '联系', links: [{ name: '发邮件', href: 'mailto:i@example.com', external: true }] },
+]
 
+describe('Footer 信息与设置', () => {
+  it('年份区间、名字与个性签名在同一段信息里', async () => {
+    await renderFooter()
     expect(screen.getByText(`© 2021–${new Date().getFullYear()}`)).toBeTruthy()
     expect(screen.getByText('Miao')).toBeTruthy()
     expect(screen.getByText('写点东西')).toBeTruthy()
   })
 
-  it('没有配置 since 时退回当前年份，不编造站龄', async () => {
-    await renderFooter({ since: null })
+  it('没有 since 时退回当前年份；identity 缺失时不出现 undefined', async () => {
+    await renderFooter({ since: null }, null)
     expect(screen.getByText(`© ${new Date().getFullYear()}`)).toBeTruthy()
-  })
-
-  it('identity 缺失时用站点标题兜底，不出现 undefined', async () => {
-    await renderFooter({}, null)
     expect(document.body.textContent).not.toContain('undefined')
   })
 
-  it('不渲染头像与社交图标', async () => {
+  it('Mix-Space 与 Design 是外链，ICP 开启时仍在出处行', async () => {
+    await renderFooter({ icp: { enabled: true, label: '浙ICP备00000000号', url: null } })
+    const core = screen.getByRole('link', { name: 'Mix-Space' })
+    const design = screen.getByRole('link', { name: 'Design' })
+    const icp = screen.getByRole('link', { name: '浙ICP备00000000号' })
+    expect(core.getAttribute('href')).toBe('https://github.com/mx-space/core')
+    expect(design.getAttribute('href')).toBe('https://github.com/miaoermua/design')
+    expect(core.getAttribute('target')).toBe('_blank')
+    expect(icp.getAttribute('href')).toBe('https://beian.miit.gov.cn/')
+    // 出处行是 `.site-footer__meta`（div：要容纳在线状态的浮层，不能再是 <p>）
+    expect(icp.closest('.site-footer__meta')?.textContent).toContain('Powered by')
+  })
+
+  it('不渲染头像、社交图标或隐式 RSS', async () => {
     const { container } = await renderFooter()
     expect(container.querySelector('img')).toBeNull()
-    // 版权行与链接行不该出现图标（页脚唯一的 SVG 来自设置区：语言/主题图标）
-    expect(container.querySelector('a svg')).toBeNull()
-    expect(container.querySelector('p svg')).toBeNull()
-    expect(container.querySelector('a[href*="twitter"], a[href*="mastodon"]')).toBeNull()
-  })
-})
-
-describe('Footer 第二栏', () => {
-  it('Mix-Space 与 Design 都是外链，指向各自仓库', async () => {
-    await renderFooter()
-
-    const core = screen.getByRole('link', { name: 'Mix-Space' })
-    const theme = screen.getByRole('link', { name: 'Design' })
-
-    expect(core.getAttribute('href')).toBe('https://github.com/mx-space/core')
-    expect(theme.getAttribute('href')).toBe('https://github.com/miaoermua/design')
-    expect(core.getAttribute('target')).toBe('_blank')
-    expect(theme.getAttribute('rel')).toContain('noopener')
-  })
-
-  it('ICP 开启时紧邻 Powered by 输出原文本与备案链接', async () => {
-    await renderFooter({
-      icp: { enabled: true, label: '浙ICP备00000000号', url: 'https://beian.miit.gov.cn/' },
-    })
-
-    const icp = screen.getByRole('link', { name: '浙ICP备00000000号' })
-    expect(icp.getAttribute('href')).toBe('https://beian.miit.gov.cn/')
-    // 与 Powered by 处在同一段里
-    expect(icp.closest('p')?.textContent).toContain('Powered by')
-  })
-
-  it('ICP 未开启时不输出任何备案文本', async () => {
-    await renderFooter({ icp: { enabled: false, label: '浙ICP备00000000号', url: null } })
-    expect(screen.queryByText('浙ICP备00000000号')).toBeNull()
-  })
-
-  it('ICP 链接非法时退回官方查询入口，不渲染坏地址', async () => {
-    await renderFooter({ icp: { enabled: true, label: '浙ICP备00000000号', url: null } })
-    expect(screen.getByRole('link', { name: '浙ICP备00000000号' }).getAttribute('href')).toBe(
-      'https://beian.miit.gov.cn/',
-    )
-  })
-})
-
-describe('Footer 第三栏：自定义链接', () => {
-  it('没配置时不渲染这一排，也不留空行', async () => {
-    const { container } = await renderFooter({ links: [] })
-    expect(container.querySelectorAll('p')).toHaveLength(2)
-  })
-
-  it('站内路径与外部地址都渲染，外部地址新窗口打开', async () => {
-    await renderFooter({
-      links: [
-        { title: '关于', url: '/about' },
-        { title: '友链', url: 'https://example.com/friends' },
-      ],
-    })
-
-    const about = screen.getByRole('link', { name: '关于' })
-    expect(about.getAttribute('href')).toBe('/about')
-    // 站内链接不做 target="_blank"
-    expect(about.getAttribute('target')).toBeNull()
-
-    const friends = screen.getByRole('link', { name: '友链' })
-    expect(friends.getAttribute('href')).toBe('https://example.com/friends')
-    expect(friends.getAttribute('target')).toBe('_blank')
-    expect(friends.getAttribute('rel')).toContain('noopener')
-  })
-
-  it('是追加而不是覆盖：Powered by 与 ICP 仍按原样输出', async () => {
-    await renderFooter({
-      icp: { enabled: true, label: '浙ICP备00000000号', url: null },
-      links: [{ title: '关于', url: '/about' }],
-    })
-
-    expect(screen.getByRole('link', { name: 'Mix-Space' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Design' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: '浙ICP备00000000号' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: '关于' })).toBeTruthy()
-  })
-})
-
-describe('Footer 已删除的旧内容', () => {
-  it('不再有页脚导航、RSS 与项目宣传链接', async () => {
-    const { container } = await renderFooter()
-
-    expect(container.querySelectorAll('footer nav')).toHaveLength(0)
     expect(container.querySelector('a[href="/feed"]')).toBeNull()
     expect(screen.queryByText(/RSS/i)).toBeNull()
-    expect(screen.queryByText(/Mix Space 社区|Mix Space community/)).toBeNull()
-
-    // 页脚里只有 Mix-Space、Design（以及可选的 ICP）三个链接
-    expect(container.querySelectorAll('a')).toHaveLength(2)
   })
 })
 
-/**
- * 分区结构：信息区在左、设置区在右
- *
- * jsdom 没有布局引擎，算不出「谁在右」——这里锁的是**结构契约**：
- * 两个平级区域、DOM 顺序（信息在前，单列堆叠时自然在上）、
- * 以及 grid 的两列定义写在 CSS 里。真实几何（x 坐标、是否换行、
- * 是否被回顶浮标压住）由 `scripts/visual/footer-layout.mjs` 在浏览器里量。
- */
-describe('Footer 分区结构', () => {
+describe('Footer Shiro 分类导航', () => {
+  it('未配置 linkSections 时不渲染 nav，也不留空行', async () => {
+    const { container } = await renderFooter()
+    expect(container.querySelector('footer nav')).toBeNull()
+    // 信息区仍是两行：版权行（<p>）与出处行（<div>，内含在线状态）
+    expect(container.querySelectorAll('.site-footer__line')).toHaveLength(1)
+    expect(container.querySelectorAll('.site-footer__meta')).toHaveLength(1)
+    expect(container.querySelector('footer')?.className).not.toContain('site-footer--has-nav')
+  })
+
+  it('按配置顺序渲染分类名、箭头与链接，导航位于信息区上方', async () => {
+    const { container } = await renderFooter({ linkSections: sections })
+    const nav = screen.getByRole('navigation', { name: '页脚导航' })
+    const groups = [...nav.querySelectorAll('.site-footer__nav-group')]
+    expect(
+      groups.map((group) => group.querySelector('.site-footer__nav-label')?.textContent),
+    ).toEqual(['关于', '联系'])
+    expect(nav.querySelectorAll('.site-footer__nav-chevron[aria-hidden="true"]')).toHaveLength(2)
+    const inner = container.querySelector('.site-footer__inner')!
+    expect(nav.compareDocumentPosition(inner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(container.querySelector('footer')?.className).toContain('site-footer--has-nav')
+  })
+
+  it('站内链接走 Link，外部链接与 mailto 新窗口打开', async () => {
+    await renderFooter({ linkSections: sections })
+    const about = screen.getByRole('link', { name: '关于我' })
+    const project = screen.getByRole('link', { name: '项目地址' })
+    const mail = screen.getByRole('link', { name: '发邮件' })
+    expect(about.getAttribute('href')).toBe('/about')
+    expect(about.getAttribute('target')).toBeNull()
+    expect(project.getAttribute('href')).toBe('https://github.com/innei/Shiro')
+    expect(project.getAttribute('target')).toBe('_blank')
+    expect(project.getAttribute('rel')).toContain('noopener')
+    expect(mail.getAttribute('href')).toBe('mailto:i@example.com')
+    expect(mail.getAttribute('target')).toBe('_blank')
+  })
+
+  it('分类导航不覆盖或替换版权、Powered by 与 ICP', async () => {
+    await renderFooter({
+      linkSections: sections,
+      icp: { enabled: true, label: '浙ICP备00000000号', url: null },
+    })
+    const nav = document.querySelector('footer nav')!
+    expect(nav.textContent).not.toContain('Powered by')
+    expect(nav.textContent).not.toContain('©')
+    expect(screen.getByRole('link', { name: 'Mix-Space' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '浙ICP备00000000号' })).toBeTruthy()
+  })
+})
+
+describe('Footer 分区与样式契约', () => {
   function globalsCss(): string {
     return readFileSync(join(import.meta.dirname, '../src/app/globals.css'), 'utf8')
   }
-
-  /** 取一条 CSS 规则的声明体（第一个 `{` 到配对 `}` 之间） */
   function ruleBody(css: string, selector: string): string {
-    const start = css.indexOf(`${selector} {`)
+    const start = css.indexOf(`\n${selector} {`)
     expect(start).toBeGreaterThan(-1)
-    return css.slice(start, css.indexOf('}', start))
+    return css.slice(start + 1, css.indexOf('}', start))
   }
-
-  /** 只取页脚布局那一节：文件名里有 48rem 的媒体查询不止一处，不能全文搜 */
   function footerLayoutCss(): string {
     const css = globalsCss()
     const start = css.indexOf('── Footer 布局')
@@ -213,129 +163,55 @@ describe('Footer 分区结构', () => {
     return css.slice(start, end)
   }
 
-  it('页脚内部是两个平级区域，信息区在前、设置区在后', async () => {
-    const { container } = await renderFooter()
-
-    const inner = container.querySelector('.site-footer__inner')
-    expect(inner).not.toBeNull()
-
-    const regions = [...(inner?.children ?? [])]
+  it('信息区与设置区仍是两个平级区域，信息在前', async () => {
+    const { container } = await renderFooter({ linkSections: sections })
+    const regions = [...container.querySelector('.site-footer__inner')!.children]
     expect(regions).toHaveLength(2)
     expect(regions[0]?.className).toContain('site-footer__info')
     expect(regions[1]?.className).toContain('site-footer__settings')
-
-    // 设置区**只**出现在右侧那一栏里，不再横在信息区上方
-    const settings = container.querySelectorAll('.footer-settings')
-    expect(settings).toHaveLength(1)
-    expect(regions[1]?.contains(settings[0])).toBe(true)
+    expect(container.querySelectorAll('.footer-settings')).toHaveLength(1)
   })
 
-  it('信息区第一行是版权行，第二行是出处与备案', async () => {
+  it('信息区始终只有版权行与出处行两段', async () => {
     await renderFooter({
+      linkSections: sections,
       icp: { enabled: true, label: '浙ICP备00000000号', url: null },
-      links: [{ title: '关于', url: '/about' }],
     })
-
-    const info = document.querySelector('.site-footer__info') as HTMLElement
-    const [first, second] = [...info.querySelectorAll(':scope > p')]
-
-    expect(first?.textContent).toContain('©')
-    expect(first?.textContent).toContain('Miao')
-    expect(second?.textContent).toContain('Powered by')
+    /*
+     * 第一行是 <p>，第二行是 <div>：出处行里挂着在线状态组件，
+     * 它的浮层包含列表与段落，放进 <p> 会构成非法的块级嵌套。
+     * 这里断言的是「仍然是两段、内容归属不变」，不是标签名。
+     */
+    const line = document.querySelector('.site-footer__info > .site-footer__line')
+    const meta = document.querySelector('.site-footer__info > .site-footer__meta')
+    expect(line?.textContent).toContain('©')
+    expect(meta?.textContent).toContain('Powered by')
+    expect(meta?.textContent).not.toContain('关于我')
+    expect(document.querySelectorAll('.site-footer__info > p')).toHaveLength(1)
   })
 
-  it('第二行里出处、备案与自定义链接共处同一条流，不拆成多段', async () => {
-    await renderFooter({
-      icp: { enabled: true, label: '浙ICP备00000000号', url: null },
-      links: [
-        { title: '关于', url: '/about' },
-        { title: '友链', url: 'https://example.com/friends' },
-      ],
-    })
-
-    const meta = document.querySelector('.site-footer__meta') as HTMLElement
-    expect(meta).not.toBeNull()
-
-    // 四个链接全部落在**同一个** <p> 里：换行由 flex-wrap 决定，不是靠多段落
-    for (const name of ['Mix-Space', 'Design', '浙ICP备00000000号', '关于', '友链']) {
-      const node = screen.getByRole('link', { name })
-      expect(node.closest('p')).toBe(meta)
-    }
-
-    // 信息区只有 2 个段落：链接没有各自成段
-    expect(document.querySelectorAll('.site-footer__info > p')).toHaveLength(2)
-  })
-
-  it('分隔符与它后面的链接绑成不可拆的单元', async () => {
-    await renderFooter({
-      icp: { enabled: true, label: '浙ICP备00000000号', url: null },
-      links: [{ title: '关于', url: '/about' }],
-    })
-
-    const units = [...document.querySelectorAll('.site-footer__meta-unit')]
-    // Powered by + 备案 + 关于 = 3 个单元
-    expect(units).toHaveLength(3)
-
-    // 除第一个（Powered by），每个单元都以分隔符开头、紧跟自己的链接——
-    // 换行时「｜」不会孤零零留在上一行行尾
-    for (const unit of units.slice(1)) {
-      expect(unit.firstElementChild?.className).toContain('footer-sep')
-      expect(unit.querySelector('a')).not.toBeNull()
-    }
-    expect(units[0]?.textContent).toContain('Powered by')
-  })
-
-  it('桌面端两列布局：信息吃剩余宽度，设置按内容收窄', () => {
+  it('手机导航分组竖排，桌面改为横排且可折行', () => {
+    const css = globalsCss()
     const section = footerLayoutCss()
-
-    expect(section).toContain('grid-template-columns: minmax(0, 1fr) auto;')
-    // 设置区贴到右边缘，而不是继续靠左
-    expect(section).toContain('justify-content: flex-end;')
-    // 两列只在 ≥48rem 生效
+    expect(ruleBody(css, '.site-footer__nav-list')).toContain('flex-direction: column')
+    expect(css).toMatch(
+      /\.site-footer__nav-list,\s*\.site-footer__nav-links \{[^}]*flex-wrap: wrap/,
+    )
+    expect(section).toContain('flex-direction: row')
     expect(section).toContain('@media (min-width: 48rem)')
   })
 
-  it('窄屏单列且可换行，不会横向溢出', () => {
+  it('有导航时信息区不重复叠加顶部内边距', () => {
     const css = globalsCss()
-    const section = footerLayoutCss()
-
-    // 基础规则是单列
-    expect(ruleBody(css, '.site-footer__inner')).toContain('grid-template-columns: minmax(0, 1fr);')
-    // 第二行是可换行的流；链接自身 nowrap（组件里写死）
-    expect(ruleBody(css, '.site-footer__meta')).toContain('flex-wrap: wrap;')
-    // 信息区允许收缩到列宽内，长链接不撑破 grid
-    expect(ruleBody(css, '.site-footer__info')).toContain('min-width: 0;')
-    // 极窄屏（<22rem）给浮标让出右侧：控件组各占一行，而不是被压住
-    expect(section).toContain('@media (max-width: 22rem)')
+    expect(ruleBody(css, '.site-footer--has-nav .site-footer__inner')).toContain('padding-top: 0')
+    expect(ruleBody(css, '.site-footer__inner')).toContain('grid-template-columns: minmax(0, 1fr)')
+    expect(footerLayoutCss()).toContain('grid-template-columns: minmax(0, 1fr) auto')
+    expect(footerLayoutCss()).toContain('justify-content: flex-end')
   })
 
-  it('分隔符只留右侧间距，左边距交给容器的 column-gap', () => {
+  it('导航链接有可见焦点与足够点击高度', () => {
     const css = globalsCss()
-    const sep = ruleBody(css, '.footer-sep')
-
-    // 双侧 margin 会让换到行首的分隔符带着左间距一起换行，第二行看着像缩进了一格
-    // 0.45em 是 78df0e2「footer 布局与间距收紧」定下的值（此前是 0.55em，
-    // 断言当时没跟改）。这里守的是「只有右侧间距」这条规则，不是某个具体数值。
-    expect(sep).toContain('margin-inline-end: 0.45em;')
-    expect(sep).not.toContain('margin-inline:')
-    // 间距的承担者
-    expect(ruleBody(css, '.site-footer__meta')).toContain('column-gap: 0.55em;')
-  })
-
-  it('信息单元用 nowrap 保持整体不折行，不用 inline-flex', () => {
-    // inline-flex 会吞掉文本节点首尾空白 → 渲染成 "Powered byMix-Space.Design."
-    const unit = ruleBody(globalsCss(), '.site-footer__meta-unit')
-    expect(unit).toContain('white-space: nowrap;')
-    expect(unit).not.toContain('display: inline-flex')
-  })
-
-  it('旧的「靠左排 / 预留 4.5rem」不再残留', () => {
-    const css = globalsCss()
-
-    // padding-right 曾加在 .footer-settings 上：对左对齐的 flex 行毫无作用
-    expect(ruleBody(css, '.footer-settings')).not.toContain('padding-right')
-    // 注释里「靠左排」「不分居两端」的描述已作废
-    expect(css).not.toContain('靠左排')
-    expect(css).not.toContain('不分居两端')
+    expect(ruleBody(css, '.site-footer__nav-link')).toContain('min-height: 2rem')
+    expect(ruleBody(css, '.site-footer__nav-link:focus-visible')).toContain('outline:')
   })
 })

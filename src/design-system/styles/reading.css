@@ -584,22 +584,15 @@
 
 .comments__notice {
   margin-top: 1.5rem;
-  padding: 1rem 1.1rem;
-  border: 1px dashed var(--edge-strong);
-  border-radius: var(--radius-md);
   font-size: var(--text-small);
   color: var(--text-secondary);
 }
 
 .comments__empty {
   margin-top: 1.75rem;
-  padding: 1.5rem 1.1rem;
-  border: 1px dashed var(--edge);
-  border-radius: var(--radius-md);
   font-family: var(--font-serif);
   font-size: var(--text-small);
   color: var(--text-secondary);
-  text-align: center;
 }
 
 .comments__list {
@@ -769,17 +762,13 @@
 
 .comment-composer {
   margin-top: 1.5rem;
-  padding: 1rem 1.05rem 1.05rem;
-  border: 1px solid var(--edge);
-  /* 设计系统没有大圆角 Token，卡片层用 md（6px），与其它输入区一致 */
-  border-radius: var(--radius-md);
-  background: color-mix(in oklab, var(--surface-lift) 55%, var(--reading-surface));
+  padding: 0;
 }
 
 .comment-composer--reply {
   margin-top: 0.9rem;
-  padding: 0.8rem 0.9rem 0.9rem;
-  background: var(--surface-sunk);
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--edge);
 }
 
 .comment-composer__head {
@@ -836,10 +825,10 @@
 .comment-composer__input,
 .comment-composer__textarea {
   width: 100%;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--edge);
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--surface-raised);
+  background: var(--surface-sunk);
   font-family: var(--font-sans);
   font-size: var(--text-small);
   color: var(--text-heading);
@@ -864,15 +853,22 @@
 
 .comment-composer__foot {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem 1rem;
-  margin-top: 0.75rem;
+  margin-top: 0.65rem;
+}
+
+.comment-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
 }
 
 .comment-composer__submit {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 0.42rem 1rem;
   border-radius: var(--radius-pill);
   background: var(--text-primary);
@@ -892,20 +888,17 @@
   opacity: 0.55;
 }
 
-.comment-composer__hint {
-  font-family: var(--font-sans);
-  font-size: var(--text-meta);
-  color: var(--text-secondary);
-}
-
 .comment-composer__count {
   font-family: var(--font-sans);
   font-size: var(--text-meta);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .comment-composer__message {
+  display: block;
+  margin-top: 0.65rem;
   font-family: var(--font-sans);
   font-size: var(--text-meta);
 }
@@ -918,24 +911,19 @@
   color: var(--state-danger);
 }
 
-/* ── 悄悄话 toggle ── */
+/* ── 悄悄话选项与提示 ── */
 
 .comment-composer__whisper {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.55rem;
-  margin-top: 0.7rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in oklab, var(--accent) 6%, transparent);
-  cursor: pointer;
-  user-select: none;
-  transition: background var(--duration-fast) var(--ease-out-soft);
+  gap: 0.35rem;
 }
 
-.comment-composer__whisper:hover {
-  background: color-mix(in oklab, var(--accent) 10%, transparent);
+.comment-composer__whisper-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
 }
 
 .comment-composer__whisper-check {
@@ -947,16 +935,52 @@
 
 .comment-composer__whisper-label {
   font-family: var(--font-sans);
-  font-size: var(--text-small);
-  font-weight: 600;
-  color: var(--accent-strong);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
 }
 
-.comment-composer__whisper-hint {
+.comment-composer__whisper-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.comment-composer__whisper-info {
+  display: grid;
+  width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: var(--text-meta);
   color: var(--text-secondary);
-  flex-basis: 100%;
+}
+
+.comment-composer__whisper-info:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.comment-composer__whisper-tooltip {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(17rem, calc(100vw - 2.5rem));
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  visibility: hidden;
+}
+
+.comment-composer__whisper-help:hover .comment-composer__whisper-tooltip,
+.comment-composer__whisper-help:focus-within .comment-composer__whisper-tooltip {
+  visibility: visible;
 }
 
 @media (max-width: 640px) {
@@ -966,6 +990,10 @@
 
   .comment__replies {
     padding-left: 0.75rem;
+  }
+
+  .comment-composer__actions {
+    gap: 0.55rem;
   }
 }
 

@@ -14,7 +14,7 @@
  * 但状态机没变：断言仍然只看 `data-theme`、`localStorage` 与勾选项。
  */
 
-import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, act, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const KEY = 'folio-theme'
@@ -286,45 +286,142 @@ describe('跨标签同步', () => {
 })
 
 describe('切换动画', () => {
-  it('首次加载不加过渡类', () => {
-    render(<FooterSettings />)
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
+  /**
+   * jsdom 没有 View Transition。这里装一个替身，并且**必须让回调异步执行**：
+   * 真实浏览器要先拍下旧帧快照，更新回调实测约 16ms 后才跑。
+   * 同步执行的替身会把「通知订阅者早于写入」这个顺序错误掩盖掉
+   * （页面变暗、页脚勾没动的那个 bug 就是这么漏出去的）。
+   *
+   * 用 `defineProperty` 而不是直接赋值：TS 的 DOM 类型已内置
+   * `startViewTransition(callback): ViewTransition`，返回 `{ finished }` 的
+   * 简化替身过不了结构化校验，而 `delete` 也不允许作用于非可选属性。
+   */
+  function installViewTransition(mock?: () => never) {
+    const spy =
+      mock ??
+      vi.fn((callback: () => void) => {
+        setTimeout(callback, 0)
+        return { finished: Promise.resolve() }
+      })
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      writable: true,
+      value: spy,
+    })
+    return spy
+  }
+
+  function removeViewTransition() {
+    Reflect.deleteProperty(document, 'startViewTransition')
+  }
+
+  afterEach(() => {
+    removeViewTransition()
   })
 
-  it('用户主动切换时临时加过渡类，结束后摘掉', () => {
-    vi.useFakeTimers()
+  it('首次加载不触发视图过渡：只有用户点击才算一次切换', () => {
+    const spy = installViewTransition()
+    render(<FooterSettings />)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('用户主动切换走一次 View Transition，回调里完成写入', async () => {
+    const spy = installViewTransition()
     render(<FooterSettings />)
 
     fireEvent.click(lightOption())
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(true)
 
-    act(() => {
-      vi.advanceTimersByTime(300)
+    expect(spy).toHaveBeenCalledTimes(1)
+    // 回调是异步的（先拍旧帧快照）：点下去的那一帧还没写入
+    expect(storedValue()).toBeNull()
+
+    await waitFor(() => expect(storedValue()).toBe('light'))
+    expect(currentTheme()).toBe('light')
+  })
+
+  /**
+   * 回归：页面已经变暗，页脚三段单选的勾却停在上一态。
+   *
+   * 症状来自顺序错误——过渡回调异步执行，而通知订阅者被放在
+   * `startViewTransition()` 之后立刻派发：React 那时读到的还是旧存储值，
+   * 之后也不会再有人叫它重读。所以断言必须是「勾选态最终跟得上」，
+   * 而不是只看 `data-theme`。
+   */
+  it('过渡回调异步执行时，选中态必须跟上，不能停在上一态', async () => {
+    installViewTransition()
+    render(<FooterSettings />)
+    expect(checkedLabel()).toBe('跟随系统')
+
+    fireEvent.click(darkOption())
+
+    expect(currentTheme()).toBe('light') // 回调还没跑
+    await waitFor(() => expect(currentTheme()).toBe('dark'))
+    await waitFor(() => expect(checkedLabel()).toBe('深色'))
+    expect(storedValue()).toBe('dark')
+    expect(darkOption().checked).toBe(true)
+    expect(systemOption().checked).toBe(false)
+  })
+
+  it('连续切换两态，选中态每次都跟得上', async () => {
+    installViewTransition()
+    render(<FooterSettings />)
+
+    fireEvent.click(darkOption())
+    await waitFor(() => expect(checkedLabel()).toBe('深色'))
+
+    fireEvent.click(lightOption())
+    await waitFor(() => expect(checkedLabel()).toBe('浅色'))
+
+    fireEvent.click(systemOption())
+    await waitFor(() => expect(checkedLabel()).toBe('跟随系统'))
+    expect(storedValue()).toBeNull()
+  })
+
+  it('浏览器不支持 View Transition 时直接瞬切，切换本身不能丢', () => {
+    removeViewTransition()
+    render(<FooterSettings />)
+
+    fireEvent.click(darkOption())
+
+    expect(currentTheme()).toBe('dark')
+    expect(storedValue()).toBe('dark')
+  })
+
+  it('过渡进行中再次点击（API 抛错）也退回瞬切', () => {
+    installViewTransition(() => {
+      throw new Error('transition already running')
     })
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
+    render(<FooterSettings />)
+
+    fireEvent.click(darkOption())
+
+    expect(currentTheme()).toBe('dark')
+    expect(storedValue()).toBe('dark')
   })
 
   it('系统自动切换不播放过渡', () => {
+    const spy = installViewTransition()
     render(<FooterSettings />)
     emitSystemChange(true)
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('其他标签改动不播放过渡（那不是本页的用户操作）', () => {
+    const spy = installViewTransition()
     render(<FooterSettings />)
     act(() => {
       window.localStorage.setItem(KEY, 'dark')
       window.dispatchEvent(new StorageEvent('storage', { key: KEY, newValue: 'dark' }))
     })
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
+    expect(spy).not.toHaveBeenCalled()
   })
 
-  it('prefers-reduced-motion: reduce 时完全不用过渡类', () => {
+  it('prefers-reduced-motion: reduce 时不进过渡，切换照常生效', () => {
+    const spy = installViewTransition()
     media.reducedMotion = true
     render(<FooterSettings />)
     fireEvent.click(lightOption())
-    expect(document.documentElement.classList.contains('theme-transition')).toBe(false)
-    // 但切换本身必须照常生效
+    expect(spy).not.toHaveBeenCalled()
     expect(currentTheme()).toBe('light')
   })
 })

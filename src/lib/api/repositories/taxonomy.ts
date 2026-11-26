@@ -54,10 +54,14 @@ const TAG_SCAN_MAX_PAGES = 20
  *
  * 代价：一个标签页最多要翻 TAG_SCAN_MAX_PAGES 页（有 ISR 缓存兜着）；
  * 超出上限时结果会被截断，paginate 的 total 也只是"已扫到的数量"。
+ *
+ * `lang` 必须传给**每一次**扫描请求：标签页展示的是文章标题与摘要，
+ * 只在最终结果上补一次语言是不可能的——标题来自响应本身。
+ * 它不影响筛选（按标签名匹配，标签名不翻译）。
  */
 export async function listArticlesByTag(
   tag: string,
-  options: { page?: number; size?: number } = {},
+  options: { page?: number; size?: number; lang?: string } = {},
 ): Promise<{ tagName: string; result: PageResult<Article> }> {
   const page = Math.max(1, options.page ?? 1)
   const size = Math.max(1, options.size ?? 10)
@@ -68,7 +72,11 @@ export async function listArticlesByTag(
 
   do {
     scannedPage += 1
-    const chunk = await listArticles({ page: scannedPage, size: TAG_SCAN_SIZE })
+    const chunk = await listArticles({
+      page: scannedPage,
+      size: TAG_SCAN_SIZE,
+      lang: options.lang,
+    })
     matched.push(...chunk.items.filter((article) => article.tags.includes(tag)))
     totalPages = chunk.pagination.totalPages
     if (chunk.items.length === 0) break

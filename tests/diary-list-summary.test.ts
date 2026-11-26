@@ -168,8 +168,18 @@ describe('列表组件契约：不渲染正文', () => {
     expect((source.match(/<CoverImage/g) ?? []).length).toBe(1)
   })
 
-  it('图片容器有比例占位，加载前就确定尺寸', () => {
-    expect(source).toContain('aspect-[4/3]')
+  it('图片优先按原始比例显示，取不到尺寸才退回比例盒', () => {
+    // 有宽高：交给原生 width/height 属性等比缩放，只限制最大宽与最大高
+    expect(source).toContain('coverHasSize')
+    expect(source).toContain('max-h-[22rem]')
+    // 4:3 盒子只作为「附件没带尺寸」时的降级分支，不能是唯一路径
+    expect(source).toMatch(/coverHasSize \? [^:]+ : 'aspect-\[4\/3\] w-full'/)
+    // 不再用 object-cover 统一裁切
+    expect(source).not.toContain('object-cover')
+  })
+
+  it('图片宽度上限在 300–340px 之间', () => {
+    expect(source).toContain('max-w-[20rem] sm:max-w-[21.25rem]')
   })
 
   it('受密码保护时不取摘要也不取图', () => {
@@ -177,8 +187,12 @@ describe('列表组件契约：不渲染正文', () => {
     expect(source).toMatch(/readable = !diary\.hasPassword/)
   })
 
-  it('详情入口存在（标题 + 继续阅读）', () => {
-    expect(source).toContain("t(locale, 'diary.continueReading')")
+  it('标题链接扩展为整条日记入口，不再重复显示继续阅读', () => {
+    expect(source).toContain('className="diary-entry"')
+    expect(source).toContain('diary-entry__title-link')
+    expect(source).not.toContain("t(locale, 'diary.continueReading')")
     expect(source).toContain('notePath(diary.nid)')
+    expect(source).toContain('diary.readCount')
+    expect(source).toContain("t(locale, 'diary.unlock')")
   })
 })

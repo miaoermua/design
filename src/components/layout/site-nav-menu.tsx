@@ -27,25 +27,32 @@ interface SiteNavMenuProps {
   onNavigate: () => void
   panelRef: RefObject<HTMLDivElement | null>
   /**
-   * 文章目录的预留位（本次不实现）。
+   * 当前阅读页的「本文目录」。
    *
    * 位置定在「站点身份」与主导航之间：移动端展开后第一屏就能看到目录，
    * 与设置区（固定在面板底部）互不挤压。
-   * 调用方当前不传值 → 这里不留任何空容器、不显示空标题。
-   * 下一阶段只需从文章详情页把已经存在的 `TocItem[]` 传进来渲染，
-   * 不需要改这个组件的结构，也不需要新增状态。
+   *
+   * 调用方（`SiteHeaderClient`）只在目录 ≥2 节时才传值 —— 传 `undefined`
+   * 时这里不留空容器、不显示空标题，`nav-section` 也不画分隔线与「主导航」
+   * 小标题。数据来自阅读页推到 `lib/reading/toc-store` 的 `TocItem[]`。
    */
   tocSlot?: ReactNode
 }
 
 /**
- * 完整菜单面板（桌面端与移动端共用一套内容）
+ * 完整菜单面板（移动端）
  *
- * 结构固定为三段：站点身份 → 一张导航列表。
+ * 桌面在 ≥48rem 把它收起：顶栏已经是完整横向导航，不再需要托盘。
+ * 面板本身保留同一套结构与开关逻辑，手机（以及没有 hover 的大屏）使用。
+ *
+ * 结构固定为：站点身份 → 当前阅读页的「本文目录」（有则显示）→ 一张导航列表。
  * 列表里每一行都来自 `nav` 里的同一个 `NavEntry`；「更多」只是这张列表的
  * 最后一行（`section: 'more'` 的入口收在它自己的折叠里），不是第四个分区。
- * 桌面端与移动端的差别只在**定位与展开方向**（由 CSS 按断点决定），
- * 内容、顺序、文案、选中态完全同一份，不存在第二套菜单。
+ *
+ * 为什么目录要放在这里：手机上没有右侧栏，正文里的目录折叠又要滚到文末
+ * 才看得见；放进抽屉则「随手一按」就能跳到任一章节。它与站点导航之间
+ * 用标题（目录 / 主导航）与虚线分开——两者是两种不同的定位方式，
+ * 视觉上不能连成一片。
  *
  * 它是导航的展开形态，不是第二套导航：目录型入口的父子关系就写在数据里
  * （`entry.branch`），不另存一份分组清单，也不手工映射分组标题。
@@ -120,11 +127,16 @@ export function SiteNavMenu({
           </span>
         </Link>
 
-        {/* 文章目录的预留位：当前为空，不占高度 */}
+        {/* 文章内目录：有目录时与下方的博客导航用虚线和标题明确划清界限 */}
         {tocSlot}
 
         {/* B. 主导航 + 更多：同一张列表里的若干行 */}
-        <nav aria-label={messages['nav.main']} className="nav-section">
+        <nav
+          aria-label={messages['nav.main']}
+          className="nav-section"
+          data-has-toc={tocSlot ? 'true' : undefined}
+        >
+          {tocSlot ? <p className="nav-panel__label">{messages['nav.main']}</p> : null}
           <ul className="nav-list">
             {mainNav.map((entry) => (
               <NavEntryRow

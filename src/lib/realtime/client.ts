@@ -22,6 +22,7 @@
 
 import { io, type Socket } from 'socket.io-client'
 import type { Locale } from '@/lib/i18n/config'
+import { getRealtimeSessionId } from './session-id'
 import {
   REALTIME_ENGINE_PATH,
   REALTIME_MESSAGE_EVENT,
@@ -234,10 +235,16 @@ export function classifyConnectionError(error: unknown): RealtimeError {
 
 /** 默认 transport：Core v12 的 Socket.IO 4.x /web namespace */
 function createSocketIoTransport({ origin, lang }: RealtimeTransportConfig): RealtimeTransport {
+  /*
+   * 稳定的会话 id 只走握手 query（core 同时也认 `x-socket-session-id` 头，
+   * 但浏览器不能自定义 WebSocket 握手头）。拿不到存储时**省略**该参数，
+   * 不能传空串——空串会让 core 把所有人 uniqBy 成同一个会话。
+   */
+  const sessionId = getRealtimeSessionId()
   const socket: Socket = io(`${origin}${REALTIME_NAMESPACE_PATH}`, {
     // `/socket.io/` 是 Engine.IO path；`/web` 由 URL 的 pathname 指定为 namespace
     path: REALTIME_ENGINE_PATH,
-    query: { lang },
+    query: sessionId ? { lang, socket_session_id: sessionId } : { lang },
     transports: ['websocket'],
     autoConnect: false,
     reconnection: true,

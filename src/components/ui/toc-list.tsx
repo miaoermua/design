@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils/cn'
 interface TocListProps {
   items: TocItem[]
   variant: 'rail' | 'inline'
+  /** 点击目录项后的回调（例如移动端菜单里点选章节后自动收起菜单） */
+  onSelect?: () => void
 }
 
 /**
@@ -17,7 +19,7 @@ interface TocListProps {
  *   2. 触底时把最后一节标为当前（短小节在视口底部常常到不了顶部）；
  *   3. 没有 JS 时列表仍然可点、可读，只是没有高亮。
  */
-export function TocList({ items, variant }: TocListProps) {
+export function TocList({ items, variant, onSelect }: TocListProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const frame = useRef(0)
 
@@ -70,6 +72,7 @@ export function TocList({ items, variant }: TocListProps) {
           <li key={item.id}>
             <a
               href={`#${item.id}`}
+              onClick={onSelect}
               aria-current={active ? 'location' : undefined}
               // 单行截断：目录是「定位器」不是正文，长标题不该把栏撑宽或折成两行。
               // 完整文本仍在 DOM 里（读屏按原文朗读），鼠标可经 title 看到全文。

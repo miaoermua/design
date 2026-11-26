@@ -418,6 +418,11 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
     },
     { file: 'src/app/globals.css', match: '.footer-sep', reason: '页脚分隔符，纯装饰' },
     {
+      file: 'src/app/globals.css',
+      match: '.site-footer__nav-chevron',
+      reason: '页脚分类导航右向箭头，SVG aria-hidden，纯装饰',
+    },
+    {
       file: 'src/app/about/page.tsx',
       match: 'group-hover:translate-x-0.5',
       reason: '链接尾部箭头图标',
@@ -457,6 +462,14 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       file: 'src/components/ui/subscribe-modal.tsx',
       match: 'text-[var(--text-tertiary)]',
       reason: '箭头图标「↗」，aria-hidden',
+    },
+    {
+      file: 'src/features/friends/friend-postcard.css',
+      match: 'text-decoration-color: var(--text-tertiary)',
+      // 这里染的是**下划线**而不是文字：已过期友链的站名不可点击，保留下划线并整体转灰。
+      // 线是非文本装饰，相对页面底色 亮 3.56:1 / 暗 4.85:1，高于非文本的 3:1；
+      // 同一条规则里的文字取 --text-secondary（亮 5.14:1 / 暗 7.22:1）。
+      reason: '已过期友链站名的下划线（非文本装饰线）；站名文字本身用 --text-secondary',
     },
   ]
 
