@@ -127,9 +127,7 @@ export function ArchiveSection({
 
   return (
     <>
-      <p className="meta">
-        {tf(locale, 'archive.summary', { total, years: years.length })}
-      </p>
+      <p className="meta">{tf(locale, 'archive.summary', { total, years: years.length })}</p>
 
       {years.length > 1 ? (
         <nav
@@ -144,17 +142,23 @@ export function ArchiveSection({
         </nav>
       ) : null}
 
-      {years.map((group) => (
-        <section key={group.year} id={`${idPrefix}-${group.year}`} className="scroll-mt-28 pt-10">
+      {years.map((group, yearIndex) => (
+        <section
+          key={group.year}
+          id={`${idPrefix}-${group.year}`}
+          className={cn(
+            'scroll-mt-28',
+            yearIndex === 0
+              ? 'pt-10'
+              : 'mt-10 border-t border-dashed border-[var(--edge-strong)] pt-8',
+          )}
+        >
           <h3 className="font-serif text-[1.75rem] leading-none text-[var(--text-heading)]">
             {group.year}
           </h3>
 
           {group.months.map((month) => (
-            <div
-              key={month.key}
-              className="mt-7 grid gap-3 border-t border-dashed border-[var(--edge-strong)] pt-5 sm:grid-cols-[5.5rem_1fr] sm:gap-7"
-            >
+            <div key={month.key} className="mt-6 grid gap-3 sm:grid-cols-[5.5rem_1fr] sm:gap-7">
               <p className="meta">{month.label}</p>
               <ul className="flex flex-col gap-2.5">
                 {month.entries.map((entry) => (
@@ -162,16 +166,18 @@ export function ArchiveSection({
                     <time className="meta tabular-nums" dateTime={entry.date}>
                       {entry.day}
                     </time>
-                    <span className="text-meta text-[var(--text-secondary)]">{t(locale, entry.kind)}</span>
+                    <span className="text-meta text-[var(--text-secondary)]">
+                      {t(locale, entry.kind)}
+                    </span>
                     {entry.href ? (
                       <Link
                         href={entry.href}
-                        className="link-quiet font-serif text-body leading-[1.5]"
+                        className="link-quiet text-body font-serif leading-[1.5]"
                       >
                         {entry.title}
                       </Link>
                     ) : (
-                      <span className="font-serif text-body">{entry.title}</span>
+                      <span className="text-body font-serif">{entry.title}</span>
                     )}
                   </li>
                 ))}
@@ -215,7 +221,7 @@ export function TagCluster({ tags, className }: TagClusterProps) {
           >
             #{tag.name}
             {tag.count !== null ? (
-              <span className="ml-1.5 align-middle text-meta tabular-nums text-[var(--text-secondary)]">
+              <span className="text-meta ml-1.5 align-middle text-[var(--text-secondary)] tabular-nums">
                 {tag.count}
               </span>
             ) : null}
