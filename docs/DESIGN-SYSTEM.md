@@ -36,6 +36,10 @@
 > **2026-11-18 首页编辑栅格（单列索引）**：上一轮 minimal 目录把文章区拉成通栏单列「表格」——每行右侧大片空白、行间虚线，与日记三列、More 居中各说各话。本轮全页统一到一套编辑栅格：≥lg 为 `--rail-home`（11rem，新增 Token）左轨 + 自适应内容列，轨距复用 `--gap-rail`；Hero 头像与区块标题（含 action 链接，竖排贴顶——`justify-between` 在拉伸高度下会把 action 推到轨底）落左轨，身份名、统计行、文章索引、日记栅格、More 按钮行落内容列，一条对齐线贯穿全页；<lg 退化单列（标题行在上、内容在下）。**文章区保持单列**：一行一篇，标题左、日期贴右缘同基线（≥sm；<sm 日期落标题下方），不做双列卡片阵（用户明确否决双列），行距 `gap-y-8` 与日记同族；日记区 <xl 单列（预览行宽收 `--measure-note`）、≥xl 三列，同样不经过双列阶段。`.home-more` 居中改左对齐。区块分隔统一「`--spacing-section` 留白 + 虚线 + `--spacing-stack` 内边距」，消掉旧版 pt-10 与 mt-5rem 叠加的双间距；Hero 经典布局去掉 pb，留白交给区块分隔。顺带删除上一轮相关阅读改版后零消费者的 `ArticleCard`（无消费者、无测试、§13 清单无引用），并修正 §5.1 / §9 对它和 `ArticleRow` 的过时描述。实测 390 / 768 / 1024 / 1280 亮色 + 1280 暗色：`scrollWidth - innerWidth` 均 0、无破图。真后端（`api.miaoer.net`，PORT=3000）复验又暴露两处并同批修掉：① 真站配置走**模板化 Hero**，它原先不进编辑栅格、上下各 160px 内边距与区块外距叠出约 240px 死留白——≥lg 整体缩进内容列（`lg:pl` = rail+gap）、头像贴版心右缘，竖向改顶 1.5×section、底部交给区块分隔，对齐线与留白节奏与经典布局一致；② GitHub 品牌黑作前景在暗色纸面上整枚不可见——`toSocialItems` 按 WCAG 相对亮度归一：L<0.05 或 L>0.95 的 hex 品牌色落回 null（语义次级色），中间亮度与 CSS var 色保留原值，新增 4 例单元测试覆盖拒绝与允许路径。真数据（6 篇长标题文章、3 日记、2 More 入口）五视口溢出 0、无破图；截图等待加长到 3s 以覆盖 Hero 逐字动画完成态。同步 §5.1、§6、§9。
 > **2026-11-25 页脚改为 Shiro 分类导航**：按用户要求不保留兼容层，删除旧 `footer.links`，只接受官方 `footer.linkSections[]`（`name` + `links[{name, href, external}]`）。页脚顺序改为「分类导航 → 版权/签名 → Powered by/ICP → 右下语言与主题」；<48rem 分类竖排，≥48rem 横排且可折行。链接地址允许根相对路径、http(s) 与 mailto；`external` 省略时按地址推导，显式声明与地址类型矛盾时丢弃该条。分类最多 6 组、每组最多 8 条，组内按 href 去重。同步 §5.2、§9。
 >
+> **2026-11-26 友链明信片：列数改容器查询 + 字号下调一档**：克制的排版微调。卡片仍是 312 × 144（窄屏 312 × 140），邮票、邮戳、纸面装饰、背景 / 边框 / 阴影 / 圆角全部不动。① **列数不再看视口**：`friends/page.tsx` 的 `Container` 加 `@container`，网格改用 Tailwind 容器变体 —— `@min-[41.5rem]:`（664px = 2 × 312 + 40）转两列、`@min-[63.5rem]:`（1016px = 3 × 312 + 2 × 40）转三列，阈值取「刚好放得下、不压缩卡片」的最小可用宽度；原 `md:`（768px 视口）两列规则删除。因为 `--container-wide` 72rem 封顶，视口 ≥1080px 时容器可用宽度就 ≥1016px，笔记本与宽桌面得到同样的三列。② **名称 18px → 16px**（`--text-h3` → `1rem`；衬线、字重 500、行高 1.5 不变），**简介 13px → 12px**（`--text-caption` → `--text-meta`；颜色不变，行高仍取 1.6）。16px 在 Token 里没有对应角色，按用户明确要求写绝对值，不新增 Token。实测 44 条真实友链（三列）：两行标题 6 → 2 张，被两行截断的简介 2 → 0 条。同步 §5 / §5.1 / §6。
+>
+> **2026-11-26 友链：已过期的单开一类**：`/friends` 在信封网格下方新增「已过期的友链」一段（间距 3rem），每条只有站名 + 描述两行文字，不做卡片。数据取 `state === 2`（`LinkState.Expired`）且未隐藏，与已通过的一类分开取（`listExpiredFriendLinks`）；审核中、已屏蔽、已拒绝仍然不展示。站名**不可点击**，但保留下划线：粗细 1px、抬升 0.22em 与 `.prose a` 一致，颜色转灰 —— 文字取 `--text-secondary`、下划线取 `--text-tertiary`（相对页面底色实测：文字 亮 5.14:1 / 暗 7.22:1，下划线 亮 3.56:1 / 暗 4.85:1），读成「失效的链接」而不是普通链接。**`--text-tertiary` 只用于这条装饰线，不用于文字**（浅色 3.56:1 不到 4.5:1）。字号沿用上一条的 16px / 12px；轨道与信封网格相同（`19.5rem` 定宽列、`2.5rem` 列距、同一组容器断点），两块逐列对齐。同步 §9 字重表。
+>
 > **2026-11-25 阅读正文加宽（对照 Shiro）**：`--measure-post` 44 → **52rem**（704 → 832px，≈49 汉字/行 @17px），`--measure-note` 40 → **44rem**（640 → 704px，≈41 汉字/行），博文∶日记 = 1.18。依据是对 hoshiroko.com（Shiro，根字号 14px）的实测：博文正文 920px / 15.4px ≈ 60 字/行，日记纸面 840px（左右 padding 45）正文 748px ≈ 49 字/行，比例 1.23 —— 本主题取中间档，不追 60 字/行。派生 shell 需同时放得进 1280 视口的容器内容宽（1088）：`--shell-post` = 832 + 36 + 208 = **1076**，`--shell-note` = 704 + 2×56 + 36 + 208 = **1060**，都留有余量，因此 `--container-wide` 与 xl 断点不动。同步 §6。
 
 ---
@@ -297,7 +301,7 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | Lead        | `--text-lead`        | 1.125rem / lh 1.8                                                      | 导语、摘要                                                                                       |
 | Small       | `--text-small`       | 0.9375rem / lh 1.7                                                     | 说明文                                                                                           |
 | Caption     | `--text-caption`     | 0.8125rem / lh 1.6                                                     | 图注、注释、表头                                                                                 |
-| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                       | 日期、阅读数、kicker                                                                             |
+| Meta        | `--text-meta`        | 0.75rem / lh 1.5                                                       | 日期、阅读数、kicker、友链简介（行高另取 1.6）                                                   |
 | Code        | `--text-code`        | 0.875rem / lh 1.7                                                      | 行内与代码块                                                                                     |
 
 `lh` = 同族 `--text-*--line-height`；`ls` = `--text-*--letter-spacing`。display / pageheading / headline / title 四个标题档位都定义了字距，h2/h3 及更小层级没有字距变量 —— 组件若自行写 `tracking-*` 属于局部调整，不是 Token 缺失。
@@ -306,7 +310,9 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 > 行高有两个基准，不要混淆：`.prose` 用 `--text-body--line-height` = 1.82（`prose.css:11`），而 `body` 元素默认是硬编码的 1.75（`globals.css:48-49`）。页面骨架（导航、页脚、空状态）落在 1.75 上，正文落在 1.82 上，是有意分工。
 >
-> 移动端不再单独压正文：`prose.css` 的 `@media (max-width: 640px)` 曾把 `.prose` 降成 `1rem / 1.8`，使文章正文（16px）比全局 `body`（17px）更小，形成全站唯一的「正文比 UI 小」倒挂。现已在所有断点统一吃 `--text-body` + 伴生行高，窄屏只收紧 `h2` 的上边距。
+> 移动端不再单独压正文：`prose.css` 的 `@media (max-width: 640px)` 曾把 `.prose` 降成 `1rem / 1.8`，使文章正文（16px）比全局 `body`（17px）更小，形成全站唯一的「正文比 UI 小」倒挂。现已在所有断点统一吃 `--text-body` + 伴生行高，窄屏只收紧标题间距。
+
+`.prose` 的垂直节奏（博文与日记共用）：普通段落间距 `1.35em` ≈ 23px；H2 上方桌面 `1.82em` ≈ 40px、≤640px `1.45em` ≈ 32px；H2 虚线到标题文字 `0.73em` ≈ 16px；H2 后首个非标题内容块 `1.12em` ≈ 19px；H3 上方 `1.78em` ≈ 32px。H2 的 `::before` 只在非首个子节点生成，首个子节点仍不显示分隔线。块间距按 CSS 相邻 margin 折叠取较大值，不相加；段落的 `margin-block: 0` 会覆盖通用兄弟间距，因此用 `.prose > * + p` 显式恢复段落间距，再由 H2 邻接规则覆盖为较紧的标题后间距。
 
 ### 5.1 字号角色 → 实际消费者
 
@@ -319,11 +325,11 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 | `--text-headline`                                 | 文章详情 h1（`articles/[category]/[slug]/page.tsx`）、Markdown 视觉样张 h1     |
 | `--text-title`                                    | 日记详情 h1（`diaries/[id]/page.tsx`）、`error.tsx` / `not-found.tsx` / 分类页 |
 | `--text-rowtitle`                                 | 文章列表每一条的 h3（`ArticleRow` 完整与 minimal 变体）                        |
-| `--text-h2` / `--text-h3`                         | `.prose` 标题、卡片标题、`friends` 等页                                        |
+| `--text-h2` / `--text-h3`                         | `.prose` 标题、卡片标题（日记卡、紧凑文章行、搜索结果）                        |
 | `--text-body`                                     | `body`、`.prose`（含移动端）、归档条目                                         |
 | `--text-lead`                                     | 首页导语（无衬线）、文章导语（衬线）                                           |
-| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta`                                                          |
-| `--text-code`                                     | `.prose :code`（`prose.css:206`）                                              |
+| `--text-small` / `--text-caption` / `--text-meta` | 说明文、图注、`.meta`、友链简介                                                |
+| `--text-code`                                     | `.prose :code`                                                                 |
 
 同一 px 数值不代表同一语义。以下是**特殊排版用法**，尚未 Token 化，改动前请先确认是否值得升为 Token：
 
@@ -401,17 +407,18 @@ src/features/*/[component].css           ← 组件专属样式（当前：frien
 
 断点（实测口径）：
 
-| 断点    | 等宽            | 承担                                               | 实现方式                                                                                      |
-| ------- | --------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `sm`    | 40rem（640px）  | 纸面起铺、阅读纸面上色                             | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)`                                |
-| `md`    | 48rem（768px）  | 友链卡片转两列；**桌面导航双态的起点**             | Tailwind `md:`（仅 `friends/page.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
-| `lg`    | 64rem（1024px） | 阅读区加宽（纸张内边距 3.5rem）                    | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)`                                |
-| `xl`    | 80rem（1280px） | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起   | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处）                                     |
-| `69rem` | 1104px          | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列 | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处）                                        |
+| 断点     | 等宽                                | 承担                                                    | 实现方式                                                                                     |
+| -------- | ----------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `sm`     | 40rem（640px）                      | 纸面起铺、阅读纸面上色                                  | Tailwind `sm:` + `material.css` 的 `@media (min-width: 40rem)`                               |
+| `md`     | 48rem（768px）                      | **桌面导航双态的起点**；文章行 meta 的分隔间距          | Tailwind `md:`（仅 `article-row.tsx`）+ `globals.css` 导航段落的 `@media (min-width: 48rem)` |
+| 容器查询 | 41.5rem（664px）/ 63.5rem（1016px） | 友链卡片转两列 / 三列（按内容容器的可用宽度，不看视口） | Tailwind `@min-[…]`（仅 `friends/page.tsx`），查询容器是 `Container` 上的 `@container`       |
+| `lg`     | 64rem（1024px）                     | 阅读区加宽（纸张内边距 3.5rem）                         | Tailwind `lg:` + `material.css:63` `@media (min-width: 64rem)`                               |
+| `xl`     | 80rem（1280px）                     | 文章 / 日记 TOC 侧栏加列、`<details>` 折叠版收起        | Tailwind `xl:`（文章/日记详情、阅读工具、项目网格等多处）                                    |
+| `69rem`  | 1104px                              | 普通页左侧身份卡显示阈值：低于它侧栏收起、正文单列      | 任意值断点 `min-[69rem]:`，仅 `about/page.tsx`（4 处）                                       |
 
-- Tailwind v4 走 CSS-first 配置：仓库里没有 `tailwind.config.*`，`tokens.css` 也没有覆盖 `--breakpoint-*`，所以 `sm/md/lg/xl` 就是 Tailwind 默认值。**没有 `2xl:` 使用**；`md:` 只有 `friends/page.tsx` 一处（768px 两列），与导航双态的 48rem 断点是同一个值，改其中一个要同时看另一个。`69rem` 是唯一一个任意值断点（1104px），它不在 Tailwind 档位里，**修改前先想清楚为什么不复用 `xl`**。
+- Tailwind v4 走 CSS-first 配置：仓库里没有 `tailwind.config.*`，`tokens.css` 也没有覆盖 `--breakpoint-*`，所以 `sm/md/lg/xl` 就是 Tailwind 默认值。**没有 `2xl:` 使用**；Tailwind `md:` 只有 `article-row.tsx` 一处（meta 分隔间距），导航双态的 48rem 断点走 `globals.css` 的 `@media`，两者是同一个值，改其中一个要同时看另一个。容器查询只有友链一处的任意值 `@min-[…]`，没有使用 `@md:` 这类具名容器档位；它量的是 `Container` 的内容盒宽度，与视口断点无关。`69rem` 是唯一一个任意值断点（1104px），它不在 Tailwind 档位里，**修改前先想清楚为什么不复用 `xl`**。
 - 断点处数会随功能增减，本文不再写死"共 N 处"——写死的那一刻就开始过期。要看当前分布，直接在 `src` 下搜 `sm:` / `md:` / `lg:` / `xl:` / `min-[69rem]:` 这几个前缀。
-- 与断点区分开：**组件内部局部尺寸条件**不算断点。现存两处桌面优先的窄屏收紧 —— `prose.css:353` 与 `prose.css:394` 的 `@media (max-width: 640px)`，它们调整的是正文内部节奏，不要为了"统一"把它们改写成 `min-width`。
+- 与断点区分开：**组件内部局部尺寸条件**不算断点。`prose.css` 中现存两个 `@media (max-width: 640px)`，调整的是正文内部节奏，不要为了"统一"把它们改写成 `min-width`。
 - 材质/无障碍类查询（`prefers-reduced-motion` 6 处、`prefers-reduced-transparency` 1 处）与 `@supports not (backdrop-filter)` 属于能力探测，也不属于断点。
 
 ---
@@ -557,7 +564,7 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 ## 10. Markdown 视觉
 
 - 正文 `.prose`：`--font-sans` + `--text-body`（17px）/ 1.82 + `letter-spacing: 0.004em`（`prose.css:8-16`）。
-- 标题：`.prose :is(h1,h2,h3,h4)` 用 `--font-serif` + 600 + `letter-spacing: -0.01em`（`prose.css:23-27`）；`h2` = `--text-h2` + 上方 2.4em，`h3` = `--text-h3`，`h1` = `--text-title` + 2.6em。
+- 标题：`.prose :is(h1,h2,h3,h4)` 用 `--font-serif` + 600 + `letter-spacing: -0.01em`；`h2` = `--text-h2` + 上方 1.82em（≤640px 为 1.45em）与虚线分隔，`h3` = `--text-h3` + 上方 1.78em，`h1` = `--text-title` + 2.6em。间距实值见 §5 的 `.prose` 垂直节奏。
 - 链接：**颜色继承正文**，靠下划线识别 —— `text-decoration-color: --accent-soft`、1px、offset 0.22em；hover 升到 `--accent` + 2px（`prose.css:74-88`）。`--accent-strong` 不是链接的默认色。
 - 引用：`border-left: 2px solid var(--color-accent-soft)` + `--text-secondary` + `--font-serif` + `font-style: normal`（中文斜体难读）+ `1.04em` / lh 1.85（`prose.css:158-167`）。
 - 列表：`ul` 用 4px 圆点 `::before`，色为 `--color-accent-soft`（`prose.css:124-133`）；`ol > li::marker` 用 `--text-tertiary` + mono + 0.85em。
@@ -711,6 +718,7 @@ tests/self-hosted-fonts.test.ts                       ← 字体资源 / 许可 
 | `globals.css`（`.nav-identity__name`）              | 600  | `--font-sans`                   | 导航身份块名称       | 中：中文，但字号 15px 且有 `text-overflow: ellipsis`                                                                                                                |
 | `globals.css`（`.nav-link`）                        | 500  | `--font-sans`                   | 顶栏一级导航         | 低                                                                                                                                                                  |
 | `friend-postcard.css`（`.friend-postcard__title`）  | 500  | `--font-serif`                  | 友链卡片名称         | 中低：可能含中文                                                                                                                                                    |
+| `friend-postcard.css`（`.friend-expired__name`）    | 500  | `--font-serif`                  | 已过期友链站名       | 中低：可能含中文                                                                                                                                                    |
 | `friend-postcard.css`（`.friend-postmark text`）    | 500  | `--font-sans`（10px，SVG）      | 邮戳弧形字（装饰）   | 低：纯装饰图案                                                                                                                                                      |
 | `reading.css`（`.article-info__heading`）           | 500  | `--font-sans`                   | 文末信息区标题       | 低                                                                                                                                                                  |
 
@@ -912,7 +920,7 @@ hover 从 `--accent` 抬到 `--accent-strong` 并加粗到 2px，保持可感知
 ### 14.10 断点使用规范与人工验收
 
 - 断点事实与口径见 §6：**A**（只有 `sm/lg/xl` 三档，无 `md:`/`2xl:`，无 `--breakpoint-*` 覆盖）。
-- 组件内部局部尺寸条件（`prose.css:353`、`prose.css:394` 的 `max-width: 640px`）不算断点，**不要为了统一而改写它们**。
+- 组件内部局部尺寸条件（`prose.css` 中两个 `max-width: 640px` 媒体查询）不算断点，**不要为了统一而改写它们**。
 
 **已实测完成（2026-11-17，Chromium / Windows，Dev Server + CDP）**：
 

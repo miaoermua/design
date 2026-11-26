@@ -35,7 +35,12 @@ export {
   getCategoryBySlug,
   listArticlesByTag,
 } from './repositories/taxonomy'
-export { getSiteIdentity, getTimeline, listFriendLinks } from './repositories/site'
+export {
+  getSiteIdentity,
+  getTimeline,
+  listFriendLinks,
+  listExpiredFriendLinks,
+} from './repositories/site'
 export { getActivityRooms } from './repositories/activity'
 export { searchArticles } from './repositories/search'
 export { getArticleSummary, getArticleInsights } from './repositories/ai'

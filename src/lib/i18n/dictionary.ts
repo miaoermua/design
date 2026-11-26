@@ -358,10 +358,11 @@ const zhCN = {
   'friends.kicker': '友链',
   'friends.heading': '朋友们',
   'friends.description':
-    '这里只展示已通过审核且未被隐藏的友链；审核中、已过期与已拒绝的条目不会出现。',
+    '这里展示已通过审核且未被隐藏的友链，已过期的单独列在下方；审核中与已拒绝的条目不会出现。',
   'friends.count': '{count} 个站点',
   'friends.emptyTitle': '还没有公开的友链',
   'friends.emptyHint': '还没有通过审核的友链。',
+  'friends.expiredTitle': '已过期的友链',
 
   // ── 一言 ───────────────────────────────────────────────────────
   'nav.says': '一言',
@@ -848,10 +849,11 @@ const en: Record<MessageKey, string> = {
   'friends.kicker': 'Links',
   'friends.heading': 'Friends',
   'friends.description':
-    'Only approved, visible links are shown here; pending, expired and rejected entries never appear.',
+    'Approved, visible links are shown here, with expired ones listed separately below; pending and rejected entries never appear.',
   'friends.count': '{count} sites',
   'friends.emptyTitle': 'No public links yet',
   'friends.emptyHint': 'No link has been approved yet.',
+  'friends.expiredTitle': 'Expired links',
 
   'nav.says': 'Says',
   'says.title': 'Says',

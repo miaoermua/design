@@ -38,6 +38,12 @@ export async function getTimeline(
   return toTimeline(expectObject<V2TimelineBody>(body, '/aggregate/timeline'))
 }
 
+/** GET /links/all 的全部友链（不过滤状态）。同一次渲染里两个调用方共用一次请求。 */
+async function fetchFriendLinks(): Promise<FriendLink[]> {
+  const body = await requestV2<unknown>('/links/all', { revalidate: 600, tags: ['links'] })
+  return unwrapListBody<V2LinkRow>(body, '/links/all').map(toFriendLink)
+}
+
 /**
  * GET /links/all —— 只取已通过审核（LinkState.Pass = 0）且未被隐藏的友链。
  *
@@ -45,8 +51,17 @@ export async function getTimeline(
  * 不是「1 表示通过」。
  */
 export async function listFriendLinks(): Promise<FriendLink[]> {
-  const body = await requestV2<unknown>('/links/all', { revalidate: 600, tags: ['links'] })
-  return unwrapListBody<V2LinkRow>(body, '/links/all')
-    .map(toFriendLink)
-    .filter((link) => link.state === 0 && !link.hidden)
+  const links = await fetchFriendLinks()
+  return links.filter((link) => link.state === 0 && !link.hidden)
+}
+
+/**
+ * 已过期（LinkState.Expired = 2）且未被隐藏的友链。
+ *
+ * `/friends` 把它们当作信封之外的单开一类列在下方，所以与 `listFriendLinks` 分开取；
+ * 审核中、已屏蔽、已拒绝三类仍然不展示。
+ */
+export async function listExpiredFriendLinks(): Promise<FriendLink[]> {
+  const links = await fetchFriendLinks()
+  return links.filter((link) => link.state === 2 && !link.hidden)
 }

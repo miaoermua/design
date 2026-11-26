@@ -463,6 +463,14 @@ describe('文字颜色使用纪律（静态可识别范围）', () => {
       match: 'text-[var(--text-tertiary)]',
       reason: '箭头图标「↗」，aria-hidden',
     },
+    {
+      file: 'src/features/friends/friend-postcard.css',
+      match: 'text-decoration-color: var(--text-tertiary)',
+      // 这里染的是**下划线**而不是文字：已过期友链的站名不可点击，保留下划线并整体转灰。
+      // 线是非文本装饰，相对页面底色 亮 3.56:1 / 暗 4.85:1，高于非文本的 3:1；
+      // 同一条规则里的文字取 --text-secondary（亮 5.14:1 / 暗 7.22:1）。
+      reason: '已过期友链站名的下划线（非文本装饰线）；站名文字本身用 --text-secondary',
+    },
   ]
 
   it('--text-tertiary 的每一处使用都在装饰白名单里，且白名单无失效项', () => {
