@@ -1,10 +1,17 @@
-import { requestV2 } from '../client/http'
-import type { V2Aggregate, V2LinkRow, V2TimelineBody } from '../contracts/v2'
+import { postV2, requestV2 } from '../client/http'
+import type {
+  V2Aggregate,
+  V2LinkApplicationInput,
+  V2LinkAuditCapability,
+  V2LinkRow,
+  V2TimelineBody,
+} from '../contracts/v2'
 import { expectObject, unwrapListBody } from '../adapters/common'
 import { toSiteIdentity, toTimeline } from '../adapters/site'
 import { toFriendLink } from '../adapters/taxonomy'
-import type { FriendLink, SiteIdentity } from '../domain/taxonomy'
+import type { FriendLink, FriendLinkApplicationInput, SiteIdentity } from '../domain/taxonomy'
 import type { V2TimelineType } from '../contracts/v2/site'
+import { ApiError } from '../errors'
 
 /** GET /aggregate —— 站点身份、SEO、评论开关、最新日记 */
 export async function getSiteIdentity(): Promise<SiteIdentity> {
@@ -64,4 +71,33 @@ export async function listFriendLinks(): Promise<FriendLink[]> {
 export async function listExpiredFriendLinks(): Promise<FriendLink[]> {
   const links = await fetchFriendLinks()
   return links.filter((link) => link.state === 2 && !link.hidden)
+}
+
+/** GET /links/audit — 申请入口是否开放 */
+export async function getFriendLinkApplicationCapability(): Promise<{ canApply: boolean }> {
+  const body = expectObject<V2LinkAuditCapability>(
+    await requestV2<unknown>('/links/audit', { revalidate: 0 }),
+    '/links/audit',
+  )
+  if (typeof body.can !== 'boolean') {
+    throw new ApiError('响应缺少布尔型 can 字段', {
+      status: 200,
+      path: '/links/audit',
+      body,
+    })
+  }
+  return { canApply: body.can }
+}
+
+/** POST /links/audit — 申请由 Core 再次按当前站点配置校验 */
+export async function applyForFriendLink(input: FriendLinkApplicationInput): Promise<void> {
+  const payload: V2LinkApplicationInput = {
+    author: input.author,
+    name: input.name,
+    url: input.url,
+    avatar: input.avatar,
+    description: input.description,
+    email: input.email,
+  }
+  await postV2<unknown>('/links/audit', payload)
 }

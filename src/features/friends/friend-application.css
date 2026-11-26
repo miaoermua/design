@@ -1,0 +1,218 @@
+.friend-application {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--edge);
+}
+
+.friend-application__description {
+  max-width: 62ch;
+  margin-top: 0.35rem;
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+}
+
+.friend-application__site {
+  max-width: 52rem;
+  margin-top: 1.5rem;
+}
+
+.friend-application__site-title {
+  margin-bottom: 0.6rem;
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  color: var(--text-heading);
+}
+
+.friend-application__details {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.friend-application__detail {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+  gap: 0.75rem;
+  font-size: var(--text-small);
+}
+
+.friend-application__detail dt {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.friend-application__detail dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+}
+
+.friend-application__copy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.friend-application__copy {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--edge-strong);
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+  transition:
+    border-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft);
+}
+
+.friend-application__copy:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.friend-application__copy:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.friend-application__action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+}
+
+.friend-application__trigger,
+.friend-application__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-heading);
+  transition:
+    border-color var(--duration-fast) var(--ease-out-soft),
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft);
+}
+
+.friend-application__trigger:hover,
+.friend-application__submit:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+}
+
+.friend-application__status {
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 40rem) {
+  .friend-application__detail {
+    grid-template-columns: 1fr;
+    gap: 0.05rem;
+  }
+}
+
+.friend-application-modal {
+  max-width: 34rem;
+}
+
+.friend-application__head {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.05rem 0.9rem 1.35rem;
+  border-bottom: 1px solid var(--edge);
+}
+
+.friend-application__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  color: var(--text-heading);
+}
+
+.friend-application__intro {
+  margin-top: 0.25rem;
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.friend-application__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.85rem 1.35rem 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.friend-application__fields {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.friend-application__fields label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.friend-application__input {
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  font-size: var(--text-small);
+  color: var(--text-heading);
+  transition: border-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.friend-application__input:focus {
+  border-color: var(--accent);
+}
+
+.friend-application__input:disabled {
+  opacity: 0.65;
+}
+
+.friend-application__textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.friend-application__submit-row {
+  display: grid;
+  justify-items: start;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.friend-application__submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.friend-application__message {
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
+}
+
+.friend-application__message--error {
+  font-weight: 600;
+  color: var(--text-heading);
+}

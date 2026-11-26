@@ -212,6 +212,8 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
     return { status: 200, body: paginate(hits, page, size) }
   }
 
+  if (path === '/links/audit') return { status: 200, body: { can: true } }
+
   if (path === '/links/all') return { status: 200, body: { data: mockLinks } }
 
   /*
@@ -272,6 +274,56 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
  */
 export function getMockMutation(path: string, body: unknown): MockResponse | null {
   const payload = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+
+  if (path === '/links/audit') {
+    const author = typeof payload.author === 'string' ? payload.author.trim() : ''
+    const name = typeof payload.name === 'string' ? payload.name.trim() : ''
+    const url = typeof payload.url === 'string' ? payload.url.trim() : ''
+    let parsedUrl: URL | null = null
+    try {
+      parsedUrl = new URL(url)
+    } catch {
+      parsedUrl = null
+    }
+
+    const validOptionalUrl = (value: unknown, maxLength: number) => {
+      if (value === undefined || value === null || value === '') return true
+      if (typeof value !== 'string' || value.length > maxLength) return false
+      try {
+        return new URL(value).protocol === 'https:'
+      } catch {
+        return false
+      }
+    }
+    const email = payload.email
+    const description = payload.description
+    const validEmail =
+      email === undefined ||
+      email === null ||
+      email === '' ||
+      (typeof email === 'string' && email.length <= 50 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    const validDescription =
+      description === undefined ||
+      description === null ||
+      (typeof description === 'string' && description.length <= 50)
+
+    if (
+      !author ||
+      author.length > 20 ||
+      !name ||
+      name.length > 20 ||
+      !url ||
+      url.length === 0 ||
+      !parsedUrl ||
+      parsedUrl.protocol !== 'https:' ||
+      !validOptionalUrl(payload.avatar, 200) ||
+      !validEmail ||
+      !validDescription
+    ) {
+      return { status: 400, body: { ok: 0, message: '友链申请字段不合法' } }
+    }
+    return { status: 200, body: { ok: 1, data: null } }
+  }
 
   if (path === '/activity/like') {
     const id = typeof payload.id === 'string' ? payload.id.trim() : ''

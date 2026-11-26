@@ -40,6 +40,8 @@ export {
   getTimeline,
   listFriendLinks,
   listExpiredFriendLinks,
+  getFriendLinkApplicationCapability,
+  applyForFriendLink,
 } from './repositories/site'
 export { getActivityRooms } from './repositories/activity'
 export { searchArticles } from './repositories/search'

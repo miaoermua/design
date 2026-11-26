@@ -24,6 +24,7 @@
 @import '../features/articles/article-row.css';
 @import '../features/diaries/diary-card.css';
 @import '../features/friends/friend-postcard.css';
+@import '../features/friends/friend-application.css';
 
 /*
  * 基础层：纸面、环境光、焦点、选择色。

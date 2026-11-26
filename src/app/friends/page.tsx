@@ -4,9 +4,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader, SectionHeading } from '@/components/ui/page-header'
 import { requireFeature } from '@/core/registry/guard'
 import { ExpiredFriendItem, FriendCard } from '@/features/friends/friend-card'
+import { FriendApplication } from '@/features/friends/friend-application'
 import { listExpiredFriendLinks, listFriendLinks } from '@/lib/api'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
+import { loadSiteContext } from '@/lib/site'
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale()
@@ -20,7 +22,11 @@ export default async function FriendsPage() {
   requireFeature('friends')
 
   const locale = await getLocale()
-  const [links, expiredLinks] = await Promise.all([listFriendLinks(), listExpiredFriendLinks()])
+  const [links, expiredLinks, siteContext] = await Promise.all([
+    listFriendLinks(),
+    listExpiredFriendLinks(),
+    loadSiteContext(),
+  ])
 
   return (
     <Container className="@container">
@@ -70,6 +76,8 @@ export default async function FriendsPage() {
           </ul>
         </section>
       ) : null}
+
+      <FriendApplication siteIdentity={siteContext.identity} />
     </Container>
   )
 }
