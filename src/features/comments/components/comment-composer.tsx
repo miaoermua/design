@@ -86,11 +86,7 @@ export function CommentComposer({
   const locale = useLocale()
   // 记住的昵称/网址只在客户端存在：用 useSyncExternalStore 读取，
   // 服务端快照是空串，水合时与服务端输出一致。
-  const storedIdentity = useSyncExternalStore(
-    subscribeIdentity,
-    readIdentity,
-    readServerIdentity,
-  )
+  const storedIdentity = useSyncExternalStore(subscribeIdentity, readIdentity, readServerIdentity)
   const identity = useMemo(() => parseIdentity(storedIdentity), [storedIdentity])
 
   // 输入框的初始值由已记住的身份派生；用户只要动过输入框，就切到本地覆盖值。
@@ -108,7 +104,9 @@ export function CommentComposer({
   const [invalidField, setInvalidField] = useState<CommentField | null>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const messageId = useId()
+  const whisperHintId = useId()
   const compact = variant === 'reply'
+  const hasText = text.trim().length > 0
 
   function remember(next: Draft) {
     try {
@@ -157,6 +155,7 @@ export function CommentComposer({
       if (result.status === 'ok') {
         remember(draft)
         setText('')
+        setIsWhispers(false)
         setMessage({ kind: 'ok', text: t(locale, 'comments.submitted') })
         onSuccess()
         return
@@ -189,27 +188,28 @@ export function CommentComposer({
           : t(locale, 'comments.composerLabel')
       }
     >
-      <div className="comment-composer__head">
-        <p className="comment-composer__title">
-          {compact
-            ? replyTo
+      {compact ? (
+        <div className="comment-composer__head">
+          <p className="comment-composer__title">
+            {replyTo
               ? tf(locale, 'comments.replyTo', { name: replyTo })
-              : t(locale, 'comments.reply')
-            : t(locale, 'comments.writePlaceholder')}
-        </p>
-        {onCancel ? (
-          <button type="button" onClick={onCancel} className="comment-composer__cancel">
-            {t(locale, 'comments.cancelReply')}
-          </button>
-        ) : null}
-      </div>
+              : t(locale, 'comments.reply')}
+          </p>
+          {onCancel ? (
+            <button type="button" onClick={onCancel} className="comment-composer__cancel">
+              {t(locale, 'comments.cancelReply')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="comment-composer__fields">
         <label className="comment-composer__field">
-          <span>{t(locale, 'comments.name')}</span>
+          <span className="sr-only">{t(locale, 'comments.name')}</span>
           <input
             value={draft.author}
             onChange={(event) => setDraft({ ...draft, author: event.target.value })}
+            placeholder={`${t(locale, 'comments.name')} *`}
             maxLength={COMMENT_LIMITS.author}
             required
             autoComplete="nickname"
@@ -220,10 +220,11 @@ export function CommentComposer({
         </label>
 
         <label className="comment-composer__field">
-          <span>{t(locale, 'comments.mail')}</span>
+          <span className="sr-only">{t(locale, 'comments.mail')}</span>
           <input
             value={draft.mail}
             onChange={(event) => setDraft({ ...draft, mail: event.target.value })}
+            placeholder={`${t(locale, 'comments.mail')} *`}
             type="email"
             maxLength={COMMENT_LIMITS.mail}
             required
@@ -235,7 +236,7 @@ export function CommentComposer({
         </label>
 
         <label className="comment-composer__field">
-          <span>{t(locale, 'comments.url')}</span>
+          <span className="sr-only">{t(locale, 'comments.url')}</span>
           <input
             value={draft.url}
             onChange={(event) => setDraft({ ...draft, url: event.target.value })}
@@ -250,10 +251,15 @@ export function CommentComposer({
       </div>
 
       <label className="comment-composer__field comment-composer__field--wide">
-        <span>{t(locale, 'comments.body')}</span>
+        <span className="sr-only">{t(locale, 'comments.body')}</span>
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
+          placeholder={
+            parentId && replyTo
+              ? tf(locale, 'comments.replyPlaceholder', { name: replyTo })
+              : t(locale, 'comments.writePlaceholder')
+          }
           maxLength={COMMENT_LIMITS.text}
           required
           rows={compact ? 3 : 4}
@@ -264,48 +270,66 @@ export function CommentComposer({
         />
       </label>
 
-      <label className="comment-composer__whisper">
-        <input
-          type="checkbox"
-          checked={isWhispers}
-          onChange={(event) => setIsWhispers(event.target.checked)}
-          className="comment-composer__whisper-check"
-        />
-        <span className="comment-composer__whisper-label">
-          {t(locale, 'comments.whisper')}
-        </span>
-        <span className="comment-composer__whisper-hint">
-          {t(locale, 'comments.whisperHint')}
-        </span>
-      </label>
-
-      <div className="comment-composer__foot">
-        <button type="submit" disabled={pending} className="comment-composer__submit">
-          {pending
-            ? t(locale, 'comments.submitting')
-            : parentId
-              ? t(locale, 'comments.reply')
-              : t(locale, 'comments.submit')}
-        </button>
-
-        <span className="comment-composer__hint">{t(locale, 'comments.mailHint')}</span>
-
-        <span className="comment-composer__count">
-          {text.length}/{COMMENT_LIMITS.text}
-        </span>
-
-        {message ? (
-          <span
-            id={messageId}
-            role="status"
-            className={`comment-composer__message comment-composer__message--${
-              message.kind === 'ok' ? 'ok' : 'error'
-            }`}
-          >
-            {message.text}
+      {hasText ? (
+        <div className="comment-composer__foot">
+          <span className="comment-composer__count">
+            {text.length}/{COMMENT_LIMITS.text}
           </span>
-        ) : null}
-      </div>
+
+          <div className="comment-composer__actions">
+            <div className="comment-composer__whisper">
+              <label className="comment-composer__whisper-toggle">
+                <input
+                  type="checkbox"
+                  checked={isWhispers}
+                  onChange={(event) => setIsWhispers(event.target.checked)}
+                  className="comment-composer__whisper-check"
+                />
+                <span className="comment-composer__whisper-label">
+                  {t(locale, 'comments.whisper')}
+                </span>
+              </label>
+              <span className="comment-composer__whisper-help">
+                <button
+                  type="button"
+                  aria-label={t(locale, 'comments.whisperInfo')}
+                  aria-describedby={whisperHintId}
+                  className="comment-composer__whisper-info"
+                >
+                  <span aria-hidden="true">?</span>
+                </button>
+                <span
+                  id={whisperHintId}
+                  role="tooltip"
+                  className="comment-composer__whisper-tooltip"
+                >
+                  {t(locale, 'comments.whisperHint')}
+                </span>
+              </span>
+            </div>
+
+            <button type="submit" disabled={pending} className="comment-composer__submit">
+              {pending
+                ? t(locale, 'comments.submitting')
+                : parentId
+                  ? t(locale, 'comments.reply')
+                  : t(locale, 'comments.submit')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {message ? (
+        <span
+          id={messageId}
+          role="status"
+          className={`comment-composer__message comment-composer__message--${
+            message.kind === 'ok' ? 'ok' : 'error'
+          }`}
+        >
+          {message.text}
+        </span>
+      ) : null}
     </form>
   )
 }
