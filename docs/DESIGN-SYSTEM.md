@@ -1,6 +1,6 @@
-# Folio Design System · Warm Paper × Lavender Blue
+# Folio Design System · Modern Reading × Warm Paper × Lavender Blue
 
-> 暖纸与薰衣草蓝：**Warm Paper 70% · Vintage Editorial 20% · Frosted Glass 10%**
+> **Modern Reading first · Less is more.** Warm Paper 与 Lavender Blue 是克制的视觉气质，编辑排版与玻璃材质都只为阅读和操作服务。
 > 这份文档是「改之前先读、改之后要同步」的唯一设计口径。任何视觉决定若与本文冲突，以本文为准；本文没写的，先补文档再写代码。
 >
 > **同步记录**：Phase 4A（自托管中文 Web Font：Noto Sans SC / Noto Serif SC）与 Phase 4B（Markdown 失效选择器删除、材质/媒体注释与契约测试）已并入主线，本文按两者的实际实现更新了 §2、§3.1、§5.2、§10（含 10.1/10.2）、§13、§14.1、§14.3、§14.5、§14.8、§14.9、§14.10。本次顶部玻璃参数调整为亮/暗均 24px blur，亮色 alpha 0.82 / saturate 1.4、暗色 tint 36 44 47 / saturate 1.25；并移除导航胶囊的内缘高光与描边。
@@ -46,17 +46,23 @@
 
 ## 1. 设计语言
 
-| 层次                       | 占比 | 承担什么                         | 材质                          |
-| -------------------------- | ---- | -------------------------------- | ----------------------------- |
-| 暖纸 Warm Parchment        | 70%  | 页面底、阅读纸面、卡片           | 纸色 + 极轻颗粒 + 环境光      |
-| 编辑排版 Vintage Editorial | 20%  | 衬线标题、发丝线、留白、悬挂标点 | 无（纯排版）                  |
-| 冰面 Frosted Glass         | 10%  | 导航条、工具浮标、浮层           | 半透明纸色玻璃 + 14–24px 模糊 |
+| 角色     | 原则           | 承担什么                             | 视觉表达                               |
+| -------- | -------------- | ------------------------------------ | -------------------------------------- |
+| 阅读核心 | Modern Reading | 清晰层级、舒适行宽、自然留白、低干扰 | 让内容先于界面被看见                   |
+| 气质底色 | Warm Paper     | 页面底色与阅读表面的温度             | 中性微暖纸色，不模拟旧纸或做强烈纹理   |
+| 编辑编排 | Editorial      | 标题层级、节奏、少量衬线与发丝线     | 用排版建立秩序，不靠装饰堆叠           |
+| 交互识别 | Lavender Blue  | 链接、焦点、选中态与必要的操作反馈   | 小面积使用，正文保持墨色               |
+| 工具材质 | Frosted Glass  | 导航、工具浮标与确有需要的浮层       | 局部半透明纸色玻璃；不进入阅读内容区域 |
 
-三条不可越界：
+设计以**少即是多，现代阅读优先**为核心：先保证内容层级、可读性与浏览节奏，再决定是否需要视觉装饰。能用留白表达分组时，不再叠加边框或卡片；重复出现的卡片、分隔线和强调色必须提供实际辨识或操作价值，否则删除。暖纸只是克制的页面气质，不是复古主题；衬线、细线与纸纹都作为辅助，不得与正文争夺注意力。
 
-1. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。友链明信片卡是这条规则的验证案例：它曾经用 `.glass-control` 做邮票纸面，改成「明信片 + 独立邮票」后**已完全退出冰面**，纸面改由暖纸底色 + 纸纤维 + 发丝边构成。内容卡片不得再以任何理由引入玻璃。
-2. 主题色（Lavender Blue）承担交互识别，**不做大面积填充**；正文永远是墨色。
-3. 装饰必须有理由：无统计卡片、无渐变按钮、无位移悬浮、无霓虹。
+具体约束：
+
+1. 版面服务阅读：标题、正文与元信息有明确层级；列表优先以一致间距组织内容，不为每一项增加容器外框。
+2. 材质退后：正文不铺明显颗粒，不使用旧化、泛黄或仿扫描纸效果；阅读表面保持安静。
+3. 主题色（Lavender Blue）承担交互识别，**不做大面积填充**；正文永远是墨色。
+4. 冰面只给「需要压住滚动内容」的局部，**不做全屏玻璃、不给正文卡片**。友链明信片卡是这条规则的验证案例：它曾经用 `.glass-control` 做邮票纸面，改成「明信片 + 独立邮票」后**已完全退出冰面**，纸面改由暖纸底色 + 纸纤维 + 发丝边构成。内容卡片不得再以任何理由引入玻璃。
+5. 装饰必须有理由：无统计卡片、无渐变按钮、无位移悬浮、无霓虹。
 
 ---
 
@@ -546,7 +552,7 @@ Frost 的去向：`--color-frost` 不再以 RGB 三元组形式服务玻璃 tint
 | `SiteFooter`                                 | `layout/site-footer.tsx`                    | 上部 Shiro 分类导航（`footer.linkSections`：分类名 › 链接）；下部左右两区——年份 + 衬线名字 + 签名 / Powered by + ICP，右侧语言与主题。`｜` 统一用 `.footer-sep`                                                                                                                             |
 | `Container`                                  | `ui/container.tsx`                          | `prose / wide / narrow` 三档                                                                                                                                                                                                                                                                |
 | `PageHeader`                                 | `ui/page-header.tsx`                        | kicker（短横线 + 12px）+ Display 标题 + 摘要 + meta                                                                                                                                                                                                                                         |
-| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（22px 固定档），hover 变 `--accent-strong`；完整变体日期左轨 + 分类/标签/阅读数，标题下一行 `line-clamp-1` 正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                                                            |
+| `ArticleRow`                                 | `features/articles/...`                     | 标题 `text-rowtitle`（22px 固定档），hover 变 `--accent-strong`；`/articles` 与分类结果页共用无边框间距列表，完整变体展示日期、分类/标签/阅读数、官方摘要及可选的一行正文概览（`withExcerpt`）；minimal 变体只留标题 + 日期，作首页单列索引行（≥sm 日期贴右缘同基线）                       |
 | `ReadingProgressRing` / `ReadingProgressBar` | `ui/reading-progress.tsx`                   | 环形（26px，移动端折叠目录行右侧）与竖向线性（2rem×1px，桌面端侧栏）两种阅读进度指示，共用 scroll 监听。环形百分比在环外右侧，竖向条百分比在条右侧。填充色 `--accent`，底色 `--edge`                                                                                                        |
 | `AISummaryCard`                              | `features/ai-summary/...`                   | 纸面卡片（`--surface-lift` 混 `--reading-surface`）：左上 AI 图标 + 标题，右侧「AI 精读」按钮与箭头；折叠只改可见性                                                                                                                                                                         |
 | `Dialog` / `InsightsDialog`                  | `ui/dialog.tsx`、`features/ai-insights/...` | portal + 遮罩模糊 + 滚动锁 + 焦点陷阱与归还；精读窗口桌面居中、移动近全屏，头部固定、内容区自滚                                                                                                                                                                                             |

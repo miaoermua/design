@@ -81,9 +81,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       />
 
       {items.length > 0 ? (
-        <div className="divide-y divide-dashed divide-[var(--edge)] border-t border-dashed border-[var(--edge-strong)]">
+        <div className="flex flex-col gap-4">
           {items.map((article) => (
-            <ArticleRow key={article.id} article={article} timeZone={timeZone} locale={locale} />
+            <ArticleRow
+              key={article.id}
+              article={article}
+              timeZone={timeZone}
+              withExcerpt
+              locale={locale}
+            />
           ))}
         </div>
       ) : (
