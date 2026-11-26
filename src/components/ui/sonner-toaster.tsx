@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 通知渲染层（Sonner 适配）
+ * 通知渲染层（Sonner）
  *
  * ## 分工
  *
@@ -19,8 +19,22 @@
  * 因此 store 仍是事实来源，Sonner 只承担它真正擅长的事：
  * 定位、堆叠、进出场动画、滑动手势。
  *
- * 因为 store 的 id 与 Sonner 的 id 是同一个（`toast.custom(jsx, { id })`），
+ * 因为 store 的 id 与 Sonner 的 id 是同一个（`toast.xxx(title, { id })`），
  * 同步只是「按差集补/删」，不存在两套状态互相追着跑。
+ *
+ * ## 渲染只用 Sonner 自带卡片
+ *
+ * 这里调的是 `toast.success / warning / error / info`，**不自绘 JSX**。
+ * 曾有一套自定义卡片（级别标签行 + 左侧色条 + `role="alert"`），但它从未
+ * 真正接上（全仓没有 `toast.custom` 调用），已作为死代码删除。外观调整一律
+ * 改 `src/design-system/styles/sonner.css`，不要在本文件重新引入第二套卡片。
+ *
+ * 由此带来的无障碍现状：播报完全由 Sonner 容器 `<section>` 上硬编码的
+ * `aria-live="polite"` 承担，**所有级别统一 polite**，不再按 error/warning
+ * 升级为 assertive。曾经有一段「把 section 的 aria-live 置为 off」的逻辑，
+ * 目的是避免与自定义卡片的实时区重复播报；卡片删除后它会让通知彻底不被
+ * 播报，因此一并移除。要恢复分级播报，就得重新自绘卡片 —— 那是改版，
+ * 不属于清理。
  *
  * ## 时长为什么交给 store 而不是 Sonner
  *
@@ -31,12 +45,9 @@
  *
  * ## 空队列
  *
- * Sonner 的 <section> 是恒渲染的，且硬编码 `aria-live="polite"`。
- * 两件事必须处理：
- *   1. 队列空时**整棵卸载**（延迟 300ms 让最后一条走完退场动画），
- *      避免长期留一个空的 live region；
- *   2. 有通知时把 section 的 `aria-live` 改成 `off`，否则外层 polite 与
- *      卡片自身的 assertive 会双重播报（见 toast-card.tsx）。
+ * Sonner 的 `<section>` 是恒渲染的，且硬编码 `aria-live="polite"`。
+ * 队列空时**整棵卸载**（延迟 300ms 让最后一条走完退场动画），
+ * 避免长期留一个空的 live region。
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -69,7 +80,6 @@ export function SonnerToaster({ locale = DEFAULT_LOCALE }: SonnerToasterProps) {
   const items = useNotifications()
   const status = useStatusSnapshot()
   const shown = useRef(new Set<string>())
-  const hostRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(true)
 
   const capsuleVisible = status.kind !== null
@@ -127,43 +137,29 @@ export function SonnerToaster({ locale = DEFAULT_LOCALE }: SonnerToasterProps) {
     }
   }, [items, router])
 
-  /*
-   * 把 Sonner 外层 <section> 的 aria-live 关掉。
-   *
-   * Sonner 把 `aria-live="polite"` 硬编码在 section 上，而我们的卡片自带
-   * 正确的实时区语义（alert/assertive 与 status/polite）。两者同时生效会
-   * 让每条通知被播报两次，且 warning/error 的紧急程度会被外层 polite 稀释。
-   *
-   * 这里改的是**我们自己渲染出来的 DOM 属性**，不读 Sonner 的内部模块状态；
-   * 属性值固定不变，React 的 diff 不会把它改回去。
-   */
-  useEffect(() => {
-    if (!present) return
-    const section = hostRef.current?.querySelector('section')
-    section?.setAttribute('aria-live', 'off')
-  }, [present, items.length])
-
   if (!present) return null
 
   return (
-    <div ref={hostRef}>
-      <Toaster
-        className="folio-toaster"
-        position="bottom-right"
-        // store 已把队列限制在 3 条，这里保持一致；超出时 Sonner 负责堆叠动画
-        visibleToasts={3}
-        closeButton
-        containerAriaLabel={t(locale, 'notify.region')}
-        customAriaLabel={t(locale, 'notify.region')}
-        offset={{
-          right: 24,
-          bottom: 24 + (capsuleVisible ? CAPSULE_CLEARANCE : 0),
-        }}
-        mobileOffset={{
-          right: 16,
-          bottom: 16 + (capsuleVisible ? CAPSULE_CLEARANCE : 0),
-        }}
-      />
-    </div>
+    <Toaster
+      className="folio-toaster"
+      position="bottom-right"
+      // store 已把队列限制在 3 条，这里保持一致；超出时 Sonner 负责堆叠动画
+      visibleToasts={3}
+      closeButton
+      containerAriaLabel={t(locale, 'notify.region')}
+      customAriaLabel={t(locale, 'notify.region')}
+      // Sonner 默认是英文「Close toast」；这里沿用卡片时代的同一句字典文案，
+      // 保证界面上不出现与语言无关的英文可访问名称。
+      // 注意它在 ToastOptions 里，不在 ToasterProps 顶层。
+      toastOptions={{ closeButtonAriaLabel: t(locale, 'notify.dismiss') }}
+      offset={{
+        right: 24,
+        bottom: 24 + (capsuleVisible ? CAPSULE_CLEARANCE : 0),
+      }}
+      mobileOffset={{
+        right: 16,
+        bottom: 16 + (capsuleVisible ? CAPSULE_CLEARANCE : 0),
+      }}
+    />
   )
 }

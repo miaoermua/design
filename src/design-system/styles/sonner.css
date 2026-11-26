@@ -11,8 +11,9 @@
  *      搜索面板(50)。必须降到模态层之下，见下方容器规则。
  *   2. 色板：Sonner 自带 light/dark 灰阶与 richColors 彩底，全部换成 Folio 语义
  *      Token；`richColors` 保持关闭。
- *   3. 形状：Sonner 默认 8px 圆角 + 16px 内边距。Folio 是方角卡片、由自定义
- *      JSX 自己排版（`data-styled="false"`，Sonner 不会套默认内边距）。
+ *   3. 形状：**暂不覆盖**，沿用 Sonner 默认（8px 圆角 + 16px 内边距）。
+ *      解析：通知统一用 Sonner 自带卡片后，原先为自定义 JSX（`data-styled="false"`
+ *      方角排版）准备的形状覆盖已随 `toast-card.tsx` 一起删除；外观后续单独调整。
  */
 
 /* ── 容器 ─────────────────────────────────────────────────────── */

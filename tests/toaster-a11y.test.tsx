@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
 /**
- * 通知渲染层的无障碍契约（Sonner 适配后）
+ * 通知渲染层的契约（Sonner 原生卡片）
  *
- * 迁移前这组测试直接断言 `<Toaster>` 的输出；迁移后被测对象变成
- * `<SonnerToaster>`，但**断言的行为一条都没少**：
- *   1. 空队列不留活动的 live region；
- *   2. 非紧急（info/success）走 `role="status"` + `aria-live="polite"`；
- *   3. 紧急（warning/error）走 `role="alert"` + `aria-live="assertive"`；
- *   4. 容器是可命名的 region；
- *   5. 多条并存时各自带自己的 role。
+ * 通知已统一到 Sonner：渲染用 `toast.success/warning/error/info`，不再自绘
+ * JSX。因此这组测试断言的是「队列 → 画面」的映射，以及几处只有真实浏览器
+ * 才看得见、但一漏就坏掉的视觉契约。
  *
- * 另外新增两条只有 Sonner 化之后才存在的问题：
- *   6. 外层 <section> 的 `aria-live` 必须被关掉（否则与卡片自身的实时区
- *      叠加，一条通知被播报两次，warning/error 的紧急度还会被 polite 稀释）；
- *   7. 队列清空后整棵组件要卸载，不长期保留那个空的 section。
+ * ## 关于无障碍
+ *
+ * Sonner 的条目 `<li>` 上没有 role，播报只由容器 `<section>` 上硬编码的
+ * `aria-live="polite"` 承担，**各等级统一 polite**。自定义卡片时代的
+ * `role="alert"` + `assertive` 分级已不可达，这里不再断言它；能保住且必须
+ * 守住的是「容器是可命名 region」「live region 保持开启」「关闭按钮有可访问
+ * 名称」。曾经有一段把 section 的 aria-live 置为 off 的逻辑（为了给卡片的
+ * 实时区让路），卡片删除后它会导致通知彻底静音，因此也一并移除，这里反向
+ * 钉住。
  *
  * Sonner 的 toast 状态是模块级的，测试之间会串，因此每个用例结束时要把
  * 队列清空并等一个退场周期（Sonner 内部 200ms 才把条目从状态里移除）。
@@ -21,10 +22,30 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SonnerToaster } from '@/components/ui/sonner-toaster'
 import { notificationStore } from '@/lib/notifications/store'
+
+/**
+ * `SonnerToaster` 用 `useRouter` 把 action 转成站内跳转。
+ *
+ * jsdom 里没有 App Router 上下文，直接渲染会抛
+ * `invariant expected app router to be mounted`。这里只补一个最小的
+ * router 替身：被测的是「点击后有没有按 href 导航」，不是 Next 的路由实现。
+ */
+const { push } = vi.hoisted(() => ({ push: vi.fn() }))
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push,
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}))
 
 /** 比 Sonner 的 200ms 清场稍长，确保下个用例不会看到上一条残留 */
 const SETTLE_MS = 350
@@ -40,8 +61,18 @@ async function settle() {
   })
 }
 
+/** 等第一条 toast 落到 DOM，返回它的根元素 */
+async function findToast(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const el = document.querySelector<HTMLElement>('[data-sonner-toast]')
+    expect(el).not.toBeNull()
+    return el!
+  })
+}
+
 beforeEach(() => {
   notificationStore.clear()
+  push.mockClear()
 })
 
 afterEach(async () => {
@@ -53,9 +84,7 @@ describe('通知：空队列', () => {
   it('不渲染任何节点，也不留空的 live region', () => {
     const { container } = render(<SonnerToaster />)
     expect(container.firstChild).toBeNull()
-    expect(screen.queryByRole('region')).toBeNull()
-    expect(document.querySelector('[aria-live="polite"]')).toBeNull()
-    expect(document.querySelector('[aria-live="assertive"]')).toBeNull()
+    expect(document.querySelector('section[aria-live]')).toBeNull()
   })
 
   it('最后一条关闭后整棵卸载（不留 Sonner 的空 section）', async () => {
@@ -69,121 +98,87 @@ describe('通知：空队列', () => {
   })
 })
 
-describe('通知：非紧急提示', () => {
-  it('info 用 role="status" + aria-live="polite"', async () => {
-    notificationStore.notify({ level: 'info', title: '已保存' })
-    render(<SonnerToaster />)
-
-    const item = await screen.findByRole('status')
-    expect(item.getAttribute('aria-live')).toBe('polite')
-    expect(item.textContent).toContain('已保存')
-  })
-
-  it('success 同样走 polite', async () => {
-    notificationStore.notify({ level: 'success', title: '订阅成功' })
-    render(<SonnerToaster />)
-
-    const item = await screen.findByRole('status')
-    expect(item.getAttribute('aria-live')).toBe('polite')
-  })
-})
-
-describe('通知：紧急提示', () => {
-  it('error 用 role="alert" + aria-live="assertive"', async () => {
-    notificationStore.notify({ level: 'error', title: '网络异常' })
-    render(<SonnerToaster />)
-
-    const item = await screen.findByRole('alert')
-    expect(item.getAttribute('aria-live')).toBe('assertive')
-    expect(item.textContent).toContain('网络异常')
-  })
-
-  it('warning 同样走 assertive', async () => {
-    notificationStore.notify({ level: 'warning', title: '内容未发布' })
-    render(<SonnerToaster />)
-
-    const item = await screen.findByRole('alert')
-    expect(item.getAttribute('aria-live')).toBe('assertive')
-  })
-
-  it('多条并存时各自带自己的 role，不会串味', async () => {
-    notificationStore.notify({ level: 'info', title: '普通' })
-    notificationStore.notify({ level: 'error', title: '出错' })
-    render(<SonnerToaster />)
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('status')).toHaveLength(1)
-      expect(screen.getAllByRole('alert')).toHaveLength(1)
-    })
-  })
-})
-
 describe('通知：容器语义', () => {
-  it('容器是带 aria-label 的 region，逐条提示挂在里面', async () => {
+  it('容器是带 aria-label 的 region', async () => {
     notificationStore.notify({ level: 'info', title: '第一条' })
     render(<SonnerToaster />)
 
     const region = await screen.findByRole('region')
-    expect(region.getAttribute('aria-label')).toBeTruthy()
-    expect(region.contains(await screen.findByRole('status'))).toBe(true)
+    expect(region.getAttribute('aria-label')).toBe('通知')
   })
 
-  it('外层 live region 被关掉，避免与卡片自身的实时区重复播报', async () => {
-    // 标题必须与其他用例不同：store 的去重表跨用例保留 5 秒
-    notificationStore.notify({ level: 'error', title: '播报级别检查' })
+  it('live region 保持开启，不再被置为 off', async () => {
+    notificationStore.notify({ level: 'info', title: '播报级别检查' })
     render(<SonnerToaster />)
-    await screen.findByRole('alert')
+    await findToast()
 
     /*
-     * Sonner 把 aria-live="polite" 硬编码在 <section> 上。若保留，读屏会把
-     * 同一条内容播报两次（外层 polite + 内层 alert）。这里断言它已被置为 off。
+     * 卡片时代这里断言的是 `aria-live="off"`：外层 polite 会与卡片的
+     * assertive 重复播报。卡片已删除，只剩容器这一条播报通道，
+     * 一旦再置 off 就等于通知完全不发声。
      */
-    const section = document.querySelector('section')
+    const section = document.querySelector('section[aria-live]')
     expect(section).not.toBeNull()
-    expect(section?.getAttribute('aria-live')).toBe('off')
-    // 卡片自身的断言不受影响
-    expect(screen.getByRole('alert').getAttribute('aria-live')).toBe('assertive')
+    expect(section?.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('关闭按钮有中文可访问名称', async () => {
+    notificationStore.notify({ level: 'info', title: '可关闭' })
+    render(<SonnerToaster />)
+    await findToast()
+
+    expect(screen.getByRole('button', { name: '关闭通知' })).toBeDefined()
   })
 })
 
+describe('通知：级别映射', () => {
+  it.each(['info', 'success', 'warning', 'error'] as const)(
+    '%s 保留自己的 data-type',
+    async (level) => {
+      notificationStore.notify({ level, title: `级别-${level}` })
+      render(<SonnerToaster />)
+
+      const toastEl = await findToast()
+      expect(toastEl.getAttribute('data-type')).toBe(level)
+      expect(toastEl.textContent).toContain(`级别-${level}`)
+    },
+  )
+})
+
 describe('通知：内容与交互', () => {
-  it('四段内容齐全：级别标签、标题、描述、action 链接', async () => {
+  it('action 渲染成按钮，点击后按 href 导航', async () => {
     notificationStore.notify({
       level: 'warning',
       title: '文章已失效',
-      description: '刚才那篇已经不在列表里了',
       action: { label: '回到文章列表', href: '/articles' },
     })
     render(<SonnerToaster />)
+    await findToast()
 
-    const card = await screen.findByRole('alert')
-    expect(card.textContent).toContain('注意')
-    expect(card.textContent).toContain('文章已失效')
-    expect(card.textContent).toContain('刚才那篇已经不在列表里了')
-
-    const link = within(card).getByRole('link', { name: '回到文章列表' })
-    expect(link.getAttribute('href')).toBe('/articles')
+    const button = await screen.findByRole('button', { name: '回到文章列表' })
+    await act(async () => {
+      button.click()
+    })
+    expect(push).toHaveBeenCalledWith('/articles')
   })
 
-  it('关闭按钮有可访问名称，点击后从队列移除', async () => {
-    notificationStore.notify({ level: 'info', title: '可关闭' })
+  it('点击关闭按钮后从队列移除', async () => {
+    notificationStore.notify({ level: 'info', title: '待关闭' })
     render(<SonnerToaster />)
-
-    const card = await screen.findByRole('status')
-    const close = within(card).getByRole('button', { name: /关闭/ })
+    await findToast()
 
     await act(async () => {
-      close.click()
+      screen.getByRole('button', { name: '关闭通知' }).click()
     })
 
-    expect(notificationStore.getSnapshot()).toHaveLength(0)
+    await waitFor(() => expect(notificationStore.getSnapshot()).toHaveLength(0))
   })
 
   it('常驻通知（durationMs: 0）不会自己消失', async () => {
     notificationStore.notify({ level: 'warning', title: '需要你处理', durationMs: 0 })
     render(<SonnerToaster />)
 
-    await screen.findByRole('alert')
+    await findToast()
     await act(async () => {
       await sleep(50)
     })
@@ -233,14 +228,12 @@ describe('通知：队列策略在渲染层的体现', () => {
 
 const Z_40 = new RegExp('z-index:\\s*40')
 const Z_30_TOOLBAR = new RegExp('\\.toolbar-dock[\\s\\S]{0,700}?z-index:\\s*30')
-const WIDTH_RULE = new RegExp('\\[data-sonner-toast\\][\\s\\S]{0,240}?width:\\s*min\\(24rem')
 const OFFSET_DESKTOP = new RegExp('bottom:\\s*24 \\+ \\(capsuleVisible')
 const OFFSET_MOBILE = new RegExp('bottom:\\s*16 \\+ \\(capsuleVisible')
 
 describe('通知：层级与挂载位置', () => {
   const css = read('src/design-system/styles/sonner.css')
   const layout = read('src/app/layout.tsx')
-  const globals = read('src/app/globals.css')
 
   it('通知层被压到 40，低于搜索面板(50)、预览(80)、对话框(90)', () => {
     expect(Z_40.test(css)).toBe(true)
@@ -256,6 +249,7 @@ describe('通知：层级与挂载位置', () => {
      * 浮标原本 z=50，与搜索面板同值。通知压到 40 后，浮标会浮在通知之上，
      * 实测三条堆叠时圆圈按钮正好压在中间那条的文字上。
      */
+    const globals = read('src/app/globals.css')
     expect(Z_30_TOOLBAR.test(globals)).toBe(true)
   })
 
@@ -282,13 +276,25 @@ describe('通知：层级与挂载位置', () => {
     expect(OFFSET_DESKTOP.test(toaster)).toBe(true)
     expect(OFFSET_MOBILE.test(toaster)).toBe(true)
   })
+})
 
-  it('自定义 JSX 路径必须自己给宽度', () => {
-    /*
-     * `width: var(--width)` 写在 Sonner 的 `[data-styled=true]` 规则里，
-     * 而自定义 JSX 的条目是 `data-styled="false"`。实测漏掉这条时 li 会
-     * shrink-to-fit 到 153px，卡片被挤成窄条。
-     */
-    expect(WIDTH_RULE.test(css)).toBe(true)
+/*
+ * ── 单轨守卫 ──────────────────────────────────────────────────────
+ *
+ * 通知 UI 只允许一套。曾经同时存在「自定义卡片」与「Sonner 原生卡片」，
+ * 结果是卡片从未接上、却拖着一组无法通过的测试和一段会静音的 aria-live
+ * 补丁。这两条断言用来防止双轨制回潮。
+ */
+
+describe('通知：只保留一套渲染', () => {
+  const toaster = read('src/components/ui/sonner-toaster.tsx')
+
+  it('渲染层不自绘 JSX', () => {
+    // 只盯调用，不盯注释：文件头会说明「曾有一套卡片、没有 toast.custom」
+    expect(toaster).not.toMatch(/toast\.custom\s*\(/)
+  })
+
+  it('ToastCard 组件已删除', () => {
+    expect(() => read('src/components/ui/toast-card.tsx')).toThrow()
   })
 })

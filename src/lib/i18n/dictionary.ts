@@ -401,10 +401,6 @@ const zhCN = {
   'error.title': '这个页面没能完成渲染',
 
   // ── 通知 / 状态 / 订阅 ────────────────────────────────────────
-  'notify.info': '提示',
-  'notify.success': '成功',
-  'notify.warning': '注意',
-  'notify.error': '错误',
   'notify.region': '通知',
   'notify.dismiss': '关闭通知',
   'notify.likeSaved': '喜欢已记录',
@@ -885,10 +881,6 @@ const en: Record<MessageKey, string> = {
   'error.kicker': 'Something broke',
   'error.title': 'This page could not finish rendering',
 
-  'notify.info': 'Notice',
-  'notify.success': 'Done',
-  'notify.warning': 'Warning',
-  'notify.error': 'Error',
   'notify.region': 'Notifications',
   'notify.dismiss': 'Dismiss notification',
   'notify.likeSaved': 'Like recorded',
