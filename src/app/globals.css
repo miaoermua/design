@@ -1005,6 +1005,10 @@
   font-size: var(--text-caption);
 }
 
+.nav-flyout__card .nav-row--child {
+  padding-block: 0.35rem;
+}
+
 /* 分组：原生 details —— 触屏没有 hover，折叠列表是唯一能让
    「几十个分类」不把菜单撑爆、又保留键盘与无 JS 可用性的形态。 */
 .nav-group {
