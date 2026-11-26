@@ -1381,6 +1381,117 @@ details[open] > .toc-summary .toc-chevron {
   justify-content: flex-start;
 }
 
+/* ── 页脚在线状态与访客预览 ───────────────────────────────────
+   状态点是页脚唯一的「运行中」信号；浮层只在悬停时出现、向上展开。
+   数据是惰性的（见 `components/layout/footer-presence.tsx`），这里只负责形态。 */
+
+.footer-presence {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.footer-presence__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  color: var(--text-secondary);
+  /* 人数从 9 变 10 时宽度不跳 */
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.footer-presence__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--state-success);
+}
+
+/*
+ * 浮层定位：`bottom: 100%` 让盒子的**底边**贴住触发器顶边，
+ * 再用 `padding-bottom` 造出 8px 的悬停桥。
+ *
+ * 这一段必须是 padding 而不是 margin：margin 产生的空隙不属于任何元素，
+ * 鼠标从状态点移向浮层时会穿过它，触发 pointerleave，浮层当场消失。
+ */
+.footer-presence__panel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 30;
+  padding-bottom: 0.5rem;
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 2.5rem));
+}
+
+.footer-presence__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* 「读取中…」只有几个字，没有下限的话浮层会先缩成一条再撑开 */
+  min-width: 11rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+  line-height: 1.5;
+}
+
+.footer-presence__heading,
+.footer-presence__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+}
+
+.footer-presence__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-presence__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.footer-presence__link {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out-soft);
+}
+
+.footer-presence__link:hover {
+  color: var(--text-heading);
+}
+
+.footer-presence__viewers {
+  flex: none;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 触屏没有 hover：保留状态点，但不提供浮层（组件本身也不会因 tap 打开） */
+@media (hover: none) {
+  .footer-presence__panel {
+    display: none;
+  }
+}
+
 @media (min-width: 48rem) {
   .site-footer__nav {
     padding-bottom: var(--spacing-stack);

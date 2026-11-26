@@ -14,6 +14,7 @@ export * from './domain/taxonomy'
 export * from './domain/common'
 export * from './domain/say'
 export * from './domain/project'
+export * from './domain/presence'
 
 export * from './errors'
 
@@ -35,6 +36,7 @@ export {
   listArticlesByTag,
 } from './repositories/taxonomy'
 export { getSiteIdentity, getTimeline, listFriendLinks } from './repositories/site'
+export { getActivityRooms } from './repositories/activity'
 export { searchArticles } from './repositories/search'
 export { getArticleSummary, getArticleInsights } from './repositories/ai'
 export {

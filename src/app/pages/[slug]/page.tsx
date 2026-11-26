@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
+import { ArticleRoomJoin } from '@/components/realtime/article-room-join'
 import { PageHeader } from '@/components/ui/page-header'
 import { Prose } from '@/components/ui/prose'
 import { requireFeature } from '@/core/registry/guard'
@@ -11,6 +12,7 @@ import { renderMarkdown } from '@/lib/content/markdown'
 import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
+import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { formatDate } from '@/lib/utils/date'
 
 interface PageDetailProps {
@@ -74,6 +76,8 @@ export default async function PageDetailPage({ params }: PageDetailProps) {
 
   return (
     <Container width="prose">
+      {/* 只加入房间、不订阅事件：独立页面也要能被页脚的「谁在读」统计到 */}
+      {isRealtimeEnabled() ? <ArticleRoomJoin articleId={page.id} /> : null}
       <PageHeader
         kicker={t(locale, 'page.kicker')}
         title={page.title}

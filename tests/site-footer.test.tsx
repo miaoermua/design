@@ -84,7 +84,8 @@ describe('Footer 信息与设置', () => {
     expect(design.getAttribute('href')).toBe('https://github.com/miaoermua/design')
     expect(core.getAttribute('target')).toBe('_blank')
     expect(icp.getAttribute('href')).toBe('https://beian.miit.gov.cn/')
-    expect(icp.closest('p')?.textContent).toContain('Powered by')
+    // 出处行是 `.site-footer__meta`（div：要容纳在线状态的浮层，不能再是 <p>）
+    expect(icp.closest('.site-footer__meta')?.textContent).toContain('Powered by')
   })
 
   it('不渲染头像、社交图标或隐式 RSS', async () => {
@@ -99,7 +100,9 @@ describe('Footer Shiro 分类导航', () => {
   it('未配置 linkSections 时不渲染 nav，也不留空行', async () => {
     const { container } = await renderFooter()
     expect(container.querySelector('footer nav')).toBeNull()
-    expect(container.querySelectorAll('p')).toHaveLength(2)
+    // 信息区仍是两行：版权行（<p>）与出处行（<div>，内含在线状态）
+    expect(container.querySelectorAll('.site-footer__line')).toHaveLength(1)
+    expect(container.querySelectorAll('.site-footer__meta')).toHaveLength(1)
     expect(container.querySelector('footer')?.className).not.toContain('site-footer--has-nav')
   })
 
@@ -174,11 +177,17 @@ describe('Footer 分区与样式契约', () => {
       linkSections: sections,
       icp: { enabled: true, label: '浙ICP备00000000号', url: null },
     })
-    const paragraphs = [...document.querySelectorAll('.site-footer__info > p')]
-    expect(paragraphs).toHaveLength(2)
-    expect(paragraphs[0]?.textContent).toContain('©')
-    expect(paragraphs[1]?.textContent).toContain('Powered by')
-    expect(paragraphs[1]?.textContent).not.toContain('关于我')
+    /*
+     * 第一行是 <p>，第二行是 <div>：出处行里挂着在线状态组件，
+     * 它的浮层包含列表与段落，放进 <p> 会构成非法的块级嵌套。
+     * 这里断言的是「仍然是两段、内容归属不变」，不是标签名。
+     */
+    const line = document.querySelector('.site-footer__info > .site-footer__line')
+    const meta = document.querySelector('.site-footer__info > .site-footer__meta')
+    expect(line?.textContent).toContain('©')
+    expect(meta?.textContent).toContain('Powered by')
+    expect(meta?.textContent).not.toContain('关于我')
+    expect(document.querySelectorAll('.site-footer__info > p')).toHaveLength(1)
   })
 
   it('手机导航分组竖排，桌面改为横排且可折行', () => {

@@ -8,6 +8,7 @@ import { ActionRail } from '@/components/reading/action-rail'
 import { AiDisclosure } from '@/components/reading/ai-disclosure'
 import { ArticleInfo } from '@/components/reading/article-info'
 import { ReadingAside, ReadingInline } from '@/components/reading/reading-tools'
+import { ArticleRoomJoin } from '@/components/realtime/article-room-join'
 import { requireFeature } from '@/core/registry/guard'
 import { getThemeConfig } from '@/core/config/theme'
 import { readArticleInsights } from '@/features/ai-insights'
@@ -29,6 +30,7 @@ import { toContentLang } from '@/lib/i18n/config'
 import { t, tf } from '@/lib/i18n/dictionary'
 import { getLocale } from '@/lib/i18n/server'
 import { NOTE_LIST_PATH, notePath } from '@/lib/routes'
+import { isRealtimeEnabled } from '@/lib/realtime/config'
 import { PasswordGate } from '@/features/diaries/components/password-gate'
 import { cn } from '@/lib/utils/cn'
 import { formatDate, formatTime, formatWeekday } from '@/lib/utils/date'
@@ -168,6 +170,8 @@ export default async function DiaryPage({ params, searchParams }: DiaryPageProps
 
   return (
     <Container width="wide">
+      {/* 只加入房间、不订阅事件：日记也要能被页脚的「谁在读」统计到 */}
+      {isRealtimeEnabled() ? <ArticleRoomJoin articleId={diary.id} /> : null}
       <div className="mx-auto mt-10 grid max-w-[calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline))] gap-10 sm:mt-14 xl:max-w-[var(--shell-note)] xl:grid-cols-[minmax(0,calc(var(--measure-note)+var(--pad-paper-inline)+var(--pad-paper-inline)))_var(--rail-toc)] xl:gap-x-[var(--gap-rail)]">
         <article
           id="diary-content"

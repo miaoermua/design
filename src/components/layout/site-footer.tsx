@@ -7,6 +7,7 @@ import { getLocale } from '@/lib/i18n/server'
 import { t } from '@/lib/i18n/dictionary'
 import { siteDescription, siteTitle } from '@/lib/site'
 import { cn } from '@/lib/utils/cn'
+import { FooterPresence } from './footer-presence'
 import { FooterSettings } from './footer-settings'
 
 /**
@@ -89,12 +90,15 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
             </p>
 
             {/*
-             * 第二行：出处、备案与自定义链接共用同一条流。
+             * 第二行：出处、备案、在线状态与自定义链接共用同一条流。
              * 用 flex-wrap 而不是若干 <p>：宽度不足时换行，但每个 `.meta-unit`
              * 是**不可拆**的整体（分隔符跟着它后面的链接走，`nowrap`），
              * 所以换行只发生在链接之间，不会出现「行尾一个孤零零的｜」。
+             *
+             * 这一行是 <div> 而不是 <p>：在线状态是个客户端组件，内部有浮层
+             * （列表 + 段落），放进 <p> 会构成非法的块级嵌套。
              */}
-            <p className="site-footer__meta text-meta">
+            <div className="site-footer__meta text-meta">
               <span className="site-footer__meta-unit">
                 Powered by{' '}
                 <a
@@ -132,7 +136,14 @@ export async function SiteFooter({ identity }: { identity: SiteIdentity | null }
                   </a>
                 </span>
               ) : null}
-            </p>
+
+              {/*
+               * 在线状态固定排在这一行末尾：它属于「站点的运行状态」，
+               * 与版权/出处/备案是同一类信息，不干扰上面的署名行。
+               * 未连接时组件自己返回 null，这里不会留下空单元或多余分隔符。
+               */}
+              <FooterPresence />
+            </div>
           </div>
 
           {/* 设置区：全站唯一的语言与主题入口，两个控件紧挨成一组。 */}

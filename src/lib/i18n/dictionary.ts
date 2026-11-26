@@ -77,6 +77,12 @@ const zhCN = {
 
   // ── 页脚 ───────────────────────────────────────────────────────
   'footer.navigation': '页脚导航',
+  'presence.online': '{count} 个在线连接',
+  'presence.heading': '正在浏览',
+  'presence.viewers': '{count} 个连接',
+  'presence.empty': '此刻没有其他在线连接',
+  'presence.unavailable': '在线连接数据暂时不可用',
+  'presence.loading': '读取中…',
 
   // ── 分页与元信息 ───────────────────────────────────────────────
   'pagination.label': '分页',
@@ -566,6 +572,12 @@ const en: Record<MessageKey, string> = {
   'state.skipToContent': 'Skip to content',
 
   'footer.navigation': 'Footer navigation',
+  'presence.online': '{count} online connections',
+  'presence.heading': 'Reading now',
+  'presence.viewers': '{count} connections',
+  'presence.empty': 'No other active connections right now',
+  'presence.unavailable': 'Connection data unavailable',
+  'presence.loading': 'Loading…',
 
   'pagination.label': 'Pagination',
   'pagination.previous': 'Previous',

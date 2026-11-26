@@ -214,6 +214,24 @@ export function getMockResponse(path: string, params: URLSearchParams): MockResp
 
   if (path === '/links/all') return { status: 200, body: { data: mockLinks } }
 
+  /*
+   * 房间人数（页脚预览的数据源）。
+   *
+   * mock 没有真实网关，任何房间都不可能有人：返回**空房间**而不是编造访客，
+   * 预览于是走「暂无其他访客」这条真实分支。形状与线上一致：单数 `activity`，
+   * 人数键名已完成 snake_case（`article_<id>`）。
+   */
+  if (path === '/activity/rooms') {
+    return {
+      status: 200,
+      body: {
+        rooms: [],
+        room_count: {},
+        objects: { posts: [], notes: [], pages: [], recentlies: [] },
+      },
+    }
+  }
+
   // 主题 Snippet：真实后端返回 js-yaml 解析后的对象，mock 直接返回同形状对象。
   // 只有 folio / kami 之外的名字才 404，用来在测试里验证降级路径。
   const themeSnippetMatch = /^\/snippets\/theme\/([^/]+)$/.exec(path)
